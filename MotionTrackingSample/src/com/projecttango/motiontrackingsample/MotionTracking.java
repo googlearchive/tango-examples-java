@@ -9,7 +9,9 @@ import android.widget.TextView;
 import com.google.atap.tangoapi.VioStatus;
 import com.google.atap.tangoclient.TangoClient;
 
-
+/**
+ * Example showing how to get Motion Tracking Data and Display it on UI.
+ */
 public class MotionTracking extends Activity {
 	
 	public interface poseUpdateListener{
