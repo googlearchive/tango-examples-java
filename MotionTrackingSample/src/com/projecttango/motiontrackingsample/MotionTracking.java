@@ -4,8 +4,6 @@ import java.text.DecimalFormat;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.widget.TextView;
 
 import com.google.atap.tangoapi.VioStatus;
@@ -20,7 +18,6 @@ public class MotionTracking extends Activity {
 	
 	private poseUpdateListener poseCallBack;
 	private TangoClient mTangoClient; 
-	private VioStatus status;
 	@Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -32,7 +29,6 @@ public class MotionTracking extends Activity {
         final TextView pos0 = (TextView) findViewById(R.id.positionX);
         final TextView pos1 = (TextView) findViewById(R.id.positionY);
         final TextView pos2 = (TextView) findViewById(R.id.positionZ);
-        final DecimalFormat fourDec = new DecimalFormat("0.0000");
         mTangoClient = new TangoClient(this, false, false, false);  
         poseCallBack = new poseUpdateListener(){
             @Override
@@ -74,26 +70,6 @@ public class MotionTracking extends Activity {
 	    // just ending the app is probably the safest thing to do here.
 	    finish();
 	  }
-
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.motion_tracking, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-        if (id == R.id.action_settings) {
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
     
     public void poseUpdater()
     {
