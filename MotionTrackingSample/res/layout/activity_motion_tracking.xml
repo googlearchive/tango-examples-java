@@ -119,21 +119,22 @@
         android:textSize="23sp" />
 
     <TextView
-        android:id="@+id/positionZ"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignLeft="@+id/positionX"
-        android:layout_below="@+id/positionY"
-        android:text="0.0000"
-        android:textSize="23sp" />
-
-    <TextView
         android:id="@+id/positionY"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignBaseline="@+id/PosY"
         android:layout_alignBottom="@+id/PosY"
         android:layout_alignRight="@+id/positionX"
+        android:text="0.0000"
+        android:textSize="23sp" />
+
+    <TextView
+        android:id="@+id/positionZ"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/PosZ"
+        android:layout_alignBottom="@+id/PosZ"
+        android:layout_alignLeft="@+id/positionY"
         android:text="0.0000"
         android:textSize="23sp" />
 
