@@ -1,0 +1,84 @@
+<GridLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/Grid"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:columnCount="2" >
+
+    <LinearLayout
+        android:id="@+id/LinearLayout1"
+        android:layout_width="318dp"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingBottom="@dimen/activity_vertical_margin"
+        android:paddingLeft="@dimen/activity_horizontal_margin"
+        android:paddingRight="@dimen/activity_horizontal_margin"
+        android:paddingTop="@dimen/activity_vertical_margin"
+        tools:context="com.google.atap.jmotiontrackingsample_v2.MotionTracking" >
+
+        <TextView
+            android:id="@+id/Quaternion1"
+            android:layout_width="159dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="51dp"
+            android:layout_marginTop="18dp"
+            android:text="Quaternion 1" />
+
+        <TextView
+            android:id="@+id/Quaternion2"
+            android:layout_width="159dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="51dp"
+            android:layout_marginTop="18dp"
+            android:text="Quaternion 2" />
+
+        <TextView
+            android:id="@+id/Quaternion3"
+            android:layout_width="159dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="51dp"
+            android:layout_marginTop="18dp"
+            android:text="Quaternion 3" />
+
+        <TextView
+            android:id="@+id/Quaternion4"
+            android:layout_width="159dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="51dp"
+            android:layout_marginTop="18dp"
+            android:text="Quaternion 4" />
+
+        <TextView
+            android:id="@+id/PosX"
+            android:layout_width="159dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="51dp"
+            android:layout_marginTop="18dp"
+            android:text="Position X" />
+
+        <TextView
+            android:id="@+id/PosY"
+            android:layout_width="159dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="51dp"
+            android:layout_marginTop="18dp"
+            android:text="Position Y" />
+
+        <TextView
+            android:id="@+id/PosZ"
+            android:layout_width="159dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="51dp"
+            android:layout_marginTop="18dp"
+            android:text="Position Z" />
+    </LinearLayout>
+
+    <android.opengl.GLSurfaceView
+        android:id="@+id/gl_surface_view"
+        android:layout_width="538dp"
+        android:layout_height="321dp"
+        android:layout_column="1"
+        android:layout_gravity="left|center_vertical"
+        android:layout_row="0" />
+
+</GridLayout>
