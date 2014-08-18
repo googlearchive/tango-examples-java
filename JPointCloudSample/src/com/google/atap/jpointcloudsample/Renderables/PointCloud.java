@@ -19,7 +19,7 @@ public class PointCloud {
             // the matrix must be included as a modifier of gl_Position
             // Note that the uMVPMatrix factor *must be first* in order
             // for the matrix multiplication product to be correct.
-            "gl_PointSize = 5.0;"+
+            "gl_PointSize = 3.0;"+
             "  gl_Position = uMVPMatrix * vPosition;" +
             "}";
 	private static final String fragmentShaderCode="precision mediump float;" +
@@ -55,7 +55,7 @@ public class PointCloud {
 	{
 		FloatBuffer mPointCloudFloatBuffer;
 		ByteBuffer mVertexByteBuffer;
-		mPointCloudFloatBuffer = ByteBuffer.wrap(byteArray).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer(); 
+		mPointCloudFloatBuffer = ByteBuffer.wrap(byteArray).order(ByteOrder.nativeOrder()).asFloatBuffer(); 
 		mPointCount = mPointCloudFloatBuffer.capacity()/3;
 		mVertexByteBuffer = ByteBuffer.allocateDirect(mPointCloudFloatBuffer.capacity()*BYTES_PER_FLOAT);
 		mVertexByteBuffer.order(ByteOrder.nativeOrder());
@@ -66,9 +66,9 @@ public class PointCloud {
 		for(int i=0; i< mPointCloudFloatBuffer.capacity();i=i+3){
 			if(i+3 < mPointCloudFloatBuffer.capacity())
 			{
-			mVertexBuffer.put(mPointCloudFloatBuffer.get(i)*0.001f);
-			mVertexBuffer.put(-mPointCloudFloatBuffer.get(i+1)*0.001f);
-			mVertexBuffer.put(-mPointCloudFloatBuffer.get(i+2)*0.001f);
+			mVertexBuffer.put(mPointCloudFloatBuffer.get(i));
+			mVertexBuffer.put(-mPointCloudFloatBuffer.get(i+1));
+			mVertexBuffer.put(-mPointCloudFloatBuffer.get(i+2));
 			}
 		}
 		

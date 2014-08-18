@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 import com.google.atap.tangoservice.Tango;
+import com.google.atap.tangoservice.TangoConfig;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
@@ -29,7 +30,11 @@ public class JPointCloud extends Activity {
         mGLView = (GLSurfaceView)findViewById(R.id.gl_surface_view);
         mGLView.setEGLContextClientVersion(2);
         mGLView.setRenderer(mRenderer);
+        mGLView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);		
         mTango = new Tango(this);
+        TangoConfig config = new TangoConfig();
+        config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
+        mTango.lockConfig(config);
         mTango.connectListener(new OnTangoUpdateListener() {
             
         	@Override
@@ -47,12 +52,13 @@ public class JPointCloud extends Activity {
             	try {
             		fileStream.read(buffer, xyzIj.xyzParcelFileDescriptorOffset,
                     xyzIj.xyzParcelFileDescriptorSize);
+            		fileStream.close();
             		mRenderer.mPointCloud.UpdatePoints(buffer);
             		mGLView.requestRender();
             		} catch (IOException e) {
             		e.printStackTrace();
             		}
-            	
+            	 
   //          	for (int i = 0; i < buffer.length; i++) {
    //         		Log.e("XyzIj data", "[i]= "+i+" "+ buffer[i]);
     //        		}
