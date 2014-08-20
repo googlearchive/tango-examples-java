@@ -132,7 +132,7 @@ public class CameraFrustrum {
 	    };
 	    
 	    public void updateViewMatrix(float[] viewMatrix) {
-	    	Matrix.setLookAtM(viewMatrix, 0, mTranslation[0], mTranslation[2]+5, -mTranslation[1]+5, mTranslation[0], mTranslation[2], -mTranslation[1], 0, 1, 0);
+	    	Matrix.setLookAtM(viewMatrix, 0, mTranslation[0], mTranslation[2]+2, -mTranslation[1]+2, mTranslation[0], mTranslation[2], -mTranslation[1], 0, 1, 0);
 		}
 	  
 
