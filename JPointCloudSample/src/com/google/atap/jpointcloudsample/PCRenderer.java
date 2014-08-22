@@ -42,7 +42,7 @@ public class PCRenderer implements GLSurfaceView.Renderer {
 	     mFloorGrid = new Grid();
 	     mPointCloud = new PointCloud();
 	     Matrix.setIdentityM(mViewMatrix, 0);
-	     setLookAtM(mViewMatrix, 0, 0f, 0f, 10f, 0f, 0f, 0f, 0f, 1f, 0f);
+	     setLookAtM(mViewMatrix, 0, 0f,  3f, -3f, 0f, 0f, 0f, 0f, 1f, 0f);
 	}
 
 	@Override
@@ -58,7 +58,7 @@ public class PCRenderer implements GLSurfaceView.Renderer {
 		// TODO Auto-generated method stub
 		GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT); 	
 		mFloorGrid.draw(mViewMatrix, mProjectionMatrix);
-		cameraFrustrum.draw(mViewMatrix, mProjectionMatrix);
+		//cameraFrustrum.draw(mViewMatrix, mProjectionMatrix);
 		mPointCloud.draw(mViewMatrix,mProjectionMatrix);
 	}
 	

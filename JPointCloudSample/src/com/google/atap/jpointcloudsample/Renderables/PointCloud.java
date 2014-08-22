@@ -15,17 +15,19 @@ public class PointCloud {
             // the coordinates of the objects that use this vertex shader
             "uniform mat4 uMVPMatrix;" +
             "attribute vec4 vPosition;" +
+             "varying vec4 vColor;"+
             "void main() {" +
             // the matrix must be included as a modifier of gl_Position
             // Note that the uMVPMatrix factor *must be first* in order
             // for the matrix multiplication product to be correct.
-            "gl_PointSize = 3.0;"+
+            "gl_PointSize = 2.0;"+
             "  gl_Position = uMVPMatrix * vPosition;" +
+            "  vColor = vPosition;" +
             "}";
 	private static final String fragmentShaderCode="precision mediump float;" +
-            "uniform vec4 vColor;" +
+            "varying vec4 vColor;" +
             "void main() {" +
-            "  gl_FragColor = vec4(0.7,0.5,0.8,1.0);" +
+            "  gl_FragColor = vec4(vColor);" +
             "}";
 	
 	private static final int BYTES_PER_FLOAT = 4;
@@ -39,6 +41,7 @@ public class PointCloud {
 	private int mMVPMatrixHandle;
 	static final int COORDS_PER_VERTEX = 3;
 	public int mPointCount;
+	
 	public PointCloud()
 	{
 		   	int vertexShader = PCRenderer.loadShader(GLES20.GL_VERTEX_SHADER,vertexShaderCode);
@@ -47,7 +50,6 @@ public class PointCloud {
 			GLES20.glAttachShader(mProgram, vertexShader);
 			GLES20.glAttachShader(mProgram, fragShader);
 			GLES20.glLinkProgram(mProgram);
-			
 	        Matrix.setIdentityM(modelMatrix, 0);
 	}
 	
@@ -66,9 +68,9 @@ public class PointCloud {
 		for(int i=0; i< mPointCloudFloatBuffer.capacity();i=i+3){
 			if(i+3 < mPointCloudFloatBuffer.capacity())
 			{
-			mVertexBuffer.put(mPointCloudFloatBuffer.get(i));
-			mVertexBuffer.put(-mPointCloudFloatBuffer.get(i+1));
-			mVertexBuffer.put(-mPointCloudFloatBuffer.get(i+2));
+				mVertexBuffer.put(-mPointCloudFloatBuffer.get(i));
+				mVertexBuffer.put(-mPointCloudFloatBuffer.get(i+1));
+				mVertexBuffer.put(mPointCloudFloatBuffer.get(i+2));
 			}
 		}
 		

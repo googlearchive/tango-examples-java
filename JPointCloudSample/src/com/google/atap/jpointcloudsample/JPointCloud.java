@@ -39,7 +39,7 @@ public class JPointCloud extends Activity {
             
         	@Override
         	public void onPoseAvailable(final TangoPoseData pose) {
-        		 mRenderer.cameraFrustrum.updateModelMatrix(pose.translation, pose.rotation);
+        		// mRenderer.cameraFrustrum.updateModelMatrix(pose.translation, pose.rotation);
                  //mGLView.requestRender();
         	}
 
