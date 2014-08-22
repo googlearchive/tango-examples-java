@@ -13,10 +13,6 @@ import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
 import android.app.Activity;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
-import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
-
 
 public class JPointCloud extends Activity {
 	private Tango mTango;
