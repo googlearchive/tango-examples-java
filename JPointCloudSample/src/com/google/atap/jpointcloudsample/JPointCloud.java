@@ -20,6 +20,7 @@ import android.view.MenuItem;
 
 public class JPointCloud extends Activity {
 	private Tango mTango;
+	private TangoConfig mConfig;
 	public PCRenderer mRenderer;
 	public GLSurfaceView mGLView;
     @Override
@@ -32,9 +33,10 @@ public class JPointCloud extends Activity {
         mGLView.setRenderer(mRenderer);
         mGLView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);		
         mTango = new Tango(this);
-        TangoConfig config = new TangoConfig();
-        config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
-        mTango.lockConfig(config);
+        mConfig = new TangoConfig();
+        mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT, mConfig);
+		mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, false);
+        mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
         mTango.connectListener(new OnTangoUpdateListener() {
             
         	@Override
@@ -59,12 +61,33 @@ public class JPointCloud extends Activity {
             		e.printStackTrace();
             		}
             	 
-  //          	for (int i = 0; i < buffer.length; i++) {
-   //         		Log.e("XyzIj data", "[i]= "+i+" "+ buffer[i]);
-    //        		}
+//             	for (int i = 0; i < buffer.length; i++) {
+//            		Log.e("XyzIj data", "[i]= "+i+" "+ buffer[i]);
+//            		}
 				}
         });
-        Log.e("TangoNativeServiceTester", "Attempting to connect...");
-        mTango.connect();
    }
+    
+    @Override
+	protected void onPause()
+	{
+		super.onPause();
+		mTango.unlockConfig();
+		mTango.disconnect();
+	}
+	
+	@Override
+	protected void onResume()
+	{	
+		super.onResume();
+		mTango.lockConfig(mConfig);
+		mTango.connect();
+	}
+	
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		//mTango.unlockConfig();
+	}
+
 }
