@@ -1,0 +1,89 @@
+package com.projecttango.tangoutils.renderables;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
+
+import android.opengl.GLES20;
+import android.opengl.Matrix;
+
+public class PointCloud {
+	
+	private static final int COORDS_PER_VERTEX = 3;
+	
+	private static final String sVertexShaderCode = 
+            "uniform mat4 uMVPMatrix;" +
+            "attribute vec4 vPosition;" +
+             "varying vec4 vColor;"+
+            "void main() {" +
+            "gl_PointSize = 2.0;"+
+            "  gl_Position = uMVPMatrix * vPosition;" +
+            "  vColor = vPosition;" +
+            "}";
+	private static final String sFragmentShaderCode="precision mediump float;" +
+            "varying vec4 vColor;" +
+            "void main() {" +
+            "  gl_FragColor = vec4(vColor);" +
+            "}";
+	
+	private static final int BYTES_PER_FLOAT = 4;
+	
+	private FloatBuffer mVertexBuffer;
+	private final int mProgram;
+	private float[] mModelMatrix = new float[16];
+	private float[] mMvMatrix = new float[16];
+	private float[] mMvpMatrix = new float[16];
+	private int mPosHandle;
+	private int mMVPMatrixHandle;
+	public int mPointCount;
+	
+	public PointCloud() {
+		   	int vertexShader = RenderUtils.loadShader(GLES20.GL_VERTEX_SHADER,sVertexShaderCode);
+			int fragShader = RenderUtils.loadShader(GLES20.GL_FRAGMENT_SHADER, sFragmentShaderCode);
+			mProgram = GLES20.glCreateProgram();
+			GLES20.glAttachShader(mProgram, vertexShader);
+			GLES20.glAttachShader(mProgram, fragShader);
+			GLES20.glLinkProgram(mProgram);
+	        Matrix.setIdentityM(mModelMatrix, 0);
+	}
+	
+	public void UpdatePoints(byte[] byteArray) {
+		FloatBuffer mPointCloudFloatBuffer;
+		ByteBuffer mVertexByteBuffer;
+		mPointCloudFloatBuffer = ByteBuffer.wrap(byteArray).order(ByteOrder.nativeOrder()).asFloatBuffer(); 
+		mPointCount = mPointCloudFloatBuffer.capacity()/3;
+		mVertexByteBuffer = ByteBuffer.allocateDirect(mPointCloudFloatBuffer.capacity()*BYTES_PER_FLOAT);
+		mVertexByteBuffer.order(ByteOrder.nativeOrder());
+		mVertexBuffer = mVertexByteBuffer.asFloatBuffer();
+		mVertexBuffer.clear();
+		mVertexBuffer.position(0);
+		
+		for (int i = 0; i < mPointCloudFloatBuffer.capacity(); i = i + 3) {
+			if (i + 3 < mPointCloudFloatBuffer.capacity()) {
+				mVertexBuffer.put(-mPointCloudFloatBuffer.get(i));
+				mVertexBuffer.put(-mPointCloudFloatBuffer.get(i+1));
+				mVertexBuffer.put(mPointCloudFloatBuffer.get(i+2));
+			}
+		}
+		
+	}
+	
+	public void draw(float[] viewMatrix,float[] projectionMatrix) {
+		if (mPointCount > 0) {
+			GLES20.glUseProgram(mProgram);
+			mVertexBuffer.position(0);
+			Matrix.setIdentityM(mMvMatrix, 0);
+			Matrix.setIdentityM(mMvpMatrix, 0);
+		
+			Matrix.multiplyMM(mMvMatrix, 0, viewMatrix, 0, mModelMatrix, 0);
+			Matrix.multiplyMM(mMvpMatrix, 0, projectionMatrix, 0, mMvMatrix, 0);
+			mPosHandle = GLES20.glGetAttribLocation(mProgram, "vPosition");	
+		    GLES20.glVertexAttribPointer(mPosHandle, COORDS_PER_VERTEX,GLES20.GL_FLOAT, false,0, mVertexBuffer);		
+		    GLES20.glEnableVertexAttribArray(mPosHandle);	
+		    mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");	
+		    GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMvpMatrix, 0);	
+		    GLES20.glDrawArrays(GLES20.GL_POINTS, 0, mPointCount);   
+		}
+	}
+	
+}
