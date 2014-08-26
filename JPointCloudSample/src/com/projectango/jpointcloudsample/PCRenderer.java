@@ -1,4 +1,4 @@
-package com.google.atap.jpointcloudsample;
+package com.projectango.jpointcloudsample;
 
 import static android.opengl.GLES20.GL_DEPTH_TEST;
 import static android.opengl.GLES20.glClearColor;
@@ -9,9 +9,9 @@ import static android.opengl.Matrix.setLookAtM;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-import com.google.atap.jpointcloudsample.Renderables.CameraFrustrum;
-import com.google.atap.jpointcloudsample.Renderables.Grid;
-import com.google.atap.jpointcloudsample.Renderables.PointCloud;
+import com.projecttango.jpointcloudsample.Renderables.CameraFrustrum;
+import com.projecttango.jpointcloudsample.Renderables.Grid;
+import com.projecttango.jpointcloudsample.Renderables.PointCloud;
 
 
 import android.opengl.GLES20;

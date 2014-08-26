@@ -1,10 +1,10 @@
-package com.google.atap.jpointcloudsample.Renderables;
+package com.projecttango.jpointcloudsample.Renderables;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
-import com.google.atap.jpointcloudsample.PCRenderer;
+import com.projectango.jpointcloudsample.PCRenderer;
 
 import android.content.Context;
 import android.opengl.GLES20;

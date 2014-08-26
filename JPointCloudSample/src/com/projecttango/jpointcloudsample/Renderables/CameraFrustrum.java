@@ -1,4 +1,4 @@
-package com.google.atap.jpointcloudsample.Renderables;
+package com.projecttango.jpointcloudsample.Renderables;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -7,7 +7,7 @@ import java.nio.ShortBuffer;
 
 import javax.microedition.khronos.opengles.GL10;
 
-import com.google.atap.jpointcloudsample.PCRenderer;
+import com.projectango.jpointcloudsample.PCRenderer;
 
 import android.opengl.GLES20;
 import android.opengl.Matrix;

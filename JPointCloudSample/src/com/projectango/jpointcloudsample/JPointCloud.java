@@ -1,4 +1,5 @@
-package com.google.atap.jpointcloudsample;
+
+package com.projectango.jpointcloudsample;
 
 
 import java.io.FileInputStream;
@@ -9,6 +10,7 @@ import com.google.atap.tangoservice.TangoConfig;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
+import com.projecttango.jpointcloudsample.R;
 
 import android.app.Activity;
 import android.opengl.GLSurfaceView;
@@ -33,7 +35,9 @@ public class JPointCloud extends Activity {
         mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT, mConfig);
 		mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, false);
         mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
-        mTango.connectListener(new OnTangoUpdateListener() {
+        mTango.connectListener(TangoPoseData.COORDINATE_FRAME_DEVICE,
+        		TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+                new OnTangoUpdateListener() {
             
         	@Override
         	public void onPoseAvailable(final TangoPoseData pose) {
