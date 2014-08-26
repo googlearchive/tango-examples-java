@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">JMotionTrackingSample_Start</string>
+ 	<string name="Quaternion1">Q1 : </string>
+ 	<string name="Quaternion2">Q2 :</string>
+ 	<string name="Quaternion3">Q3 :</string>
+ 	<string name="Quaternion4">Q4 :</string>
+ 	<string name="Position1">Pos1:</string>
+ 	<string name="Position2">Pos2:</string>
+ 	<string name="Position3">Pos3:</string>
+</resources>
