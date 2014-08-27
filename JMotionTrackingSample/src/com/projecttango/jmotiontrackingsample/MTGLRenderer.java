@@ -6,6 +6,7 @@ import javax.microedition.khronos.opengles.GL10;
 import com.projecttango.tangoutils.renderables.Axis;
 import com.projecttango.tangoutils.renderables.CameraFrustum;
 import com.projecttango.tangoutils.renderables.Grid;
+import com.projecttango.tangoutils.renderables.Trajectory;
 
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
@@ -18,10 +19,11 @@ public class MTGLRenderer implements GLSurfaceView.Renderer {
 	private static final float CAMERA_FAR = 200f;
 	private static final int MATRIX_4X4 = 16;
 	
+	private Trajectory mTrajectory;
 	private CameraFrustum mCameraFrustum;
 	private Axis mAxis;
 	private Grid mFloorGrid;
-	private float[] mViewMatrix = new float[16];
+	private float[] mViewMatrix = new float[MATRIX_4X4];
 
 	private float mCameraAspect;
 	private float[] mProjectionMatrix = new float[MATRIX_4X4];
@@ -35,7 +37,7 @@ public class MTGLRenderer implements GLSurfaceView.Renderer {
 		mCameraFrustum = new CameraFrustum();
 		mFloorGrid = new Grid();
 		mAxis = new Axis();
-		
+		mTrajectory = new Trajectory();
 		// Construct the initial view matrix
 		Matrix.setIdentityM(mViewMatrix, 0);
 		Matrix.setLookAtM(mViewMatrix, 0, 0f, 5f, 0f, 0f, 0f, 0f, 0f, 0f, -1f);
@@ -55,6 +57,7 @@ public class MTGLRenderer implements GLSurfaceView.Renderer {
 		mFloorGrid.draw(mViewMatrix, mProjectionMatrix);
 		mAxis.draw(mViewMatrix, mProjectionMatrix);
 		mCameraFrustum.draw(mViewMatrix, mProjectionMatrix);
+		mTrajectory.draw(mViewMatrix, mProjectionMatrix);
 	}
 	
 	public CameraFrustum getCameraFrustum() {
@@ -63,6 +66,10 @@ public class MTGLRenderer implements GLSurfaceView.Renderer {
 
 	public Axis getAxis() {
 		return mAxis;
+	}
+	
+	public Trajectory getTrajectory() {
+		return mTrajectory;
 	}
 
 }
