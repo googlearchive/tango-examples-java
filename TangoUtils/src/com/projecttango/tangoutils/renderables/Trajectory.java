@@ -25,7 +25,7 @@ import android.opengl.GLES20;
 import android.opengl.Matrix;
 import android.util.Log;
 
-public class Trajectory {
+public class Trajectory extends Renderable {
 
 	private static final int COORDS_PER_VERTEX = 3;
 	
@@ -47,11 +47,7 @@ public class Trajectory {
 			"}";
 	
 	private FloatBuffer mVertexBuffer;
-	private float[] mVertices = new float[10000]; // max number of points trajectory can have.
-
-	private float[] mModelMatrix = new float[16];
-	private float[] mMvMatrix = new float[16];
-	private float[] mMvpMatrix = new float[16];
+	private float[] mVertices = new float[10000];
 	
 	public int mTrajectoryCount;
 	private final int mProgram;
@@ -60,9 +56,9 @@ public class Trajectory {
 
 	public Trajectory() {
 		// Set model matrix to the identity
-		Matrix.setIdentityM(mModelMatrix, 0);
+		Matrix.setIdentityM(getModelMatrix(), 0);
 		
-		mTrajectoryCount =0;
+		mTrajectoryCount = 0;
 		
 		// Put vertices into a vertex buffer
 		ByteBuffer byteBuf = ByteBuffer.allocateDirect(mVertices.length * 4);
@@ -90,21 +86,14 @@ public class Trajectory {
 		mVertexBuffer.put(translation[2]);
 	}
 
-	/**
-	 * Applies the view and projection matrices and draws the Axis.
-	 * @param viewMatrix the view matrix to map from world space to camera space.
-	 * @param projectionMatrix the projection matrix to map from camera space to screen space.
-	 */
+	@Override
 	public void draw(float[] viewMatrix, float[] projectionMatrix) {
-
 		GLES20.glUseProgram(mProgram);
-		//updateViewMatrix(viewMatrix);
+		// updateViewMatrix(viewMatrix);
 		mVertexBuffer.position(0);
+		
 		// Compose the model, view, and projection matrices into a single m-v-p matrix
-		Matrix.setIdentityM(mMvMatrix, 0);
-		Matrix.setIdentityM(mMvpMatrix, 0);
-		Matrix.multiplyMM(mMvMatrix, 0, viewMatrix, 0, mModelMatrix, 0);
-		Matrix.multiplyMM(mMvpMatrix, 0, projectionMatrix, 0, mMvMatrix, 0);
+		updateMvpMatrix(viewMatrix, projectionMatrix);
 
 		// Load vertex attribute data
 		mPosHandle = GLES20.glGetAttribLocation(mProgram, "vPosition");
@@ -114,7 +103,7 @@ public class Trajectory {
 
 		// Draw the Axis
 		mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
-		GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMvpMatrix, 0);
+		GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, getMvpMatrix(), 0);
 		GLES20.glLineWidth(1);
 		GLES20.glDrawArrays(GLES20.GL_LINE_STRIP, 0, mTrajectoryCount);
 		GLES20.glUseProgram(0);
