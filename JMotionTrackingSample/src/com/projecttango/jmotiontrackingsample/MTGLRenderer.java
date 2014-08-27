@@ -40,7 +40,7 @@ public class MTGLRenderer implements GLSurfaceView.Renderer {
 		mTrajectory = new Trajectory();
 		// Construct the initial view matrix
 		Matrix.setIdentityM(mViewMatrix, 0);
-		Matrix.setLookAtM(mViewMatrix, 0, 0f, 5f, 0f, 0f, 0f, 0f, 0f, 0f, -1f);
+		Matrix.setLookAtM(mViewMatrix, 0, 0, 2f, 5f, 0f, 0f, 0f, 0f, 1f, 0f);
 	}
 
 	@Override

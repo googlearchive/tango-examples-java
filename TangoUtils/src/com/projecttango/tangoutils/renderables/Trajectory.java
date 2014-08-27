@@ -98,7 +98,7 @@ public class Trajectory {
 		mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
 		GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMvpMatrix, 0);
 		GLES20.glLineWidth(1);
-		GLES20.glDrawArrays(GLES20.GL_LINE_STRIP, 0, mTrajectoryCount);
+		GLES20.glDrawArrays(GLES20.GL_LINES, 0, mTrajectoryCount);
 		GLES20.glUseProgram(0);
 	}
 	

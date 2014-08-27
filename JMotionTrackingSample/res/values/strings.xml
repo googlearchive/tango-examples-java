@@ -5,8 +5,8 @@
  	<string name="Quaternion2">Q2 :</string>
  	<string name="Quaternion3">Q3 :</string>
  	<string name="Quaternion4">Q4 :</string>
- 	<string name="Position1">Pos1:</string>
- 	<string name="Position2">Pos2:</string>
- 	<string name="Position3">Pos3:</string>
+ 	<string name="Position1">PosX:</string>
+ 	<string name="Position2">PosY:</string>
+ 	<string name="Position3">PosZ:</string>
  	<string name="Status">Status:</string>
 </resources>

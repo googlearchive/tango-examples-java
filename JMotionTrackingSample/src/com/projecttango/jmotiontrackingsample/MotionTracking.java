@@ -65,7 +65,7 @@ public class MotionTracking extends Activity {
 				// Update the Axis and CameraFrustum with new pose data, then render
 				mRenderer.getCameraFrustum().updateModelMatrix(pose.translation, pose.rotation);
 				mRenderer.getAxis().updateModelMatrix(pose.translation, pose.rotation);
-				mRenderer.getTrajectory().updateTrajectory(pose.translation);
+				//mRenderer.getTrajectory().updateTrajectory(pose.translation);
 				mGLView.requestRender();
 				
 				// Run UI updates on the UI thread, doing this in the service's main thread

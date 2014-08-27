@@ -3,7 +3,7 @@ package com.projecttango.tangoutils;
 public class MathUtils {
 	
 	public static float[] convertQuaternionToOpenGl(float[] quaternion) {
-		double[] xAxis = {-1, 0, 0};
+		float[] xAxis = {1f, 0f, 0f};
 		float[] rotation_offsetX = rotateQuaternionWithAngleAxis(quaternion, 3.141517f/2f, xAxis);
 		float[] openglQuaternion = {rotation_offsetX[3],rotation_offsetX[0],rotation_offsetX[2],-rotation_offsetX[1]};
 		return openglQuaternion;		
@@ -17,12 +17,11 @@ public class MathUtils {
 		inversedQ[1] = -quaternion[1] / sqNorm;
 		inversedQ[2] = -quaternion[2] / sqNorm;
 		inversedQ[3] = quaternion[3] / sqNorm;
-		
 		return inversedQ;
 	}
 	
-	public static float[] rotateQuaternionWithAngleAxis(float[] quaternion, double angleInRadians, 
-			double[] axisVector) {
+	public static float[] rotateQuaternionWithAngleAxis(float[] quaternion, float angleInRadians, 
+			float[] axisVector) {
 		
 		float norm = (float) Math.sqrt(Math.pow(axisVector[0], 2) + Math.pow(axisVector[1], 2) + Math.pow(axisVector[2], 2));
 		float sin_half_angle = (float) Math.sin(angleInRadians / 2.0f);
@@ -30,19 +29,19 @@ public class MathUtils {
         float y = (float) (sin_half_angle * axisVector[1] / norm);
         float z = (float) (sin_half_angle * axisVector[2] / norm);
         float w = (float)Math.cos(angleInRadians / 2.0f);
-        float[] rotatedQuaternion = {0.7071067811865476f, 0 ,0.7071067811865476f, 0};
-        float[] multiQuaternion = multiplyQuarternions(rotatedQuaternion, quaternion);
+        float[] rotatedQuaternion = {x,y,z, w};
+        float[] multiQuaternion = multiplyQuarternions(quaternion, rotatedQuaternion);
         
         return multiQuaternion;
 	}
 	
 	public static float[] multiplyQuarternions(float[] a,float[] b) {
 		float[] multipliedQuaternion = new float[4];
-		multipliedQuaternion[3] = a[0]*b[0] - a[1]*b[1] - a[2]*b[2] - a[3]*b[3];
-		multipliedQuaternion[0] = a[0]*b[1] + a[1]*b[0] + a[2]*b[3] - a[3]*b[2];
-		multipliedQuaternion[1] = a[0]*b[2] - a[1]*b[3] + a[2]*b[0] + a[3]*b[1];
-		multipliedQuaternion[2] = a[0]*b[3] + a[1]*b[2] - a[2]*b[1] + a[3]*b[3];
-		
+		int w =3;int x=0;int y=1;int z=2;
+		multipliedQuaternion[w] = a[w]*b[w] - a[x]*b[x] - a[y]*b[y] - a[z]*b[z];
+		multipliedQuaternion[x] = a[w]*b[x] + a[x]*b[w] + a[y]*b[z] - a[z]*b[y];
+		multipliedQuaternion[y] = a[w]*b[y] - a[x]*b[z] + a[y]*b[w] + a[z]*b[x];
+		multipliedQuaternion[z] = a[w]*b[z] + a[x]*b[y] - a[y]*b[x] + a[z]*b[w];
 		return multipliedQuaternion;
 	}
 	
