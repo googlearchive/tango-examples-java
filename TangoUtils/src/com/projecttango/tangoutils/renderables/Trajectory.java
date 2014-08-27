@@ -1,3 +1,19 @@
+/*
+ * Copyright 2014 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.projecttango.tangoutils.renderables;
 
 import java.nio.ByteBuffer;
@@ -7,6 +23,7 @@ import java.nio.FloatBuffer;
 
 import android.opengl.GLES20;
 import android.opengl.Matrix;
+import android.util.Log;
 
 public class Trajectory {
 
@@ -36,7 +53,7 @@ public class Trajectory {
 	private float[] mMvMatrix = new float[16];
 	private float[] mMvpMatrix = new float[16];
 	
-	private int mTrajectoryCount;
+	public int mTrajectoryCount;
 	private final int mProgram;
 	private int mPosHandle;
 	private int mMVPMatrixHandle;
@@ -67,6 +84,7 @@ public class Trajectory {
 	
 	public void updateTrajectory(float[] translation){
 		mTrajectoryCount++;
+		Log.e("Count is :","" + mTrajectoryCount);
 		mVertexBuffer.put(translation[0]);
 		mVertexBuffer.put(translation[1]);
 		mVertexBuffer.put(translation[2]);
@@ -98,7 +116,7 @@ public class Trajectory {
 		mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
 		GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMvpMatrix, 0);
 		GLES20.glLineWidth(1);
-		GLES20.glDrawArrays(GLES20.GL_LINES, 0, mTrajectoryCount);
+		GLES20.glDrawArrays(GLES20.GL_LINE_STRIP, 0, mTrajectoryCount);
 		GLES20.glUseProgram(0);
 	}
 	
