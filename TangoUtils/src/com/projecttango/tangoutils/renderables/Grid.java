@@ -7,7 +7,7 @@ import java.nio.FloatBuffer;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
 
-public class Grid {
+public class Grid extends Renderable {
 
 	private static final int COORDS_PER_VERTEX = 3;
 	private static final int GRID_RANGE_M = 100;
@@ -28,15 +28,12 @@ public class Grid {
 
 	private FloatBuffer mVertexBuffer;
 	private final int mProgram;
-	private float[] mModelMatrix = new float[16];
-	private float[] mMvMatrix = new float[16];
-	private float[] mMvpMatrix = new float[16];
 	private int mPosHandle;
 	private int mMVPMatrixHandle;
 
 	public Grid() {
 		// Reset the model matrix to the identity
-		Matrix.setIdentityM(mModelMatrix, 0);
+		Matrix.setIdentityM(getModelMatrix(), 0);
 		
 		// Allocate a vertex buffer
 		ByteBuffer vertexByteBuffer = ByteBuffer.allocateDirect(
@@ -65,20 +62,14 @@ public class Grid {
 		GLES20.glLinkProgram(mProgram);
 	}
 
-	/**
-	 * Applies the view and projection matrices and draws the Grid.
-	 * @param viewMatrix the view matrix to map from world space to camera space.
-	 * @param projectionMatrix the projection matrix to map from camera space to screen space.
-	 */
+
+	@Override
 	public void draw(float[] viewMatrix, float[] projectionMatrix) {
 		GLES20.glUseProgram(mProgram);
 		mVertexBuffer.position(0);
 		
 		// Compose the model, view, and projection matrices into a single m-v-p matrix
-		Matrix.setIdentityM(mMvMatrix, 0);
-		Matrix.setIdentityM(mMvpMatrix, 0);
-		Matrix.multiplyMM(mMvMatrix, 0, viewMatrix, 0, mModelMatrix, 0);
-		Matrix.multiplyMM(mMvpMatrix, 0, projectionMatrix, 0, mMvMatrix, 0);
+		updateMvpMatrix(viewMatrix, projectionMatrix);
 
 		// Load vertex attribute data
 		mPosHandle = GLES20.glGetAttribLocation(mProgram, "vPosition");
@@ -88,7 +79,7 @@ public class Grid {
 		
 		// Draw the Grid
 		mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
-		GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMvpMatrix, 0);
+		GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, getMvpMatrix(), 0);
 		GLES20.glLineWidth(3);
 		GLES20.glDrawArrays(GLES20.GL_LINES, 0, (GRID_RANGE_M * 2 + 1) * 4);
 	}

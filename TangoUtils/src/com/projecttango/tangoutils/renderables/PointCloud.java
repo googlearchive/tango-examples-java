@@ -7,7 +7,7 @@ import java.nio.FloatBuffer;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
 
-public class PointCloud {
+public class PointCloud extends Renderable {
 	
 	private static final int COORDS_PER_VERTEX = 3;
 	
@@ -30,9 +30,6 @@ public class PointCloud {
 	
 	private FloatBuffer mVertexBuffer;
 	private final int mProgram;
-	private float[] mModelMatrix = new float[16];
-	private float[] mMvMatrix = new float[16];
-	private float[] mMvpMatrix = new float[16];
 	private int mPosHandle;
 	private int mMVPMatrixHandle;
 	public int mPointCount;
@@ -44,7 +41,7 @@ public class PointCloud {
 			GLES20.glAttachShader(mProgram, vertexShader);
 			GLES20.glAttachShader(mProgram, fragShader);
 			GLES20.glLinkProgram(mProgram);
-	        Matrix.setIdentityM(mModelMatrix, 0);
+	        Matrix.setIdentityM(getModelMatrix(), 0);
 	}
 	
 	public void UpdatePoints(byte[] byteArray) {
@@ -68,20 +65,19 @@ public class PointCloud {
 		
 	}
 	
+	@Override
 	public void draw(float[] viewMatrix,float[] projectionMatrix) {
 		if (mPointCount > 0) {
 			GLES20.glUseProgram(mProgram);
 			mVertexBuffer.position(0);
-			Matrix.setIdentityM(mMvMatrix, 0);
-			Matrix.setIdentityM(mMvpMatrix, 0);
-		
-			Matrix.multiplyMM(mMvMatrix, 0, viewMatrix, 0, mModelMatrix, 0);
-			Matrix.multiplyMM(mMvpMatrix, 0, projectionMatrix, 0, mMvMatrix, 0);
+			
+			this.updateMvpMatrix(viewMatrix, projectionMatrix);
+			
 			mPosHandle = GLES20.glGetAttribLocation(mProgram, "vPosition");	
 		    GLES20.glVertexAttribPointer(mPosHandle, COORDS_PER_VERTEX,GLES20.GL_FLOAT, false,0, mVertexBuffer);		
 		    GLES20.glEnableVertexAttribArray(mPosHandle);	
 		    mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");	
-		    GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMvpMatrix, 0);	
+		    GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, getMvpMatrix(), 0);	
 		    GLES20.glDrawArrays(GLES20.GL_POINTS, 0, mPointCount);   
 		}
 	}

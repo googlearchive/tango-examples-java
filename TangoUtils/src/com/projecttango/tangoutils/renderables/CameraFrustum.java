@@ -9,7 +9,7 @@ import com.projecttango.tangoutils.MathUtils;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
 
-public class CameraFrustum {
+public class CameraFrustum extends Renderable {
 	
 	private static final int COORDS_PER_VERTEX = 3;
 
@@ -84,17 +84,13 @@ public class CameraFrustum {
 			0.0f, 1.0f, 0.0f, 1.0f,
 			0.0f, 1.0f, 0.0f, 1.0f};
 
-	private float[] mModelMatrix = new float[16];
-	private float[] mMvMatrix = new float[16];
-	private float[] mMvpMatrix = new float[16];
-
 	private final int mProgram;
 	private int mPosHandle, mColorHandle;
 	private int mMVPMatrixHandle;
 
 	public CameraFrustum() {
 		// Reset the model matrix to the identity
-		Matrix.setIdentityM(mModelMatrix, 0);
+		Matrix.setIdentityM(getModelMatrix(), 0);
 
 		// Load the vertices into a vertex buffer
 		ByteBuffer byteBuf = ByteBuffer.allocateDirect(mVertices.length * 4);
@@ -133,15 +129,15 @@ public class CameraFrustum {
 		
 		//quaternionMatrix = MathUtils.quaternionM(openglQuaternion);
 		quaternionMatrix = MathUtils.quaternionM(quaternion);		
-		Matrix.setIdentityM(mModelMatrix, 0);
-		Matrix.translateM(mModelMatrix, 0, translation[0], translation[2], -translation[1]);
+		Matrix.setIdentityM(getModelMatrix(), 0);
+		Matrix.translateM(getModelMatrix(), 0, translation[0], translation[2], -translation[1]);
 
 		// Update the model matrix with rotation data
 		if (quaternionMatrix != null) {
 			float[] mTempMatrix = new float[16];
 			Matrix.setIdentityM(mTempMatrix, 0);	
-			Matrix.multiplyMM(mTempMatrix, 0, mModelMatrix, 0, quaternionMatrix, 0);
-			System.arraycopy(mTempMatrix, 0, mModelMatrix, 0, 16);
+			Matrix.multiplyMM(mTempMatrix, 0, getModelMatrix(), 0, quaternionMatrix, 0);
+			System.arraycopy(mTempMatrix, 0, getModelMatrix(), 0, 16);
 		}
 	};
 
@@ -150,20 +146,13 @@ public class CameraFrustum {
 				mTranslation[2], 0, 1, 0);
 	}
 
-	/**
-	 * Applies the view and projection matrices and draws the CameraFrustum.
-	 * @param viewMatrix the view matrix to map from world space to camera space.
-	 * @param projectionMatrix the projection matrix to map from camera space to screen space.
-	 */
+	@Override
 	public void draw(float[] viewMatrix, float[] projectionMatrix) {
 		GLES20.glUseProgram(mProgram);
 		// updateViewMatrix(viewMatrix);
 
 		// Compose the model, view, and projection matrices into a single mvp matrix
-		Matrix.setIdentityM(mMvMatrix, 0);
-		Matrix.setIdentityM(mMvpMatrix, 0);
-		Matrix.multiplyMM(mMvMatrix, 0, viewMatrix, 0, mModelMatrix, 0);
-		Matrix.multiplyMM(mMvpMatrix, 0, projectionMatrix, 0, mMvMatrix, 0);
+		updateMvpMatrix(viewMatrix, projectionMatrix);
 
 		// Load vertex attribute data
 		mPosHandle = GLES20.glGetAttribLocation(mProgram, "vPosition");
@@ -178,7 +167,7 @@ public class CameraFrustum {
 
 		// Draw the CameraFrustum
 		mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
-		GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMvpMatrix, 0);
+		GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, getMvpMatrix(), 0);
 		GLES20.glLineWidth(5);
 		GLES20.glDrawArrays(GLES20.GL_LINES, 0, 16);
 	}

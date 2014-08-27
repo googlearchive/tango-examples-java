@@ -58,14 +58,13 @@ public class MotionTracking extends Activity {
 		// Listen for new Tango data
 		mTango.connectListener(TangoPoseData.COORDINATE_FRAME_DEVICE,
                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,new OnTangoUpdateListener() {
-			final DecimalFormat fourDec = new DecimalFormat("0.0000");
 
 			@Override
 			public void onPoseAvailable(final TangoPoseData pose) {
 				// Update the Axis and CameraFrustum with new pose data, then render
 				mRenderer.getCameraFrustum().updateModelMatrix(pose.translation, pose.rotation);
 				mRenderer.getAxis().updateModelMatrix(pose.translation, pose.rotation);
-				//mRenderer.getTrajectory().updateTrajectory(pose.translation);
+				// mRenderer.getTrajectory().updateTrajectory(pose.translation);
 				mGLView.requestRender();
 				
 				// Run UI updates on the UI thread, doing this in the service's main thread
@@ -74,23 +73,23 @@ public class MotionTracking extends Activity {
 					@Override
 					public void run() {
 						// Display pose data on screen in TextViews
-						mPoseX.setText(fourDec.format(pose.translation[0]));
-						mPoseY.setText(fourDec.format(pose.translation[1]));
-						mPoseZ.setText(fourDec.format(pose.translation[2]));
-						mPoseQuaternion0.setText(fourDec.format(pose.rotation[0]));
-						mPoseQuaternion1.setText(fourDec.format(pose.rotation[1]));
-						mPoseQuaternion2.setText(fourDec.format(pose.rotation[2]));
-						mPoseQuaternion3.setText(fourDec.format(pose.rotation[3]));
-						if(pose.statusCode == TangoPoseData.POSE_VALID){
+						mPoseX.setText(Float.toString(pose.translation[0]));
+						mPoseY.setText(Float.toString(pose.translation[1]));
+						mPoseZ.setText(Float.toString(pose.translation[2]));
+						mPoseQuaternion0.setText(Float.toString(pose.rotation[0]));
+						mPoseQuaternion1.setText(Float.toString(pose.rotation[1]));
+						mPoseQuaternion2.setText(Float.toString(pose.rotation[2]));
+						mPoseQuaternion3.setText(Float.toString(pose.rotation[3]));
+						if (pose.statusCode == TangoPoseData.POSE_VALID) {
 							mPoseStatus.setText("Valid");
 						}
-						else if(pose.statusCode == TangoPoseData.POSE_INVALID){
+						else if (pose.statusCode == TangoPoseData.POSE_INVALID) {
 							mPoseStatus.setText("Invalid");
 						}
-						else if(pose.statusCode == TangoPoseData.POSE_INITIALIZING){
+						else if (pose.statusCode == TangoPoseData.POSE_INITIALIZING) {
 							mPoseStatus.setText("Initializing");
 						}
-						else if(pose.statusCode == TangoPoseData.POSE_UNKNOWN){
+						else if (pose.statusCode == TangoPoseData.POSE_UNKNOWN) {
 							mPoseStatus.setText("Unknown");
 						}
 					}
@@ -121,7 +120,7 @@ public class MotionTracking extends Activity {
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		// mTango.unlockConfig();
+		mTango.unlockConfig();
 	}
 	
 }
