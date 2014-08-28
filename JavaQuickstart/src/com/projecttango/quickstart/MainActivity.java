@@ -36,7 +36,8 @@ public class MainActivity extends Activity {
 	
 	private TextView mTranslationTextView;
 	private TextView mRotationTextView;
-	private Tango mTango;
+	
+  private Tango mTango;
 	private TangoConfig mConfig;
 	
 	@Override
@@ -71,7 +72,7 @@ public class MainActivity extends Activity {
 				
 				// Output to LogCat
 				String logMsg = translationMsg + " | " + rotationMsg;
-				Log.w(TAG, logMsg);
+				Log.i(TAG, logMsg);
 				
 				// Display data in TextViews.  This must be done inside a runOnUiThread call because
 				// 	it affects the UI, which will cause an error if performed from the Tango
