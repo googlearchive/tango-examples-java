@@ -30,13 +30,17 @@ import com.projecttango.jpointcloudsample.R;
 import android.app.Activity;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
+import android.util.Log;
+import android.widget.TextView;
 
 public class JPointCloud extends Activity {
 	private Tango mTango;
 	private TangoConfig mConfig;
 	private PCRenderer mRenderer;
 	private GLSurfaceView mGLView;
-	
+	private TextView mPointCount;
+	private TextView mVersion;
+	private String mServiceVersion;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -44,6 +48,9 @@ public class JPointCloud extends Activity {
         
         mRenderer = new PCRenderer();
         mGLView = (GLSurfaceView)findViewById(R.id.gl_surface_view);
+        mPointCount = (TextView) findViewById(R.id.vertexCount);
+        mVersion=  (TextView) findViewById(R.id.version);
+        
         mGLView.setEGLContextClientVersion(2);
         mGLView.setRenderer(mRenderer);
         mGLView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);	
@@ -53,9 +60,10 @@ public class JPointCloud extends Activity {
         mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT, mConfig);
 		mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, false);
         mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
-        
-        mTango.connectListener(TangoPoseData.COORDINATE_FRAME_DEVICE, 
-        		TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE, new OnTangoUpdateListener() {
+        mServiceVersion=mConfig.getString("tango_service_library_version");
+    	// Display the version of Tango Service
+		mVersion.setText(mServiceVersion);
+        mTango.connectListener( new OnTangoUpdateListener() {
         	
         	@Override
         	public void onPoseAvailable(final TangoPoseData pose) {
@@ -64,7 +72,7 @@ public class JPointCloud extends Activity {
         	}
 
 			@Override
-			public void onXyzIjAvailable(TangoXyzIjData xyzIj) {
+			public void onXyzIjAvailable(final TangoXyzIjData xyzIj) {
 				byte[] buffer = new byte[xyzIj.xyzParcelFileDescriptorSize];
             	FileInputStream fileStream = new FileInputStream(
                 xyzIj.xyzParcelFileDescriptor.getFileDescriptor());
@@ -78,6 +86,15 @@ public class JPointCloud extends Activity {
             	} catch (IOException e) {
             		e.printStackTrace();
             	}
+            	
+            	runOnUiThread(new Runnable() {
+					@Override
+					public void run() {
+						// Display Number of points in the Point Cloud in TextViews
+						mPointCount.setText(Integer.toString(xyzIj.xyzCount));
+					}
+				});
+            	
 			}
         });
    }

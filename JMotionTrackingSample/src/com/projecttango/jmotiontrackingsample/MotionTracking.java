@@ -40,9 +40,11 @@ public class MotionTracking extends Activity {
 	private TextView mPoseQuaternion2;
 	private TextView mPoseQuaternion3;
 	private TextView mPoseStatus;
+	private TextView mVersion;
+	
 	private MTGLRenderer mRenderer;
 	private GLSurfaceView mGLView;
-
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -56,6 +58,7 @@ public class MotionTracking extends Activity {
 		mPoseQuaternion2 = (TextView) findViewById(R.id.Quaternion3);
 		mPoseQuaternion3 = (TextView) findViewById(R.id.Quaternion4);
 		mPoseStatus = (TextView) findViewById(R.id.Status);
+		mVersion = (TextView) findViewById(R.id.version);
 		mGLView = (GLSurfaceView) findViewById(R.id.gl_surface_view);
 
 		mRenderer = new MTGLRenderer();
@@ -68,10 +71,9 @@ public class MotionTracking extends Activity {
 		mConfig = new TangoConfig();
 		mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT, mConfig);
 		mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
-		
+		mVersion.setText(mConfig.getString("tango_service_library_version"));
 		// Listen for new Tango data
-		mTango.connectListener(TangoPoseData.COORDINATE_FRAME_DEVICE,
-                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,new OnTangoUpdateListener() {
+		mTango.connectListener(new OnTangoUpdateListener() {
 
 			@Override
 			public void onPoseAvailable(final TangoPoseData pose) {

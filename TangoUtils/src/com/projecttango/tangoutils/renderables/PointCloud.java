@@ -32,14 +32,14 @@ public class PointCloud extends Renderable {
             "attribute vec4 vPosition;" +
              "varying vec4 vColor;"+
             "void main() {" +
-            "gl_PointSize = 2.0;"+
+            "gl_PointSize = 3.0;"+
             "  gl_Position = uMVPMatrix * vPosition;" +
             "  vColor = vPosition;" +
             "}";
 	private static final String sFragmentShaderCode="precision mediump float;" +
             "varying vec4 vColor;" +
             "void main() {" +
-            "  gl_FragColor = vec4(vColor);" +
+            "  gl_FragColor = vec4(-vColor);" +
             "}";
 	
 	private static final int BYTES_PER_FLOAT = 4;
@@ -73,12 +73,11 @@ public class PointCloud extends Renderable {
 		
 		for (int i = 0; i < mPointCloudFloatBuffer.capacity(); i = i + 3) {
 			if (i + 3 < mPointCloudFloatBuffer.capacity()) {
-				mVertexBuffer.put(-mPointCloudFloatBuffer.get(i));
+				mVertexBuffer.put(mPointCloudFloatBuffer.get(i));
 				mVertexBuffer.put(-mPointCloudFloatBuffer.get(i+1));
-				mVertexBuffer.put(mPointCloudFloatBuffer.get(i+2));
+				mVertexBuffer.put(-mPointCloudFloatBuffer.get(i+2));
 			}
 		}
-		
 	}
 	
 	@Override
@@ -86,9 +85,7 @@ public class PointCloud extends Renderable {
 		if (mPointCount > 0) {
 			GLES20.glUseProgram(mProgram);
 			mVertexBuffer.position(0);
-			
-			this.updateMvpMatrix(viewMatrix, projectionMatrix);
-			
+			this.updateMvpMatrix(viewMatrix, projectionMatrix);			
 			mPosHandle = GLES20.glGetAttribLocation(mProgram, "vPosition");	
 		    GLES20.glVertexAttribPointer(mPosHandle, COORDS_PER_VERTEX,GLES20.GL_FLOAT, false,0, mVertexBuffer);		
 		    GLES20.glEnableVertexAttribArray(mPosHandle);	
@@ -98,4 +95,7 @@ public class PointCloud extends Renderable {
 		}
 	}
 	
+	public int getPointCount(){
+		return mPointCount;
+	}
 }
