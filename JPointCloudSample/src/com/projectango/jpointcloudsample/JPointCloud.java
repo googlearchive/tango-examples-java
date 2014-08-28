@@ -63,8 +63,7 @@ public class JPointCloud extends Activity {
         mServiceVersion=mConfig.getString("tango_service_library_version");
     	// Display the version of Tango Service
 		mVersion.setText(mServiceVersion);
-        mTango.connectListener(TangoPoseData.COORDINATE_FRAME_DEVICE, 
-        		TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE, new OnTangoUpdateListener() {
+        mTango.connectListener( new OnTangoUpdateListener() {
         	
         	@Override
         	public void onPoseAvailable(final TangoPoseData pose) {
@@ -73,7 +72,7 @@ public class JPointCloud extends Activity {
         	}
 
 			@Override
-			public void onXyzIjAvailable(TangoXyzIjData xyzIj) {
+			public void onXyzIjAvailable(final TangoXyzIjData xyzIj) {
 				byte[] buffer = new byte[xyzIj.xyzParcelFileDescriptorSize];
             	FileInputStream fileStream = new FileInputStream(
                 xyzIj.xyzParcelFileDescriptor.getFileDescriptor());
@@ -92,7 +91,7 @@ public class JPointCloud extends Activity {
 					@Override
 					public void run() {
 						// Display Number of points in the Point Cloud in TextViews
-						mPointCount.setText(Integer.toString(mRenderer.getPointCloud().getPointCount()));
+						mPointCount.setText(Integer.toString(xyzIj.xyzCount));
 					}
 				});
             	

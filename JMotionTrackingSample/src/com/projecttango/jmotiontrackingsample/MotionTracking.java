@@ -73,8 +73,7 @@ public class MotionTracking extends Activity {
 		mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
 		mVersion.setText(mConfig.getString("tango_service_library_version"));
 		// Listen for new Tango data
-		mTango.connectListener(TangoPoseData.COORDINATE_FRAME_DEVICE,
-                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,new OnTangoUpdateListener() {
+		mTango.connectListener(new OnTangoUpdateListener() {
 
 			@Override
 			public void onPoseAvailable(final TangoPoseData pose) {
