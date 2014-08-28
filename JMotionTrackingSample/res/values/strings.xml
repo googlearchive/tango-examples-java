@@ -24,4 +24,5 @@
  	<string name="Position2">PosY:</string>
  	<string name="Position3">PosZ:</string>
  	<string name="Status">Status:</string>
+ 		<string name="Version">Version:</string>
 </resources>

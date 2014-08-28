@@ -61,7 +61,8 @@ public class JPointCloud extends Activity {
 		mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, false);
         mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
         mServiceVersion=mConfig.getString("tango_service_library_version");
-        Log.e("Version is ", mServiceVersion);
+    	// Display the version of Tango Service
+		mVersion.setText(mServiceVersion);
         mTango.connectListener(TangoPoseData.COORDINATE_FRAME_DEVICE, 
         		TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE, new OnTangoUpdateListener() {
         	
@@ -90,8 +91,6 @@ public class JPointCloud extends Activity {
             	runOnUiThread(new Runnable() {
 					@Override
 					public void run() {
-						// Display the version of Tango Service
-						mVersion.setText(mServiceVersion);
 						// Display Number of points in the Point Cloud in TextViews
 						mPointCount.setText(Integer.toString(mRenderer.getPointCloud().getPointCount()));
 					}
