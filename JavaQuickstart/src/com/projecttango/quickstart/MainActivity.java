@@ -6,6 +6,7 @@ import com.google.atap.tangoservice.TangoConfig;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
@@ -14,8 +15,11 @@ import android.widget.TextView;
 public class MainActivity extends Activity {
 
 	private static final String TAG = MainActivity.class.getSimpleName();
+	private static final String sTranslationFormat = "Translation: %f, %f, %f";
+	private static final String sRotationFormat = "Rotation: %f, %f, %f, %f";
 	
-	private TextView mTextView;
+	private TextView mTranslationTextView;
+	private TextView mRotationTextView;
 	private Tango mTango;
 	private TangoConfig mConfig;
 	
@@ -24,8 +28,8 @@ public class MainActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		
-		mTextView = (TextView) findViewById(R.id.main_text_view);
-		mTextView.setText("Welcome to Tango");
+		mTranslationTextView = (TextView) findViewById(R.id.translation_text_view);
+		mRotationTextView = (TextView) findViewById(R.id.rotation_text_view);
 	
 		// Instantiate Tango client
 		mTango = new Tango(this);
@@ -40,24 +44,27 @@ public class MainActivity extends Activity {
 		// Add a listener for Tango pose data
 		mTango.connectListener(new OnTangoUpdateListener() {
 
+			@SuppressLint("DefaultLocale") 
 			@Override
 			public void onPoseAvailable(TangoPoseData pose) {
-				// Log translation and rotation data to LogCat
-				String translationFormat = "Translation: %f, %f, %f";
-				String rotationFormat = "Rotation: %f, %f, %f, %f";
-				final String logMessage = String.format(translationFormat, pose.translation) +
-						" | " + String.format(rotationFormat, pose.rotation);
+				// Format Translation and Rotation data
+				final String translationMsg = String.format(sTranslationFormat, pose.translation[0],
+						pose.translation[1], pose.translation[2]);
+				final String rotationMsg = String.format(sRotationFormat, pose.rotation[0],
+						pose.rotation[1], pose.rotation[2], pose.rotation[3]);
 				
 				// Output to LogCat
-				Log.i(TAG, logMessage);
+				String logMsg = translationMsg + " | " + rotationMsg;
+				Log.w(TAG, logMsg);
 				
-				// Display in TextView.  This must be done inside a runOnUiThread call because
+				// Display in TextViews.  This must be done inside a runOnUiThread call because
 				// 	it affects the UI, which will cause an error if performed from the Tango
 				//	service thread
 				runOnUiThread(new Runnable() {
 					@Override
 					public void run() {
-						mTextView.setText(logMessage);
+						mTranslationTextView.setText(translationMsg);
+						mRotationTextView.setText(rotationMsg);
 					}	
 				});
 			}
@@ -80,7 +87,14 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onPause() {
 		super.onPause();
-		// mTango.unlockConfig();
+		mTango.unlockConfig();
+		mTango.disconnect();
+	}
+	
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		mTango.unlockConfig();
 		mTango.disconnect();
 	}
 	
