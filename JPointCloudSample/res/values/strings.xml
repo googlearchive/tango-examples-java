@@ -17,7 +17,7 @@
 <resources>
 
     <string name="app_name">JPointCloudSample</string>
-    <string name="hello_world">Hello world!</string>
-    <string name="action_settings">Settings</string>
+    <string name="vertex_count">Number of Points:</string>
+    <string name="version">Version Date:</string>
 
 </resources>

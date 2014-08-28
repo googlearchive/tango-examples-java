@@ -59,7 +59,7 @@ public class PCRenderer implements GLSurfaceView.Renderer {
 	     mFloorGrid = new Grid();
 	     mPointCloud = new PointCloud();
 	     Matrix.setIdentityM(mViewMatrix, 0);
-	     setLookAtM(mViewMatrix, 0, 0f,  3f, -3f, 0f, 0f, 0f, 0f, 1f, 0f);
+	     setLookAtM(mViewMatrix, 0, 0f,  0f, 1f, 0f, 0f, 0f, 0f, 1f, 0f);
 	}
 
 	@Override
