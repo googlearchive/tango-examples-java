@@ -16,9 +16,12 @@
 
 package com.projecttango.quickstart;
 
+import java.util.ArrayList;
+
 import com.google.atap.tangoservice.Tango;
 import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
 import com.google.atap.tangoservice.TangoConfig;
+import com.google.atap.tangoservice.TangoCoordinateFramePair;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
@@ -37,7 +40,7 @@ public class MainActivity extends Activity {
 	private TextView mTranslationTextView;
 	private TextView mRotationTextView;
 	
-  private Tango mTango;
+	private Tango mTango;
 	private TangoConfig mConfig;
 	
 	@Override
@@ -58,8 +61,13 @@ public class MainActivity extends Activity {
 		mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT, mConfig);
 		mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
 		
+	    // Select coordinate frame pairs
+	    ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
+	    framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+	                TangoPoseData.COORDINATE_FRAME_DEVICE));
+		
 		// Add a listener for Tango pose data
-		mTango.connectListener(new OnTangoUpdateListener() {
+		int statusCode = mTango.connectListener(framePairs, new OnTangoUpdateListener() {
 
 			@SuppressLint("DefaultLocale") 
 			@Override
@@ -92,6 +100,8 @@ public class MainActivity extends Activity {
 			}
 			
 		});
+		
+		Log.i(TAG, "Status Code: " + statusCode);
 	}
 	
 	@Override
