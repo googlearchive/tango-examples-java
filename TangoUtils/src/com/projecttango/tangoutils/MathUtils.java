@@ -36,7 +36,7 @@ public class MathUtils {
 		return inversedQ;
 	}
 	
-	public static double[] QuaternionToEulerAngle(float[] quaternion){
+	public static double[] quaternionToEulerAngle(float[] quaternion){
 		double test = quaternion[0]*quaternion[1] + quaternion[2]*quaternion[3];
 		double roll,pitch,yaw;
 		if (test > 0.499) { // singularity at north pole

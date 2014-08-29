@@ -20,7 +20,7 @@ import android.opengl.Matrix;
 
 public abstract class Renderable {
 
-	public float[] mModelMatrix = new float[16];
+	private float[] mModelMatrix = new float[16];
 	private float[] mMvMatrix = new float[16];
 	private float[] mMvpMatrix = new float[16];
 	
@@ -41,6 +41,10 @@ public abstract class Renderable {
 	
 	public float[] getModelMatrix() {
 		return mModelMatrix;
+	}
+	
+	public void setModelMatrix(float[] modelMatrix) {
+		this.mModelMatrix = modelMatrix;
 	}
 	
 	public float[] getMvMatrix() {
