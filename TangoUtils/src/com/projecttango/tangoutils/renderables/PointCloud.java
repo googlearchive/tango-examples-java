@@ -51,16 +51,17 @@ public class PointCloud extends Renderable {
 	public int mPointCount;
 	
 	public PointCloud() {
-		   	int vertexShader = RenderUtils.loadShader(GLES20.GL_VERTEX_SHADER,sVertexShaderCode);
-			int fragShader = RenderUtils.loadShader(GLES20.GL_FRAGMENT_SHADER, sFragmentShaderCode);
-			mProgram = GLES20.glCreateProgram();
-			GLES20.glAttachShader(mProgram, vertexShader);
-			GLES20.glAttachShader(mProgram, fragShader);
-			GLES20.glLinkProgram(mProgram);
-	        Matrix.setIdentityM(getModelMatrix(), 0);
+		int vertexShader = RenderUtils.loadShader(GLES20.GL_VERTEX_SHADER,sVertexShaderCode);
+		int fragShader = RenderUtils.loadShader(GLES20.GL_FRAGMENT_SHADER, sFragmentShaderCode);
+		
+		mProgram = GLES20.glCreateProgram();
+		GLES20.glAttachShader(mProgram, vertexShader);
+		GLES20.glAttachShader(mProgram, fragShader);
+		GLES20.glLinkProgram(mProgram);
+		Matrix.setIdentityM(getModelMatrix(), 0);
 	}
 	
-	public void UpdatePoints(byte[] byteArray) {
+	public void updatePoints(byte[] byteArray) {
 		FloatBuffer mPointCloudFloatBuffer;
 		ByteBuffer mVertexByteBuffer;
 		mPointCloudFloatBuffer = ByteBuffer.wrap(byteArray).order(ByteOrder.nativeOrder()).asFloatBuffer(); 
