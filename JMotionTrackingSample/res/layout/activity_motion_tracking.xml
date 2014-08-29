@@ -41,7 +41,7 @@
                 android:id="@+id/poseX"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:maxLength="6" />
+                android:maxLength="10" />
         </LinearLayout>
 
         <LinearLayout
@@ -59,7 +59,7 @@
                 android:id="@+id/poseY"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:maxLength="6" />
+                android:maxLength="10" />
         </LinearLayout>
 
         <LinearLayout
@@ -77,7 +77,7 @@
                 android:id="@+id/poseZ"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:maxLength="6" />
+                android:maxLength="10" />
         </LinearLayout>
 
         <LinearLayout
@@ -95,7 +95,7 @@
                 android:id="@+id/Quaternion1"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:maxLength="6" />
+                android:maxLength="10" />
         </LinearLayout>
 
         <LinearLayout
@@ -113,7 +113,7 @@
                 android:id="@+id/Quaternion2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:maxLength="6" />
+                android:maxLength="10" />
         </LinearLayout>
 
         <LinearLayout
@@ -131,7 +131,7 @@
                 android:id="@+id/Quaternion3"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:maxLength="6" />
+                android:maxLength="10" />
         </LinearLayout>
 
         <LinearLayout
@@ -149,7 +149,7 @@
                 android:id="@+id/Quaternion4"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:maxLength="6" />
+                android:maxLength="10" />
         </LinearLayout>
 
         <LinearLayout
@@ -187,12 +187,43 @@
         </LinearLayout>
         
     </LinearLayout>
-	
-    <android.opengl.GLSurfaceView
-        android:id="@+id/gl_surface_view"
-        android:layout_width="0dip"
+	<RelativeLayout 
+	    android:layout_width="0dip"
         android:layout_height="match_parent"
         android:layout_gravity="fill_horizontal"
-        android:layout_weight="5" />
+        android:layout_weight="5">
+		
+	     <android.opengl.GLSurfaceView
+        	android:id="@+id/gl_surface_view"
+        	android:layout_width="match_parent"
+        	android:layout_height="match_parent"
+        	 />
+
+	     <Button
+	         android:id="@+id/firstPerson"
+	         android:layout_width="wrap_content"
+	         android:layout_height="wrap_content"
+	         android:layout_alignParentRight="true"
+	         android:layout_alignParentTop="true"
+	         android:text="1st" />
+
+	     <Button
+	         android:id="@+id/thirdPerson"
+	         android:layout_width="wrap_content"
+	         android:layout_height="wrap_content"
+	         android:layout_alignParentLeft="true"
+	         android:layout_alignParentTop="true"
+	         android:text="3rdPerson" />
+
+	     <Button
+	         android:id="@+id/topDown"
+	         android:layout_width="wrap_content"
+	         android:layout_height="wrap_content"
+	         android:layout_alignParentTop="true"
+	         android:layout_centerHorizontal="true"
+	         android:text="TopDownView" />
+	    
+	</RelativeLayout>
+   
 
 </LinearLayout>

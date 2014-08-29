@@ -43,6 +43,10 @@ public abstract class Renderable {
 		return mModelMatrix;
 	}
 	
+	public void setModelMatrix(float[] modelMatrix) {
+		this.mModelMatrix = modelMatrix;
+	}
+	
 	public float[] getMvMatrix() {
 		return mMvMatrix;
 	}

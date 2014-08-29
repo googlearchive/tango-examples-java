@@ -20,8 +20,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
-import com.projecttango.tangoutils.MathUtils;
-
 import android.opengl.GLES20;
 import android.opengl.Matrix;
 
@@ -45,9 +43,6 @@ public class Axis extends Renderable {
 			+ "void main() {"
 			+ "gl_FragColor = vColor;" + 
 			"}";
-	
-	private float[] mTranslation = new float[3];
-	private float[] mQuaternion = new float[4];
 	private FloatBuffer mVertexBuffer, mColorBuffer;
 
 	private float mVertices[] = {  
@@ -99,37 +94,6 @@ public class Axis extends Renderable {
 		GLES20.glAttachShader(mProgram, vertexShader);
 		GLES20.glAttachShader(mProgram, fragShader);
 		GLES20.glLinkProgram(mProgram);
-	}
-
-	/**
-	 * Updates the model matrix (rotation and translation) of the Axis.
-	 * @param translation a three-element array of translation data.
-	 * @param quaternion a four-element array of rotation data.
-	 */
-	public void updateModelMatrix(float[] translation, float[] quaternion) {
-		mTranslation = translation;
-		mQuaternion = quaternion;
-		
-		float[] openglQuaternion = MathUtils.convertQuaternionToOpenGl(quaternion);
-		float[] quaternionMatrix = new float[16];
-		
-		//quaternionMatrix = MathUtils.quaternionM(openglQuaternion);
-		quaternionMatrix = MathUtils.quaternionM(quaternion);		
-		Matrix.setIdentityM(getModelMatrix(), 0);
-		Matrix.translateM(getModelMatrix(), 0, translation[0], translation[2], -translation[1]);
-
-		// Update the model matrix with rotation data
-		if (quaternionMatrix != null) {
-			float[] mTempMatrix = new float[16];
-			Matrix.setIdentityM(mTempMatrix, 0);	
-			Matrix.multiplyMM(mTempMatrix, 0, getModelMatrix(), 0, quaternionMatrix, 0);
-			System.arraycopy(mTempMatrix, 0, getModelMatrix(), 0, 16);
-		}
-	};
-
-	public void updateViewMatrix(float[] viewMatrix) {
-		Matrix.setLookAtM(viewMatrix, 0, 0, 5.0f, 5.0f, mTranslation[0], mTranslation[1], 
-				mTranslation[2], 0, 1, 0);
 	}
 
 	@Override

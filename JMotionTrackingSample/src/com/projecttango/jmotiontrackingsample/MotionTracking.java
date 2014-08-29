@@ -16,18 +16,24 @@
 
 package com.projecttango.jmotiontrackingsample;
 
+import java.util.ArrayList;
+
 import com.google.atap.tangoservice.Tango;
 import com.google.atap.tangoservice.TangoConfig;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
+import com.google.atap.tangoservice.TangoCoordinateFramePair;
 
 import android.app.Activity;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
-public class MotionTracking extends Activity {
+public class MotionTracking extends Activity implements View.OnClickListener {
 
 	private Tango mTango;
 	private TangoConfig mConfig;
@@ -41,7 +47,9 @@ public class MotionTracking extends Activity {
 	private TextView mPoseQuaternion3;
 	private TextView mPoseStatus;
 	private TextView mVersion;
-	
+	private Button mFirstPersonButton;
+	private Button mThirdPersonButton;
+	private Button mTopDownButton;
 	private MTGLRenderer mRenderer;
 	private GLSurfaceView mGLView;
 	
@@ -57,10 +65,21 @@ public class MotionTracking extends Activity {
 		mPoseQuaternion1 = (TextView) findViewById(R.id.Quaternion2);
 		mPoseQuaternion2 = (TextView) findViewById(R.id.Quaternion3);
 		mPoseQuaternion3 = (TextView) findViewById(R.id.Quaternion4);
+		
+		mFirstPersonButton = (Button) findViewById(R.id.firstPerson);
+		mThirdPersonButton = (Button) findViewById(R.id.thirdPerson);
+		mTopDownButton = (Button) findViewById(R.id.topDown);
+		
 		mPoseStatus = (TextView) findViewById(R.id.Status);
 		mVersion = (TextView) findViewById(R.id.version);
 		mGLView = (GLSurfaceView) findViewById(R.id.gl_surface_view);
+		
+		// Set up button click listeners
+		mFirstPersonButton.setOnClickListener(this);
+		mThirdPersonButton.setOnClickListener(this);
+		mTopDownButton.setOnClickListener(this);
 
+		// Configure OpenGL renderer
 		mRenderer = new MTGLRenderer();
 		mGLView.setEGLContextClientVersion(2);
 		mGLView.setRenderer(mRenderer);
@@ -72,19 +91,21 @@ public class MotionTracking extends Activity {
 		mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT, mConfig);
 		mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
 		mVersion.setText(mConfig.getString("tango_service_library_version"));
+		
+		// Select coordinate frame pairs
+		ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
+        framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+        		TangoPoseData.COORDINATE_FRAME_DEVICE));
+        
 		// Listen for new Tango data
-		mTango.connectListener(new OnTangoUpdateListener() {
+		int statusCode = mTango.connectListener(framePairs,new OnTangoUpdateListener() {
 
 			@Override
 			public void onPoseAvailable(final TangoPoseData pose) {
-				// Update the Axis and CameraFrustum with new pose data, then render
-				mRenderer.getCameraFrustum().updateModelMatrix(pose.translation, pose.rotation);
-				mRenderer.getAxis().updateModelMatrix(pose.translation, pose.rotation);
-				// mRenderer.getTrajectory().updateTrajectory(pose.translation);
+				mRenderer.getTrajectory().updateTrajectory(pose.translation);
+				mRenderer.getModelMatCalculator().updateModelMatrix(pose.translation, pose.rotation);
 				mGLView.requestRender();
 				
-				// Run UI updates on the UI thread, doing this in the service's main thread
-				//	will result in an error.
 				runOnUiThread(new Runnable() {
 					@Override
 					public void run() {
@@ -96,16 +117,15 @@ public class MotionTracking extends Activity {
 						mPoseQuaternion1.setText(Float.toString(pose.rotation[1]));
 						mPoseQuaternion2.setText(Float.toString(pose.rotation[2]));
 						mPoseQuaternion3.setText(Float.toString(pose.rotation[3]));
+						
+						// Display status of this TangoPose object
 						if (pose.statusCode == TangoPoseData.POSE_VALID) {
 							mPoseStatus.setText("Valid");
-						}
-						else if (pose.statusCode == TangoPoseData.POSE_INVALID) {
+						} else if (pose.statusCode == TangoPoseData.POSE_INVALID) {
 							mPoseStatus.setText("Invalid");
-						}
-						else if (pose.statusCode == TangoPoseData.POSE_INITIALIZING) {
+						} else if (pose.statusCode == TangoPoseData.POSE_INITIALIZING) {
 							mPoseStatus.setText("Initializing");
-						}
-						else if (pose.statusCode == TangoPoseData.POSE_UNKNOWN) {
+						} else if (pose.statusCode == TangoPoseData.POSE_UNKNOWN) {
 							mPoseStatus.setText("Unknown");
 						}
 					}
@@ -119,6 +139,7 @@ public class MotionTracking extends Activity {
 		});
 	}
 	
+	
 	@Override
 	protected void onPause() {
 		super.onPause();
@@ -131,12 +152,31 @@ public class MotionTracking extends Activity {
 		super.onResume();
 		mTango.lockConfig(mConfig);
 		mTango.connect();
+		
 	}
 	
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
 		mTango.unlockConfig();
+	}
+
+	@Override
+	public void onClick(View v) {
+		switch(v.getId()) {
+		case R.id.firstPerson:
+			mRenderer.setFirstPersonView();
+			break;
+		case R.id.topDown:
+			mRenderer.setTopDownView();
+			break;
+		case R.id.thirdPerson:
+			mRenderer.setThirdPersonView();
+			break;
+		default:
+			Log.w("MotionTracking", "Unknown button click");
+			return;
+		}
 	}
 	
 }

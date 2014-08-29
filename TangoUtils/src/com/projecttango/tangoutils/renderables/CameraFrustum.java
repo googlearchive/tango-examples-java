@@ -20,8 +20,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
-import com.projecttango.tangoutils.MathUtils;
-
 import android.opengl.GLES20;
 import android.opengl.Matrix;
 
@@ -46,8 +44,6 @@ public class CameraFrustum extends Renderable {
 			+ "gl_FragColor = vec4(0.8,0.5,0.8,1);" + 
 			"}";
 	
-	private float[] mTranslation = new float[3];
-	private float[] mQuaternion = new float[4];
 	private FloatBuffer mVertexBuffer, mColorBuffer;
 
 	private float mVertices[] = {   
@@ -131,37 +127,6 @@ public class CameraFrustum extends Renderable {
 		GLES20.glLinkProgram(mProgram);
 	}
 
-	/**
-	 * Updates the model matrix (rotation and translation) of the CameraFrustum.
-	 * @param translation a three-element array of translation data.
-	 * @param quaternion a four-element array of rotation data.
-	 */
-	public void updateModelMatrix(float[] translation, float[] quaternion) {
-		mTranslation = translation;
-		mQuaternion = quaternion;
-		
-		float[] openglQuaternion = MathUtils.convertQuaternionToOpenGl(quaternion);
-		float[] quaternionMatrix = new float[16];
-		
-		//quaternionMatrix = MathUtils.quaternionM(openglQuaternion);
-		quaternionMatrix = MathUtils.quaternionM(quaternion);		
-		Matrix.setIdentityM(getModelMatrix(), 0);
-		Matrix.translateM(getModelMatrix(), 0, translation[0], translation[2], -translation[1]);
-
-		// Update the model matrix with rotation data
-		if (quaternionMatrix != null) {
-			float[] mTempMatrix = new float[16];
-			Matrix.setIdentityM(mTempMatrix, 0);	
-			Matrix.multiplyMM(mTempMatrix, 0, getModelMatrix(), 0, quaternionMatrix, 0);
-			System.arraycopy(mTempMatrix, 0, getModelMatrix(), 0, 16);
-		}
-	};
-
-	public void updateViewMatrix(float[] viewMatrix) {
-		Matrix.setLookAtM(viewMatrix, 0, 0, 5.0f, 5.0f, mTranslation[0], mTranslation[1], 
-				mTranslation[2], 0, 1, 0);
-	}
-
 	@Override
 	public void draw(float[] viewMatrix, float[] projectionMatrix) {
 		GLES20.glUseProgram(mProgram);
@@ -187,5 +152,6 @@ public class CameraFrustum extends Renderable {
 		GLES20.glLineWidth(5);
 		GLES20.glDrawArrays(GLES20.GL_LINES, 0, 16);
 	}
+	
 	
 }
