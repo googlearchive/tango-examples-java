@@ -19,9 +19,11 @@ package com.projectango.jpointcloudsample;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import com.google.atap.tangoservice.Tango;
 import com.google.atap.tangoservice.TangoConfig;
+import com.google.atap.tangoservice.TangoCoordinateFramePair;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
@@ -62,8 +64,14 @@ public class JPointCloud extends Activity {
         mServiceVersion=mConfig.getString("tango_service_library_version");
     	// Display the version of Tango Service
 		mVersion.setText(mServiceVersion);
-        mTango.connectListener( new OnTangoUpdateListener() {
-        	
+		
+
+		ArrayList<TangoCoordinateFramePair> framePairs =
+                 new ArrayList<TangoCoordinateFramePair>();
+		
+		// Listen for new Tango data
+        framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,TangoPoseData.COORDINATE_FRAME_DEVICE));
+		int statusCode = mTango.connectListener(framePairs,new OnTangoUpdateListener() {
         	@Override
         	public void onPoseAvailable(final TangoPoseData pose) {
         		// mRenderer.getCameraFrustum().updateModelMatrix(pose.translation, pose.rotation);
