@@ -31,6 +31,11 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
 
+/**
+ * Main Activity for the Tango Java Quickstart.  Demonstrates establishing a connection to the
+ * {@link Tango} service and printing the {@link TangoPose} data to the LogCat.  Also demonstrates
+ * Tango lifecycle management through {@link TangoConfig}.
+ */
 public class MainActivity extends Activity {
 
 	private static final String TAG = MainActivity.class.getSimpleName();

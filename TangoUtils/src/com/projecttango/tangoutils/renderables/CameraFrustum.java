@@ -23,6 +23,10 @@ import java.nio.FloatBuffer;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
 
+/**
+ * {@link Renderable} OpenGL object showing the Camera Frustum in 3D.  This shows the view of the
+ * Tango camera at the current translation and rotation.
+ */
 public class CameraFrustum extends Renderable {
 	
 	private static final int COORDS_PER_VERTEX = 3;

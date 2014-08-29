@@ -37,6 +37,11 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
 
+/**
+ * Main Activity class for the Point Cloud Sample.  Handles the connection to the {@link Tango}
+ * service and propagation of Tango XyzIj data to OpenGL and Layout views.  OpenGL rendering logic
+ * is delegated to the {@link PCrenderer} class.
+ */
 public class JPointCloud extends Activity implements OnClickListener {
 	
 	private static final String TAG = JPointCloud.class.getSimpleName();

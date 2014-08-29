@@ -16,6 +16,10 @@
 
 package com.projecttango.tangoutils;
 
+/**
+ * Utility class for Matrix math computations needed for Tango Java samples that are not provided
+ * by OpenGL.
+ */
 public class MathUtils {
 	
 	/**

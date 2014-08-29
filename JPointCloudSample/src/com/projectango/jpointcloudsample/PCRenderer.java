@@ -19,15 +19,28 @@ package com.projectango.jpointcloudsample;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import com.projecttango.tangoutils.renderables.Axis;
 import com.projecttango.tangoutils.renderables.CameraFrustum;
 import com.projecttango.tangoutils.renderables.Grid;
 import com.projecttango.tangoutils.renderables.PointCloud;
+import com.projecttango.tangoutils.renderables.Trajectory;
 
 
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 
+/**
+ * OpenGL rendering class for the Motion Tracking API sample.  This class managers the objects
+ * visible in the OpenGL view which are the {@link CameraFrustum}, {@link PointCloud}
+ * and the {@link Grid}.  These objects are implemented in the TangoUtils library in the package
+ * {@link com.projecttango.tangoutils.renderables}.
+ * 
+ * This class receives {@link TangoPose} data from the {@link MotionTracking} class and updates the
+ * model and view matrices of the {@link Renderable} objects appropriately.  It also handles
+ * the user-selected camera view, which can be 1st person, 3rd person, or top-down.
+ *
+ */
 public class PCRenderer implements GLSurfaceView.Renderer {
 	
     private static final float CAMERA_FOV = 45f;
@@ -87,6 +100,6 @@ public class PCRenderer implements GLSurfaceView.Renderer {
 	
 	public void setTopDownView(){
 		Matrix.setIdentityM(mViewMatrix, 0);
-		Matrix.setLookAtM(mViewMatrix, 0, 0f, 2f, 0f, 0f, 0f, 0f, 0f, 0f, -2f);
+		Matrix.setLookAtM(mViewMatrix, 0, 0f, 5f, 0f, 0f, 0f, 0f, 0f, 0f, -1f);
 	}
 }

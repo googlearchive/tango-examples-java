@@ -23,6 +23,10 @@ import java.nio.FloatBuffer;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
 
+/**
+ * {@link Renderable} OpenGL object representing XYZ axes in 3D space.  X is Red, Y is Green,
+ * and Z is Blue.
+ */
 public class Axis extends Renderable {
 
 	private static final int COORDS_PER_VERTEX = 3;

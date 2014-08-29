@@ -2,6 +2,11 @@ package com.projecttango.tangoutils;
 
 import android.opengl.Matrix;
 
+/**
+ * Utility class to manage the calculation of a Model Matrix from the translation and quaternion
+ * arrays obtained from an {@link TangoPose} object.  Delegates some mathematical computations to
+ * the {@link MathUtils}.
+ */
 public class ModelMatCalculator {
 
 	private static float[] conversionMatrix = new float[]{

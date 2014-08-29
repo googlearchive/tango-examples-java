@@ -23,6 +23,11 @@ import java.nio.FloatBuffer;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
 
+/**
+ * {@link Renderable} OpenGL object showing the Trajectory of the Project Tango device in 3D space.
+ * Points are added when the trajectory is updated by passing translation data obtained from Tango
+ * Pose Data.
+ */
 public class Trajectory extends Renderable {
 
 	private static final int COORDS_PER_VERTEX = 3;

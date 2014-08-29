@@ -23,6 +23,10 @@ import java.nio.FloatBuffer;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
 
+/**
+ * {@link Renderable} OpenGL showing a PointCloud obtained from Tango XyzIj data.  The point count
+ * can vary over as the information is updated.
+ */
 public class PointCloud extends Renderable {
 	
 	private static final int COORDS_PER_VERTEX = 3;
@@ -82,11 +86,11 @@ public class PointCloud extends Renderable {
 	}
 	
 	@Override
-	public void draw(float[] viewMatrix,float[] projectionMatrix) {
+	public void draw(float[] viewMatrix, float[] projectionMatrix) {
 		if (mPointCount > 0) {
 			GLES20.glUseProgram(mProgram);
 			mVertexBuffer.position(0);
-			this.updateMvpMatrix(viewMatrix, projectionMatrix);			
+			updateMvpMatrix(viewMatrix, projectionMatrix);			
 			mPosHandle = GLES20.glGetAttribLocation(mProgram, "vPosition");	
 		    GLES20.glVertexAttribPointer(mPosHandle, COORDS_PER_VERTEX,GLES20.GL_FLOAT, false,0, mVertexBuffer);		
 		    GLES20.glEnableVertexAttribArray(mPosHandle);	
