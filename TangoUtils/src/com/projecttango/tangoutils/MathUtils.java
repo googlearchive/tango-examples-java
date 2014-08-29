@@ -36,6 +36,30 @@ public class MathUtils {
 		return inversedQ;
 	}
 	
+	public static double[] QuaternionToEulerAngle(float[] quaternion){
+		double test = quaternion[0]*quaternion[1] + quaternion[2]*quaternion[3];
+		double roll,pitch,yaw;
+		if (test > 0.499) { // singularity at north pole
+			pitch = 2 * Math.atan2(quaternion[0], quaternion[3]);
+			yaw = Math.PI/2;
+			roll = 0;
+			return new double[]{roll,pitch,yaw};
+		}
+		if (test < -0.499) { // singularity at south pole
+			pitch = -2 * Math.atan2(quaternion[0], quaternion[3]);
+			yaw = - Math.PI/2;
+			roll = 0;
+			return new double[]{roll,pitch,yaw};
+		}
+	    double sqx = quaternion[0]*quaternion[0];
+	    double sqy = quaternion[1]*quaternion[1];
+	    double sqz = quaternion[2]*quaternion[2];
+	    pitch = Math.atan2(2*quaternion[1]*quaternion[3]-2*quaternion[0]*quaternion[2] , 1 - 2*sqy - 2*sqz);
+		yaw = Math.asin(2*test);
+		roll = Math.atan2(2*quaternion[0]*quaternion[3]-2*quaternion[1]*quaternion[2] , 1 - 2*sqx - 2*sqz);
+		return new double[]{roll,pitch,yaw};
+	}
+	
 	public static float[] rotateQuaternionWithAngleAxis(float[] quaternion, float angleInRadians, 
 			float[] axisVector) {
 		

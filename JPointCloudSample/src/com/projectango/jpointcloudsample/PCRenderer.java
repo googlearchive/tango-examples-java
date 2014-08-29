@@ -41,10 +41,7 @@ public class PCRenderer implements GLSurfaceView.Renderer {
     private static final float CAMERA_FAR = 200f;
     private static final int MATRIX_4X4 = 16;
 	
-	private float[] mViewMatrix = new float[16];
-    private final float[] mMVPMatrix = new float[16];
-    private final float[] mRotationMatrix = new float[16];
-
+	private float[] mViewMatrix = new float[MATRIX_4X4];
     private float mCameraAspect;
     private float[] mProjectionMatrix = new float[MATRIX_4X4];
 	private CameraFrustum mCameraFrustum;
