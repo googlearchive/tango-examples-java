@@ -109,6 +109,7 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 			public void onPoseAvailable(final TangoPoseData pose) {
 				mRenderer.getTrajectory().updateTrajectory(pose.translation);
 				mRenderer.getModelMatCalculator().updateModelMatrix(pose.translation, pose.rotation);
+				mRenderer.UpdateViewMatrix();
 				mGLView.requestRender();
 				
 				runOnUiThread(new Runnable() {

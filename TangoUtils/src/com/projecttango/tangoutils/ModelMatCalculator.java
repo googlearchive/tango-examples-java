@@ -32,7 +32,8 @@ public class ModelMatCalculator {
 			0.0f, 0.0f, 0.0f, 1.0f};
 	
 	private float[] modelMatrix = new float[16];
-
+	private float[] mTranslation = new float[3];
+	private float[] mQuaternion = new float[4];
 	public ModelMatCalculator() {
 		Matrix.setIdentityM(modelMatrix, 0);
 	}
@@ -43,6 +44,7 @@ public class ModelMatCalculator {
 	 * @param quaternion a four-element array of rotation data.
 	 */
 	public void updateModelMatrix(float[] translation, float[] quaternion){
+		
 		float[] quaternionMatrix = new float[16];
 		quaternionMatrix = quaternionMatrixOpenGL(quaternion);	
 		
@@ -53,10 +55,20 @@ public class ModelMatCalculator {
 		modelMatrix[12] = translation[0];
 		modelMatrix[13] = translation[2];
 		modelMatrix[14] = -1f * translation[1];		
+		mTranslation = new float[]{modelMatrix[12],modelMatrix[13],modelMatrix[14]};
+		mQuaternion = quaternion;
 	}
 	
 	public float[] getModelMatrix(){
 		return modelMatrix;
+	}
+	
+	public float[] getTranslation(){
+		return mTranslation;
+	}
+	
+	public float[] getQuaternion(){
+		return mQuaternion;
 	}
 	
 	/**
