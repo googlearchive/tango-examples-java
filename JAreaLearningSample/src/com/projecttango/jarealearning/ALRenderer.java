@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.projecttango.jmotiontrackingsample;
+package com.projecttango.jarealearning;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -38,7 +38,7 @@ import android.opengl.Matrix;
  * This class receives also handles the user-selected camera view, which can be 1st person, 
  * 3rd person, or top-down.
  */
-public class MTGLRenderer implements GLSurfaceView.Renderer {
+public class ALRenderer implements GLSurfaceView.Renderer {
 	
 	private static final float CAMERA_FOV = 45f;
 	private static final float CAMERA_NEAR = 1f;

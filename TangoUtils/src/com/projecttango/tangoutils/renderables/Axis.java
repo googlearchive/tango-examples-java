@@ -57,7 +57,31 @@ public class Axis extends Renderable {
 		    0.0f, 1.0f, 0.0f,
 		    
 		    0.0f, 0.0f, 0.0f,
-		    0.0f, 0.0f, 1.0f};
+		    0.0f, 0.0f, 1.0f,
+		   
+		    0.0f, 0.0f, 0.0f,
+		   -0.4f, 0.3f, -0.5f,
+
+		    0.0f, 0.0f, 0.0f,
+		    0.4f, 0.3f, -0.5f,
+
+		    0.0f, 0.0f, 0.0f,
+		   -0.4f, -0.3f, -0.5f,
+
+		    0.0f, 0.0f, 0.0f,
+		    0.4f, -0.3f, -0.5f,
+
+		   -0.4f, 0.3f, -0.5f,
+		    0.4f, 0.3f, -0.5f,
+
+		    0.4f, 0.3f, -0.5f,
+		    0.4f, -0.3f, -0.5f,
+
+		    0.4f, -0.3f, -0.5f,
+		   -0.4f, -0.3f, -0.5f,
+
+		   -0.4f, -0.3f, -0.5f,
+		   -0.4f, 0.3f, -0.5f};
 
 	private float mColors[] = { 
 			1.0f, 0.0f, 0.0f, 1.0f,
@@ -67,7 +91,32 @@ public class Axis extends Renderable {
 			0.0f, 1.0f, 0.0f, 1.0f,
 			
 			0.0f, 0.0f, 1.0f, 1.0f,
-			0.0f, 0.0f, 1.0f, 1.0f};
+			0.0f, 0.0f, 1.0f, 1.0f,
+			
+			0.8f, 0.5f, 0.8f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
+			
+			0.8f, 0.5f, 0.8f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
+			
+			0.8f, 0.5f, 0.8f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
+			
+			0.8f, 0.5f, 0.8f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
+			
+			0.8f, 0.5f, 0.8f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
+			
+			0.8f, 0.5f, 0.8f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
+			
+			0.8f, 0.5f, 0.8f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
+			
+			0.8f, 0.5f, 0.8f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
+	};
 
 	private final int mProgram;
 	private int mPosHandle, mColorHandle;
@@ -123,7 +172,7 @@ public class Axis extends Renderable {
 		mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
 		GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, getMvpMatrix(), 0);
 		GLES20.glLineWidth(5);
-		GLES20.glDrawArrays(GLES20.GL_LINES, 0, 6);
+		GLES20.glDrawArrays(GLES20.GL_LINES, 0, mVertices.length/3);
 
 	}
 	
