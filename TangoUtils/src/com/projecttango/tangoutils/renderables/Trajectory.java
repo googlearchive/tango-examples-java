@@ -22,6 +22,7 @@ import java.nio.FloatBuffer;
 
 import android.opengl.GLES20;
 import android.opengl.Matrix;
+import android.util.Log;
 
 /**
  * {@link Renderable} OpenGL object showing the Trajectory of the Project Tango device in 3D space.
@@ -31,9 +32,13 @@ import android.opengl.Matrix;
 public class Trajectory extends Renderable {
 
 	private static final int COORDS_PER_VERTEX = 3;
-	private static final int GRID_RANGE_M = 10000;
+	
+	/** Note: due to resetPath() logic, keep this as a multiple of 9 **/
+	private static final int MAX_VERTICES = 9000;
 	private static final int BYTES_PER_FLOAT = 4;
 	private static int mTrajectoryCount = 0; 
+	
+	private static final String TAG = Trajectory.class.getSimpleName();
 	
 	private static final String sVertexShaderCode = 
 			"uniform mat4 uMVPMatrix;" 
@@ -41,6 +46,7 @@ public class Trajectory extends Renderable {
 			+"void main() {" 
 			+"gl_Position = uMVPMatrix * vPosition;" 
 			+"}";
+	
 	private static final String sFragmentShaderCode = 
 			"precision mediump float;"
 			+ "uniform vec4 vColor;" 
@@ -59,7 +65,7 @@ public class Trajectory extends Renderable {
 		
 		// Allocate a vertex buffer
 		ByteBuffer vertexByteBuffer = ByteBuffer.allocateDirect(
-				GRID_RANGE_M* BYTES_PER_FLOAT);
+				MAX_VERTICES * BYTES_PER_FLOAT);
 		vertexByteBuffer.order(ByteOrder.nativeOrder());
 		mVertexBuffer = vertexByteBuffer.asFloatBuffer();
 
@@ -74,10 +80,27 @@ public class Trajectory extends Renderable {
 	
 	public void updateTrajectory(float[] translation){
 		mVertexBuffer.position(mTrajectoryCount * 3);
+		if (((mTrajectoryCount + 1) * 3) >= MAX_VERTICES) {
+			Log.w(TAG, "Clearing float buffer");
+			resetPath();
+		}
 		mVertexBuffer.put(new float[] {  translation[0], translation[2], -translation[1] });
 		mTrajectoryCount++;
 	}
-
+	
+	private void resetPath() {
+		int currentPosition = mVertexBuffer.position();
+		int pointsToGet = (MAX_VERTICES / 3);
+		mVertexBuffer.position(currentPosition - pointsToGet);
+		
+		float[] tail = new float[pointsToGet];
+		mVertexBuffer.get(tail, 0, pointsToGet);
+		
+		mVertexBuffer.clear();
+		mVertexBuffer.put(tail);
+		
+		mTrajectoryCount = pointsToGet / 3;
+	}
 
 	@Override
 	public void draw(float[] viewMatrix, float[] projectionMatrix) {
@@ -98,6 +121,6 @@ public class Trajectory extends Renderable {
 		GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, getMvpMatrix(), 0);
 		GLES20.glLineWidth(3);
 		GLES20.glDrawArrays(GLES20.GL_LINE_STRIP, 0, mTrajectoryCount);
-	}
+	}	
 
 }
