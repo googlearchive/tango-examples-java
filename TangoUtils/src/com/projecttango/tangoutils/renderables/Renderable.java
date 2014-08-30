@@ -18,6 +18,10 @@ package com.projecttango.tangoutils.renderables;
 
 import android.opengl.Matrix;
 
+/**
+ * Base class for all self-drawing OpenGL objects used in Tango Java examples.  Contains common
+ * logic for handling the MVP matrices.
+ */
 public abstract class Renderable {
 
 	private float[] mModelMatrix = new float[16];

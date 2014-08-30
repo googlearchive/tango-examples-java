@@ -33,6 +33,11 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+/**
+ * Main Activity class for the Motion Tracking API Sample.  Handles the connection to the Tango
+ * service and propagation of Tango pose data to OpenGL and Layout views.  OpenGL rendering logic
+ * is delegated to the {@link MTGLRenderer} class.
+ */
 public class MotionTracking extends Activity implements View.OnClickListener {
 
 	private Tango mTango;

@@ -29,6 +29,15 @@ import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 
+/**
+ * OpenGL rendering class for the Motion Tracking API sample.  This class managers the objects
+ * visible in the OpenGL view which are the {@link CameraFrustum}, {@link Axis}, {@link Trajectory},
+ * and the {@link Grid}.  These objects are implemented in the TangoUtils library in the package
+ * {@link com.projecttango.tangoutils.renderables}.
+ * 
+ * This class receives also handles the user-selected camera view, which can be 1st person, 
+ * 3rd person, or top-down.
+ */
 public class MTGLRenderer implements GLSurfaceView.Renderer {
 	
 	private static final float CAMERA_FOV = 45f;
@@ -113,5 +122,5 @@ public class MTGLRenderer implements GLSurfaceView.Renderer {
 		Matrix.setIdentityM(mViewMatrix, 0);
 		Matrix.setLookAtM(mViewMatrix, 0, 0, 5.0f, 0.0f, 0.0f, 0f, 0f, 0f, 0f, -1f);
 	}
-
+	
 }

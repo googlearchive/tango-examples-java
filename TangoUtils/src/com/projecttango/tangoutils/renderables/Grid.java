@@ -23,6 +23,10 @@ import java.nio.FloatBuffer;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
 
+/**
+ * {@link Renderable} OpenGL object showing the 'floor' of the current scene.  This is a static grid
+ * placed in the scene to provide perspective in the various views.
+ */
 public class Grid extends Renderable {
 
 	private static final int COORDS_PER_VERTEX = 3;

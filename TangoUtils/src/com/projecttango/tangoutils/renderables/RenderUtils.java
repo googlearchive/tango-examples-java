@@ -18,6 +18,9 @@ package com.projecttango.tangoutils.renderables;
 
 import android.opengl.GLES20;
 
+/**
+ * Static functions used by Renderer classes in Tango Java samples.
+ */
 public class RenderUtils {
 	
 	/**

@@ -16,75 +16,18 @@
 
 package com.projecttango.tangoutils;
 
+/**
+ * Utility class for Matrix math computations needed for Tango Java samples that are not provided
+ * by OpenGL.
+ */
 public class MathUtils {
 	
-	public static float[] convertQuaternionToOpenGl(float[] quaternion) {
-		float[] xAxis = {-1f, 0f, 0f};
-		float[] rotation_offsetX = rotateQuaternionWithAngleAxis(quaternion, 3.141517f/2f, xAxis);
-		float[] openglQuaternion = {rotation_offsetX[2],rotation_offsetX[3],rotation_offsetX[1],-rotation_offsetX[0]};
-		return openglQuaternion;		
-	}
-	
-	public static float[] invertQuaternion(float[] quaternion) {	
-		float sqNorm = (float) (Math.pow(quaternion[0], 2) + Math.pow(quaternion[1], 2) + 
-				Math.pow(quaternion[2], 2)+ Math.pow(quaternion[3], 2));
-		float[] inversedQ = new float[4];
-		inversedQ[0] = -quaternion[0] / sqNorm;
-		inversedQ[1] = -quaternion[1] / sqNorm;
-		inversedQ[2] = -quaternion[2] / sqNorm;
-		inversedQ[3] = quaternion[3] / sqNorm;
-		return inversedQ;
-	}
-	
-	public static double[] quaternionToEulerAngle(float[] quaternion){
-		double test = quaternion[0]*quaternion[1] + quaternion[2]*quaternion[3];
-		double roll,pitch,yaw;
-		if (test > 0.499) { // singularity at north pole
-			pitch = 2 * Math.atan2(quaternion[0], quaternion[3]);
-			yaw = Math.PI/2;
-			roll = 0;
-			return new double[]{roll,pitch,yaw};
-		}
-		if (test < -0.499) { // singularity at south pole
-			pitch = -2 * Math.atan2(quaternion[0], quaternion[3]);
-			yaw = - Math.PI/2;
-			roll = 0;
-			return new double[]{roll,pitch,yaw};
-		}
-	    double sqx = quaternion[0]*quaternion[0];
-	    double sqy = quaternion[1]*quaternion[1];
-	    double sqz = quaternion[2]*quaternion[2];
-	    pitch = Math.atan2(2*quaternion[1]*quaternion[3]-2*quaternion[0]*quaternion[2] , 1 - 2*sqy - 2*sqz);
-		yaw = Math.asin(2*test);
-		roll = Math.atan2(2*quaternion[0]*quaternion[3]-2*quaternion[1]*quaternion[2] , 1 - 2*sqx - 2*sqz);
-		return new double[]{roll,pitch,yaw};
-	}
-	
-	public static float[] rotateQuaternionWithAngleAxis(float[] quaternion, float angleInRadians, 
-			float[] axisVector) {
-		
-		float norm = (float) Math.sqrt(Math.pow(axisVector[0], 2) + Math.pow(axisVector[1], 2) + Math.pow(axisVector[2], 2));
-		float sin_half_angle = (float) Math.sin(angleInRadians / 2.0f);
-        float x = (float) (sin_half_angle * axisVector[0] / norm);
-        float y = (float) (sin_half_angle * axisVector[1] / norm);
-        float z = (float) (sin_half_angle * axisVector[2] / norm);
-        float w = (float)Math.cos(angleInRadians / 2.0f);
-        float[] rotatedQuaternion = {x,y,z, w};
-        float[] multiQuaternion = multiplyQuarternions(quaternion, rotatedQuaternion);
-        
-        return multiQuaternion;
-	}
-	
-	public static float[] multiplyQuarternions(float[] a,float[] b) {
-		float[] multipliedQuaternion = new float[4];
-		int w =3;int x=0;int y=1;int z=2;
-		multipliedQuaternion[w] = a[w]*b[w] - a[x]*b[x] - a[y]*b[y] - a[z]*b[z];
-		multipliedQuaternion[x] = a[w]*b[x] + a[x]*b[w] + a[y]*b[z] - a[z]*b[y];
-		multipliedQuaternion[y] = a[w]*b[y] - a[x]*b[z] + a[y]*b[w] + a[z]*b[x];
-		multipliedQuaternion[z] = a[w]*b[z] + a[x]*b[y] - a[y]*b[x] + a[z]*b[w];
-		return multipliedQuaternion;
-	}
-	
+	/**
+	 * Converts an (x, y, z, w) quaternion tuple into a 4x4 orthogonal
+	 * rotation matrix.
+	 * @param quaternion a 4-element quaternion tuple.
+	 * @return a 4x4 row-major rotation matrix.
+	 */
 	public static float[] quaternionM(float[] quaternion) {
 		float[] matrix = new float[16];
 		normalizeVector(quaternion);
