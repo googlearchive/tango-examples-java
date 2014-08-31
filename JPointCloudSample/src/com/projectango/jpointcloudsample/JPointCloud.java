@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import com.google.atap.tangoservice.Tango;
 import com.google.atap.tangoservice.TangoConfig;
 import com.google.atap.tangoservice.TangoCoordinateFramePair;
+import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
@@ -129,6 +130,12 @@ public class JPointCloud extends Activity implements OnClickListener {
 					}
 				});
             	
+			}
+
+			@Override
+			public void onTangoEvent(TangoEvent arg0) {
+				// TODO Auto-generated method stub
+				
 			}
         });
 		

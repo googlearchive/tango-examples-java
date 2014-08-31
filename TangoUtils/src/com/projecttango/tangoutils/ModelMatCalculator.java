@@ -47,10 +47,7 @@ public class ModelMatCalculator {
 		
 		float[] quaternionMatrix = new float[16];
 		quaternionMatrix = quaternionMatrixOpenGL(quaternion);	
-		
-		float[] transposedQuaternionMatrix = new float[16];
-		Matrix.transposeM(transposedQuaternionMatrix, 0, quaternionMatrix, 0);	
-		
+				
 		Matrix.multiplyMM(modelMatrix, 0,  conversionMatrix, 0 , quaternionMatrix, 0);	
 		modelMatrix[12] = translation[0];
 		modelMatrix[13] = translation[2];

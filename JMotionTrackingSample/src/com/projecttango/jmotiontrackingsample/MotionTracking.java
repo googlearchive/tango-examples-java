@@ -20,6 +20,7 @@ import java.util.ArrayList;
 
 import com.google.atap.tangoservice.Tango;
 import com.google.atap.tangoservice.TangoConfig;
+import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
@@ -29,6 +30,7 @@ import android.app.Activity;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -55,6 +57,8 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 	private Button mFirstPersonButton;
 	private Button mThirdPersonButton;
 	private Button mTopDownButton;
+	private float mPreviousX,mPreviousY;
+	
 	private MTGLRenderer mRenderer;
 	private GLSurfaceView mGLView;
 	
@@ -142,6 +146,12 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 			public void onXyzIjAvailable(TangoXyzIjData arg0) {
 				// We are not using TangoXyzIjData for this application
 			}
+
+			@Override
+			public void onTangoEvent(TangoEvent arg0) {
+				// TODO Auto-generated method stub
+				
+			}
 		});
 	}
 	
@@ -184,5 +194,42 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 			return;
 		}
 	}
+	
+	@Override
+	public boolean onTouchEvent(MotionEvent event) {
+	        //Log.e("TOuched","Touched");
+	        final int action = event.getAction();
+	        switch (action) {
+	        case MotionEvent.ACTION_DOWN: {
+	            final float x = event.getX();
+	            final float y = event.getY();
+	            
+	            // Remember where we started
+	            mPreviousX = x;
+	            mPreviousY = y;
+	            break;
+	        }
+	            
+	        case MotionEvent.ACTION_MOVE: {
+	            final float x = event.getX();
+	            final float y = event.getY();
+	            
+	            // Calculate the distance moved
+	            final float dx = x - mPreviousX;
+	            final float dy = y - mPreviousY;
+	            
+	            float distance =(float) Math.sqrt(Math.pow(dx, 2)+Math.pow(dy, 2));
+	           Log.e("Distance Travelled", "Distance Travelled :"+distance);
+	            // Remember this touch position for the next move event
+	            mPreviousX = x;
+	            mPreviousY = y;
+	            
+	            // Invalidate to request a redraw
+	            break;
+	        }
+	        }
+	        
+	        return true;
+	    }
 	
 }

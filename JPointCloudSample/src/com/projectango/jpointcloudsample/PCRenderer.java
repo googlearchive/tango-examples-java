@@ -76,7 +76,7 @@ public class PCRenderer implements GLSurfaceView.Renderer {
 	@Override
 	public void onDrawFrame(GL10 gl) {
 		GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT); 	
-		mFloorGrid.draw(mViewMatrix, mProjectionMatrix);
+//		mFloorGrid.draw(mViewMatrix, mProjectionMatrix);
 		mPointCloud.draw(mViewMatrix,mProjectionMatrix);
 	}
 
