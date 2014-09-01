@@ -136,7 +136,6 @@ public class AreaLearning extends Activity implements View.OnClickListener {
 			}
 			if(fullUUIDList.size()>0)
 			{
-				TangoAreaDescriptionMetaData metadata = new TangoAreaDescriptionMetaData();
                 mConfig.putString(TangoConfig.KEY_STRING_AREADESCRIPTION, fullUUIDList.get(fullUUIDList.size()-1));
 				mUUID.setText("No of UUIDs : " + fullUUIDList.size() + ", Latest is :"+fullUUIDList.get(fullUUIDList.size()-1));
 			}

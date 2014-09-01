@@ -16,6 +16,7 @@
 
 package com.projecttango.jmotiontrackingsample;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 
 import com.google.atap.tangoservice.Tango;
@@ -58,6 +59,7 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 	private Button mThirdPersonButton;
 	private Button mTopDownButton;
 	private float mPreviousX,mPreviousY;
+	private TextView mPreviousPose;
 	
 	private MTGLRenderer mRenderer;
 	private GLSurfaceView mGLView;
@@ -74,6 +76,7 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 		mPoseQuaternion1 = (TextView) findViewById(R.id.Quaternion2);
 		mPoseQuaternion2 = (TextView) findViewById(R.id.Quaternion3);
 		mPoseQuaternion3 = (TextView) findViewById(R.id.Quaternion4);
+		mPreviousPose = (TextView) findViewById(R.id.previousPose);
 		
 		mFirstPersonButton = (Button) findViewById(R.id.firstPerson);
 		mThirdPersonButton = (Button) findViewById(R.id.thirdPerson);
@@ -99,13 +102,17 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 		mConfig = new TangoConfig();
 		mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT, mConfig);
 		mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
+		//mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_LEARNINGMODE, false);
 		mVersion.setText(mConfig.getString("tango_service_library_version"));
 		
 		// Select coordinate frame pairs
-		ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
+		final ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
+        framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+        		TangoPoseData.COORDINATE_FRAME_DEVICE));
         framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
         		TangoPoseData.COORDINATE_FRAME_DEVICE));
-        
+        mTango.lockConfig(mConfig);
+		mTango.connect();
 		// Listen for new Tango data
 		int statusCode = mTango.connectListener(framePairs,new OnTangoUpdateListener() {
 
@@ -115,10 +122,13 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 				mRenderer.getModelMatCalculator().updateModelMatrix(pose.translation, pose.rotation);
 				mRenderer.UpdateViewMatrix();
 				mGLView.requestRender();
-				
+//				final TangoPoseData previousPose = new TangoPoseData();
+//				final int poseAvailability = mTango.getPoseAtTime(pose.timestamp-10.0f,framePairs.get(0),previousPose);
+//				Log.e("Pose is",""+ previousPose.translation[0]+" "+ previousPose.translation[1]+" "+ previousPose.translation[2]);
 				runOnUiThread(new Runnable() {
 					@Override
 					public void run() {
+						DecimalFormat twoDec = new DecimalFormat("0.00");
 						// Display pose data on screen in TextViews
 						mPoseX.setText(Float.toString(pose.translation[0]));
 						mPoseY.setText(Float.toString(pose.translation[1]));
@@ -127,7 +137,12 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 						mPoseQuaternion1.setText(Float.toString(pose.rotation[1]));
 						mPoseQuaternion2.setText(Float.toString(pose.rotation[2]));
 						mPoseQuaternion3.setText(Float.toString(pose.rotation[3]));
-						
+//						if(poseAvailability == Tango.STATUS_ERROR)
+//						{
+//							mPreviousPose.setText("PoseNotAvailable");
+//						}else{
+//							mPreviousPose.setText(" "+twoDec.format(previousPose.translation[0])+" "+twoDec.format(previousPose.translation[1])+" "+twoDec.format(previousPose.translation[2])+" ");
+//						}
 						// Display status of this TangoPose object
 						if (pose.statusCode == TangoPoseData.POSE_VALID) {
 							mPoseStatus.setText("Valid");
@@ -166,8 +181,7 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 	@Override
 	protected void onResume() {	
 		super.onResume();
-		mTango.lockConfig(mConfig);
-		mTango.connect();
+		
 		
 	}
 	
