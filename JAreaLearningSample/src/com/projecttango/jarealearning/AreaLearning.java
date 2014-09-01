@@ -16,7 +16,10 @@
 
 package com.projecttango.jarealearning;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 import com.google.atap.tangoservice.Tango;
 import com.google.atap.tangoservice.TangoAreaDescriptionMetaData;
@@ -34,6 +37,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.ToggleButton;
 
 /**
  * Main Activity class for the Motion Tracking API Sample.  Handles the connection to the Tango
@@ -45,19 +49,25 @@ public class AreaLearning extends Activity implements View.OnClickListener {
 	protected static final String TAG = null;
 	private Tango mTango;
 	private TangoConfig mConfig;
-	
-	private TextView mPoseX;
-	private TextView mPoseY;
-	private TextView mPoseZ;
-	private TextView mPoseQuaternion0;
-	private TextView mPoseQuaternion1;
-	private TextView mPoseQuaternion2;
-	private TextView mPoseQuaternion3;
+	private TextView mStart2Device;
+	private TextView mAdf2Device;
+	private TextView mAdf2Start;
+	private int mNoOfLocalizationEvents;
 	private TextView mPoseStatus;
 	private TextView mVersion;
+	private TextView mRelocalizationText;
+	private boolean mRelocalized;
+	private boolean mIsLearningMode;
+	private boolean mIsConstantSpaceRelocalize;
+	private TextView mUUID;
+	private ToggleButton mLearningMode;
+	private ToggleButton mConstantSpaceRelocaliztion;
+	private Button mStartButton;
+	private Button mSaveAdf;
 	private Button mFirstPersonButton;
 	private Button mThirdPersonButton;
 	private Button mTopDownButton;
+	
 	private ALRenderer mRenderer;
 	private GLSurfaceView mGLView;
 	
@@ -65,22 +75,32 @@ public class AreaLearning extends Activity implements View.OnClickListener {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_area_learning);
+		
+		
+		mAdf2Device = (TextView) findViewById(R.id.Adf2Device);
+		mStart2Device = (TextView) findViewById(R.id.Start2Device);
+		mAdf2Start = (TextView) findViewById(R.id.Adf2Start);
 
-		mPoseX = (TextView) findViewById(R.id.poseX);
-		mPoseY = (TextView) findViewById(R.id.poseY);
-		mPoseZ = (TextView) findViewById(R.id.poseZ);
-		mPoseQuaternion0 = (TextView) findViewById(R.id.Quaternion1);
-		mPoseQuaternion1 = (TextView) findViewById(R.id.Quaternion2);
-		mPoseQuaternion2 = (TextView) findViewById(R.id.Quaternion3);
-		mPoseQuaternion3 = (TextView) findViewById(R.id.Quaternion4);
 		
 		mFirstPersonButton = (Button) findViewById(R.id.firstPerson);
 		mThirdPersonButton = (Button) findViewById(R.id.thirdPerson);
 		mTopDownButton = (Button) findViewById(R.id.topDown);
 		
-		mPoseStatus = (TextView) findViewById(R.id.Status);
+		mPoseStatus = (TextView) findViewById(R.id.status);
 		mVersion = (TextView) findViewById(R.id.version);
 		mGLView = (GLSurfaceView) findViewById(R.id.gl_surface_view);
+		
+		mLearningMode = (ToggleButton) findViewById(R.id.learningMode);
+		mConstantSpaceRelocaliztion = (ToggleButton) findViewById(R.id.constantSpaceRelocalization);
+		mStartButton = (Button) findViewById(R.id.start);
+		mSaveAdf = (Button) findViewById(R.id.saveAdf);
+		mUUID = (TextView) findViewById(R.id.uuid);
+		mRelocalizationText = (TextView) findViewById(R.id.relocalize);
+		
+		mStartButton.setOnClickListener(this);
+		mSaveAdf.setOnClickListener(this);
+		mLearningMode.setOnClickListener(this);
+		mConstantSpaceRelocaliztion.setOnClickListener(this);
 		
 		// Set up button click listeners
 		mFirstPersonButton.setOnClickListener(this);
@@ -95,113 +115,165 @@ public class AreaLearning extends Activity implements View.OnClickListener {
 		
 		// Instantiate the Tango service
 		mTango = new Tango(this);
-		mConfig = new TangoConfig();
-		mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT, mConfig);
-		mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_LEARNINGMODE, true);
-		mVersion.setText(mConfig.getString("tango_service_library_version"));
-		
+		mRelocalized = false;
 		// Select coordinate frame pairs
 		ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
-//        framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
-//        		TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION));
-//        framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
-//        		TangoPoseData.COORDINATE_FRAME_DEVICE));
         framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
-        		TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION));
-
-		// Listen for new Tango data
-		int statusCode = mTango.connectListener(framePairs,new OnTangoUpdateListener() {
-
-			@Override
-			public void onPoseAvailable(final TangoPoseData pose) {
-				mRenderer.getTrajectory().updateTrajectory(pose.translation);
-				mRenderer.getModelMatCalculator().updateModelMatrix(pose.translation, pose.rotation);
-				mGLView.requestRender();
-				
-				runOnUiThread(new Runnable() {
-					@Override
-					public void run() {
-						// Display pose data on screen in TextViews
-						mPoseX.setText(Float.toString(pose.translation[0]));
-						mPoseY.setText(Float.toString(pose.translation[1]));
-						mPoseZ.setText(Float.toString(pose.translation[2]));
-						mPoseQuaternion0.setText(Float.toString(pose.rotation[0]));
-						mPoseQuaternion1.setText(Float.toString(pose.rotation[1]));
-						mPoseQuaternion2.setText(Float.toString(pose.rotation[2]));
-						mPoseQuaternion3.setText(Float.toString(pose.rotation[3]));
-						
-						// Display status of this TangoPose object
-						if (pose.statusCode == TangoPoseData.POSE_VALID) {
-							mPoseStatus.setText("Valid");
-						} else if (pose.statusCode == TangoPoseData.POSE_INVALID) {
-							mPoseStatus.setText("Invalid");
-						} else if (pose.statusCode == TangoPoseData.POSE_INITIALIZING) {
-							mPoseStatus.setText("Initializing");
-						} else if (pose.statusCode == TangoPoseData.POSE_UNKNOWN) {
-							mPoseStatus.setText("Unknown");
-						}
-					}
-				});
+        		TangoPoseData.COORDINATE_FRAME_DEVICE));
+        framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+        		TangoPoseData.COORDINATE_FRAME_DEVICE));
+        framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+        		TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE));
+	}
+	
+	private void SetTangoConfig()
+	{
+		mConfig = new TangoConfig();
+		mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT, mConfig);
+		if(mIsLearningMode){
+			mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_LEARNINGMODE, true);
+			mSaveAdf.setVisibility(View.VISIBLE);
+			
+		}
+		if(mIsConstantSpaceRelocalize){
+			ArrayList<String> fullUUIDList = new ArrayList<String>();
+			mTango.listAreaDescriptions(fullUUIDList);
+			if(fullUUIDList.size()==0)
+			{
+				mUUID.setText("No UUIDs");
 			}
-
+			if(fullUUIDList.size()>0)
+			{
+				TangoAreaDescriptionMetaData metadata = new TangoAreaDescriptionMetaData();
+                mConfig.putString(TangoConfig.KEY_STRING_AREADESCRIPTION, fullUUIDList.get(fullUUIDList.size()-1));
+				mUUID.setText("No of UUIDs : " + fullUUIDList.size() + ", Latest is :"+fullUUIDList.get(fullUUIDList.size()-1));
+			}
+		}
+		mNoOfLocalizationEvents = 0;
+		mStartButton.setVisibility(View.GONE);
+		mLearningMode.setVisibility(View.GONE);
+		mConstantSpaceRelocaliztion.setVisibility(View.GONE);
+		mTango.lockConfig(mConfig);
+		mVersion.setText(mConfig.getString("tango_service_library_version"));
+		mRelocalizationText.setText(""+mRelocalized);
+		SetUpTangoListeners();
+		mTango.connect();
+	}
+	
+	private void SetUpTangoListeners(){
+		
+		ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
+        framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+        		TangoPoseData.COORDINATE_FRAME_DEVICE));
+        framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+        		TangoPoseData.COORDINATE_FRAME_DEVICE));
+        framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+        		TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE));	
+		mTango.connectListener(framePairs, new OnTangoUpdateListener() {
+			
 			@Override
-			public void onXyzIjAvailable(TangoXyzIjData arg0) {
+			public void onXyzIjAvailable(TangoXyzIjData xyzij) {
 				// TODO Auto-generated method stub
 				
 			}
-
+			
 			@Override
 			public void onTangoEvent(TangoEvent event) {
-				// TODO Auto-generated method stub
+				
+				if(event.description.matches("ADFEvent:Relocalized")){
+					mRelocalized = true;
+				}
+				if(event.description.matches("ADFEvent:NotRelocalized")){
+					mRelocalized = false;
+				}
 			}
-
+			
+			@Override
+			public void onPoseAvailable(TangoPoseData pose) {
+				UpdateTextViewWith(pose);
+				if(mRelocalized){
+					if(pose.baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE){
+						mRenderer.getTrajectory().updateTrajectory(pose.translation);
+						mRenderer.getModelMatCalculator().updateModelMatrix(pose.translation, pose.rotation);
+						mRenderer.UpdateViewMatrix();
+						mGLView.requestRender();
+					}
+				}
+				else
+				{	
+					if(pose.baseFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE){
+						mRenderer.getTrajectory().updateTrajectory(pose.translation);
+						mRenderer.getModelMatCalculator().updateModelMatrix(pose.translation, pose.rotation);
+						mRenderer.UpdateViewMatrix();
+						mGLView.requestRender();
+					}
+				}
+			}
 		});
 	}
 	
+	private void SaveAdf(){
+		ArrayList<String> uuids = new ArrayList<String>();
+		mTango.saveAreaDescription(uuids);
+	}
+	
+	private void UpdateTextViewWith(final TangoPoseData pose){
+		final DecimalFormat twoDec = new DecimalFormat("0.00");
+		runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				if(pose.baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE){
+					mAdf2Device.setText("(" + twoDec.format(pose.translation[0])+","+twoDec.format(pose.translation[1])+","+twoDec.format(pose.translation[2])+")");
+				}
+				
+				if(pose.baseFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE){
+					mStart2Device.setText("(" + twoDec.format(pose.translation[0])+","+twoDec.format(pose.translation[1])+","+twoDec.format(pose.translation[2])+")");
+				}
+				if(pose.baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE){
+					mAdf2Start.setText("(" + twoDec.format(pose.translation[0])+","+twoDec.format(pose.translation[1])+","+twoDec.format(pose.translation[2])+")");
+					mNoOfLocalizationEvents++;
+				}
+				mRelocalizationText.setText(""+mRelocalized+" " + mNoOfLocalizationEvents);
+				mPoseStatus.setText(GetPoseStatus(pose));
+			}
+			
+		});
+			
+	}
+	
+	private String GetPoseStatus(TangoPoseData pose){
+		String returnString;
+		switch(pose.statusCode)
+		{
+			case TangoPoseData.POSE_INITIALIZING:
+				returnString = "Initializing";
+				break;
+			case TangoPoseData.POSE_INVALID:
+				returnString = "Invalid";
+				break;
+			case TangoPoseData.POSE_VALID:
+				returnString = "Valid";
+				break;
+			default:
+				returnString = "UnKnown";
+				break;
+		}
+		return returnString;
+	}
 	
 	@Override
 	protected void onPause() {
 		super.onPause();
-		mTango.unlockConfig();
-		mTango.disconnect();
 	}
 	
 	@Override
 	protected void onResume() {	
 		super.onResume();
-		mTango.lockConfig(mConfig);
-		mTango.connect();
-		 ArrayList<String> fullUuidList = new ArrayList<String>();
-         mTango.listAreaDescriptions(fullUuidList);
-         if (fullUuidList.size() == 0) {
-             Log.e(TAG, "No UUIDs on device");
-         } else {
-             for (String s : fullUuidList) {
-                 Log.e(TAG, "UUID: " + s);
-                 TangoAreaDescriptionMetaData metadata =
-                     new TangoAreaDescriptionMetaData();
-                 int resultLoad = mTango.loadAreaDescriptionMetaData(s, metadata);
-                 Log.e(TAG,
-                       "Metadata load result is " + resultLoad);
-                 byte[] id = metadata.get("id");
-                 String idString = new String(id);
-                 Log.e(TAG, "Id is " + idString);
-                 byte[] name = metadata.get("name");
-                 String nameString = new String(name);
-                 Log.e(TAG, "Name is " + nameString);
-                 nameString = idString + "_tester";
-                 metadata.set("name", nameString.getBytes());
-                 int resultSave = mTango.saveAreaDescriptionMetadata(s, metadata);
-                 Log.e(TAG,
-                       "Metadata save result is " + resultSave);
-             }
-         }
 	}
 	
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		mTango.unlockConfig();
 	}
 
 	@Override
@@ -215,6 +287,20 @@ public class AreaLearning extends Activity implements View.OnClickListener {
 			break;
 		case R.id.thirdPerson:
 			mRenderer.setThirdPersonView();
+			break;
+		case R.id.start:
+			SetTangoConfig();
+			break;
+		case R.id.learningMode:
+			mIsLearningMode = mLearningMode.isChecked();
+			Log.e("Learning mode on:",""+mIsLearningMode);
+			break;
+		case R.id.constantSpaceRelocalization:
+			mIsConstantSpaceRelocalize = mConstantSpaceRelocaliztion.isChecked();
+			Log.e("CSR mode on:",""+mIsConstantSpaceRelocalize);
+			break;
+		case R.id.saveAdf:
+			SaveAdf();
 			break;
 		default:
 			Log.w("MotionTracking", "Unknown button click");
