@@ -116,14 +116,6 @@ public class AreaLearning extends Activity implements View.OnClickListener {
 		// Instantiate the Tango service
 		mTango = new Tango(this);
 		mRelocalized = false;
-		// Select coordinate frame pairs
-		ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
-        framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
-        		TangoPoseData.COORDINATE_FRAME_DEVICE));
-        framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
-        		TangoPoseData.COORDINATE_FRAME_DEVICE));
-        framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
-        		TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE));
 	}
 	
 	private void SetTangoConfig()
