@@ -15,12 +15,13 @@
    limitations under the License.
 -->
 <resources>
-
     <string name="app_name">JPointCloudSample</string>
     <string name="vertex_count">Number of Points:</string>
     <string name="version">Version Date:</string>
     <string name="first_person">1st Person</string>
     <string name="third_person">3rd Person</string>
     <string name="top_down">Top Down</string>
-
+	<string name="averageZ">Average Z :</string>
+	<string name="frequency">Frequency :</string>
+	<string name="timestamp">Timestamp :</string>
 </resources>

@@ -52,9 +52,10 @@ public class PointCloud extends Renderable {
 	private final int mProgram;
 	private int mPosHandle;
 	private int mMVPMatrixHandle;
-	public int mPointCount;
-	
+	private int mPointCount;
+	private float mAverageZ;
 	public PointCloud() {
+		mAverageZ=0;
 		int vertexShader = RenderUtils.loadShader(GLES20.GL_VERTEX_SHADER,sVertexShaderCode);
 		int fragShader = RenderUtils.loadShader(GLES20.GL_FRAGMENT_SHADER, sFragmentShaderCode);
 		
@@ -65,24 +66,24 @@ public class PointCloud extends Renderable {
 		Matrix.setIdentityM(getModelMatrix(), 0);
 	}
 	
-	public void updatePoints(byte[] byteArray) {
-		FloatBuffer mPointCloudFloatBuffer;
+	public void updatePoints(FloatBuffer mPointCloudFloatBuffer) {
 		ByteBuffer mVertexByteBuffer;
-		mPointCloudFloatBuffer = ByteBuffer.wrap(byteArray).order(ByteOrder.nativeOrder()).asFloatBuffer(); 
 		mPointCount = mPointCloudFloatBuffer.capacity()/3;
 		mVertexByteBuffer = ByteBuffer.allocateDirect(mPointCloudFloatBuffer.capacity()*BYTES_PER_FLOAT);
 		mVertexByteBuffer.order(ByteOrder.nativeOrder());
 		mVertexBuffer = mVertexByteBuffer.asFloatBuffer();
 		mVertexBuffer.clear();
 		mVertexBuffer.position(0);
-		
+		float totalZ=0;
 		for (int i = 0; i < mPointCloudFloatBuffer.capacity(); i = i + 3) {
 			if (i + 3 < mPointCloudFloatBuffer.capacity()) {
 				mVertexBuffer.put(mPointCloudFloatBuffer.get(i));
 				mVertexBuffer.put(-mPointCloudFloatBuffer.get(i+1));
 				mVertexBuffer.put(-mPointCloudFloatBuffer.get(i+2));
+				totalZ = totalZ+mPointCloudFloatBuffer.get(i+2);
 			}
 		}
+		mAverageZ = totalZ/mPointCount;
 	}
 	
 	@Override
@@ -100,6 +101,9 @@ public class PointCloud extends Renderable {
 		}
 	}
 	
+	public float getAverageZ(){
+		return mAverageZ;
+	}
 	public int getPointCount(){
 		return mPointCount;
 	}

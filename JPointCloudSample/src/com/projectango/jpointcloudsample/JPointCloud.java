@@ -18,6 +18,7 @@ package com.projectango.jpointcloudsample;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 
 import com.google.atap.tangoservice.Tango;
@@ -54,10 +55,16 @@ public class JPointCloud extends Activity implements OnClickListener {
 	private GLSurfaceView mGLView;
 	private TextView mPointCount;
 	private TextView mVersion;
+	private TextView mAverageZ;
+	private TextView mFrequency;
+	private TextView mTimeStamp;
 	private Button mFirstPersonButton;
 	private Button mThirdPersonButton;
 	private Button mTopDownButton;
 	
+	
+	private float mPreviousTimeStamp;
+	private float mCurrentTimeStamp;
 	private String mServiceVersion;
 	
     @Override
@@ -69,7 +76,9 @@ public class JPointCloud extends Activity implements OnClickListener {
         mGLView = (GLSurfaceView)findViewById(R.id.gl_surface_view);
         mPointCount = (TextView) findViewById(R.id.vertexCount);
         mVersion=  (TextView) findViewById(R.id.version);
-        
+        mAverageZ= (TextView) findViewById(R.id.averageZ);
+        mFrequency= (TextView) findViewById(R.id.frequency);
+        mTimeStamp = (TextView) findViewById(R.id.timestamp);
         mFirstPersonButton = (Button) findViewById(R.id.first_person_button);
         mFirstPersonButton.setOnClickListener(this);
         mThirdPersonButton = (Button) findViewById(R.id.third_person_button);
@@ -95,7 +104,7 @@ public class JPointCloud extends Activity implements OnClickListener {
 		ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
         framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
         		TangoPoseData.COORDINATE_FRAME_DEVICE));
-		
+		mPreviousTimeStamp = 0;
 		// Listen for new Tango data
 		int statusCode = mTango.connectListener(framePairs, new OnTangoUpdateListener() {
 			
@@ -106,27 +115,27 @@ public class JPointCloud extends Activity implements OnClickListener {
 
 			@Override
 			public void onXyzIjAvailable(final TangoXyzIjData xyzIj) {
-				byte[] buffer = new byte[xyzIj.xyzParcelFileDescriptorSize];
-            	FileInputStream fileStream = new FileInputStream(
-            			xyzIj.xyzParcelFileDescriptor.getFileDescriptor());
-            	
-            	try {
-            		fileStream.read(buffer, xyzIj.xyzParcelFileDescriptorOffset,
-            				xyzIj.xyzParcelFileDescriptorSize);
-            		fileStream.close();
-            		mRenderer.getPointCloud().updatePoints(buffer);
+				mCurrentTimeStamp = (float) xyzIj.timestamp;
+				final float frequency = 1/(mCurrentTimeStamp - mPreviousTimeStamp);
+				mPreviousTimeStamp = mCurrentTimeStamp;
+            		if(mPreviousTimeStamp==0){
+            			mPreviousTimeStamp = mCurrentTimeStamp;
+            		}
+            		mRenderer.getPointCloud().updatePoints(xyzIj.getXyzBuffer());
             		mGLView.requestRender();
-            	} catch (IOException e) {
-            		Log.e(TAG, "Error reading xyzij buffer.", e);
-            	}
             	
+            
             	// Must run UI changes on the UI thread.  Running in the Tango service thread
             	//	will result in an error.
             	runOnUiThread(new Runnable() {
+            		DecimalFormat twoFormat = new DecimalFormat("0.00");
 					@Override
 					public void run() {
 						// Display number of points in the point cloud
 						mPointCount.setText(Integer.toString(xyzIj.xyzCount));
+						mTimeStamp.setText(""+xyzIj.timestamp);
+						mFrequency.setText(""+twoFormat.format(frequency));
+						mAverageZ.setText(""+mRenderer.getPointCloud().getAverageZ());
 					}
 				});
             	
