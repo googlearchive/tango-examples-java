@@ -133,9 +133,9 @@ public class JPointCloud extends Activity implements OnClickListener {
 					public void run() {
 						// Display number of points in the point cloud
 						mPointCount.setText(Integer.toString(xyzIj.xyzCount));
-						mTimeStamp.setText(""+xyzIj.timestamp);
-						mFrequency.setText(""+twoFormat.format(frequency));
-						mAverageZ.setText(""+mRenderer.getPointCloud().getAverageZ());
+						mTimeStamp.setText(""+twoFormat.format(xyzIj.timestamp));
+						mFrequency.setText(""+twoFormat.format(frequency)+"Hz");
+						mAverageZ.setText(""+twoFormat.format(mRenderer.getPointCloud().getAverageZ()) + " meters");
 					}
 				});
             	
