@@ -143,15 +143,15 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 		// Display the library version for debug purposes
 		mVersion.setText(mConfig.getString("tango_service_library_version"));
 
+		// Lock configuration and connect to Tango
+		mTango.lockConfig(mConfig);
+		mTango.connect();
+		
 		// Select coordinate frame pairs
 		final ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
 		framePairs.add(new TangoCoordinateFramePair(
 				TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
 				TangoPoseData.COORDINATE_FRAME_DEVICE));
-		
-		// Lock configuration and connect to Tango
-		mTango.lockConfig(mConfig);
-		mTango.connect();
 		
 		// Listen for new Tango data
 		int statusCode = mTango.connectListener(framePairs, new OnTangoUpdateListener() {
@@ -170,6 +170,7 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 						mRenderer.updateViewMatrix();
 						mGLView.requestRender();
 						
+						// Update the UI with TangoPose information
 						runOnUiThread(new Runnable() {
 							@Override
 							public void run() {

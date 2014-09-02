@@ -19,13 +19,7 @@ package com.projecttango.motiontrackingjava;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 
-import com.google.atap.tangoservice.Tango;
-import com.google.atap.tangoservice.TangoConfig;
-import com.google.atap.tangoservice.TangoEvent;
-import com.google.atap.tangoservice.TangoPoseData;
-import com.google.atap.tangoservice.TangoXyzIjData;
-import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
-import com.google.atap.tangoservice.TangoCoordinateFramePair;
+import com.projecttango.motiontrackingjava_start.R;
 
 import android.app.Activity;
 import android.opengl.GLSurfaceView;
@@ -45,9 +39,6 @@ import android.widget.ToggleButton;
 public class MotionTracking extends Activity implements View.OnClickListener {
 
 	private static String TAG = MotionTracking.class.getSimpleName();
-
-	private Tango mTango;
-	private TangoConfig mConfig;
 
 	private TextView mPoseX;
 	private TextView mPoseY;
@@ -114,9 +105,6 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 		mGLView.setRenderer(mRenderer);
 		mGLView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
 		mIsAutoReset = mAutoResetButton.isChecked();
-
-		// Instantiate the Tango service
-		mTango = new Tango(this);
 	}
 
 	/**
@@ -124,114 +112,22 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 	 * Motion Tracking API.  This is called in response to the user clicking the 'Start' Button.
 	 */
 	private void startMotionTracking() {
-		// Create a new Tango Configuration and enable the MotionTracking API
-		mConfig = new TangoConfig();
-		mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT, mConfig);
-		mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
-
-		// The Auto-Reset ToggleButton sets a boolean variable to determine if the
-		//	Tango service should automatically reset when MotionTracking enters an
-		//	invalid state.
-		if (mIsAutoReset) {
-			mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_AUTORESET, true);
-			mMotionReset.setVisibility(View.GONE);
-		} else {
-			mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_AUTORESET, false);
-			mMotionReset.setVisibility(View.VISIBLE);
-		}
-		
-		// Display the library version for debug purposes
-		mVersion.setText(mConfig.getString("tango_service_library_version"));
-
-		// Select coordinate frame pairs
-		final ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
-		framePairs.add(new TangoCoordinateFramePair(
-				TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
-				TangoPoseData.COORDINATE_FRAME_DEVICE));
-		
-		// Lock configuration and connect to Tango
-		mTango.lockConfig(mConfig);
-		mTango.connect();
-		
-		// Listen for new Tango data
-		int statusCode = mTango.connectListener(framePairs, new OnTangoUpdateListener() {
-
-					@Override
-					public void onPoseAvailable(final TangoPoseData pose) {
-						// Log whenever Motion Tracking enters an invalid state
-						if (!mIsAutoReset && (pose.statusCode == TangoPoseData.POSE_INVALID)) {
-							Log.w(TAG, "Invalid State");
-						}
-						
-						// Update the OpenGL renderable objects with the new Tango Pose data
-						mRenderer.getTrajectory().updateTrajectory(pose.translation);
-						mRenderer.getModelMatCalculator().updateModelMatrix(
-								pose.translation, pose.rotation);
-						mRenderer.updateViewMatrix();
-						mGLView.requestRender();
-						
-						runOnUiThread(new Runnable() {
-							@Override
-							public void run() {
-								DecimalFormat twoDec = new DecimalFormat("0.00");
-								
-								// Display pose data on screen in TextViews
-								mPoseX.setText(twoDec.format(pose.translation[0]));
-								mPoseY.setText(twoDec.format(pose.translation[1]));
-								mPoseZ.setText(twoDec.format(pose.translation[2]));
-								mPoseQuaternion0.setText(twoDec.format(pose.rotation[0]));
-								mPoseQuaternion1.setText(twoDec.format(pose.rotation[1]));
-								mPoseQuaternion2.setText(twoDec.format(pose.rotation[2]));
-								mPoseQuaternion3.setText(twoDec.format(pose.rotation[3]));
-
-								if (pose.statusCode == TangoPoseData.POSE_VALID) {
-									mPoseStatus.setText("Valid");
-								} else if (pose.statusCode == TangoPoseData.POSE_INVALID) {
-									mPoseStatus.setText("Invalid");
-								} else if (pose.statusCode == TangoPoseData.POSE_INITIALIZING) {
-									mPoseStatus.setText("Initializing");
-								} else if (pose.statusCode == TangoPoseData.POSE_UNKNOWN) {
-									mPoseStatus.setText("Unknown");
-								}
-							}
-						});
-					}
-
-					@Override
-					public void onXyzIjAvailable(TangoXyzIjData arg0) {
-						// We are not using TangoXyzIjData for this application
-					}
-
-					@Override
-					public void onTangoEvent(TangoEvent arg0) {
-						// We are not using TangoEvent data for this application
-
-					}
-				});
-
-		// Log status code for debug purposes
-		Log.i(TAG, "Status: " + statusCode);
-
 		// Once Motion Tracking begins, these options are no longer mutable
 		mAutoResetButton.setVisibility(View.GONE);
 		mStart.setVisibility(View.GONE);
 	}
 
 	private void motionReset() {
-		mTango.resetMotionTracking();
 	}
 
 	@Override
 	protected void onPause() {
 		super.onPause();
-		mTango.unlockConfig();
-		mTango.disconnect();
 	}
 
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		mTango.unlockConfig();
 	}
 
 	@Override
