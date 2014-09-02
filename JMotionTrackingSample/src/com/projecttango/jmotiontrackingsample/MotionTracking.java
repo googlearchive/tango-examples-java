@@ -64,6 +64,7 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 	private ToggleButton mAutoResetButton;
 	private float mPreviousX,mPreviousY;
 	private boolean mIsAutoReset;
+
 	private MTGLRenderer mRenderer;
 	private GLSurfaceView mGLView;
 	
