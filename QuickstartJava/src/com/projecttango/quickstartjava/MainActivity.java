@@ -22,6 +22,7 @@ import com.google.atap.tangoservice.Tango;
 import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
 import com.google.atap.tangoservice.TangoConfig;
 import com.google.atap.tangoservice.TangoCoordinateFramePair;
+import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
@@ -102,6 +103,11 @@ public class MainActivity extends Activity {
 			@Override
 			public void onXyzIjAvailable(TangoXyzIjData arg0) {
 				// Ignoring XyzIj data
+			}
+
+			@Override
+			public void onTangoEvent(TangoEvent arg0) {
+				// Ignoring TangoEvents
 			}
 			
 		});
