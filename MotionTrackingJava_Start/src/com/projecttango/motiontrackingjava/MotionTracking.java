@@ -16,6 +16,9 @@
 
 package com.projecttango.motiontrackingjava;
 
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+
 import com.projecttango.motiontrackingjava_start.R;
 
 import android.app.Activity;
@@ -25,14 +28,18 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.ToggleButton;
 
 /**
- * Main Activity class for the Motion Tracking API Sample.  Handles the connection to the Tango
- * service and propagation of Tango pose data to OpenGL and Layout views.  OpenGL rendering logic
- * is delegated to the {@link MTGLRenderer} class.
+ * Main Activity class for the Motion Tracking API Sample. Handles the
+ * connection to the Tango service and propagation of Tango pose data to OpenGL
+ * and Layout views. OpenGL rendering logic is delegated to the
+ * {@link MTGLRenderer} class.
  */
 public class MotionTracking extends Activity implements View.OnClickListener {
-	
+
+	private static String TAG = MotionTracking.class.getSimpleName();
+
 	private TextView mPoseX;
 	private TextView mPoseY;
 	private TextView mPoseZ;
@@ -45,14 +52,20 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 	private Button mFirstPersonButton;
 	private Button mThirdPersonButton;
 	private Button mTopDownButton;
+	private Button mStart;
+	private Button mMotionReset;
+	private ToggleButton mAutoResetButton;
+	
+	private boolean mIsAutoReset;
 	private MTGLRenderer mRenderer;
 	private GLSurfaceView mGLView;
-	
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_motion_tracking);
 
+		// Text views for displaying translation and rotation data
 		mPoseX = (TextView) findViewById(R.id.poseX);
 		mPoseY = (TextView) findViewById(R.id.poseY);
 		mPoseZ = (TextView) findViewById(R.id.poseZ);
@@ -60,16 +73,28 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 		mPoseQuaternion1 = (TextView) findViewById(R.id.Quaternion2);
 		mPoseQuaternion2 = (TextView) findViewById(R.id.Quaternion3);
 		mPoseQuaternion3 = (TextView) findViewById(R.id.Quaternion4);
-		
+
+		// Buttons for selecting camera view
 		mFirstPersonButton = (Button) findViewById(R.id.firstPerson);
 		mThirdPersonButton = (Button) findViewById(R.id.thirdPerson);
 		mTopDownButton = (Button) findViewById(R.id.topDown);
 		
+		// Buttons to start and reset motion tracking
+		mStart = (Button) findViewById(R.id.start);
+		mMotionReset = (Button) findViewById(R.id.manualReset);
+		mAutoResetButton = (ToggleButton) findViewById(R.id.autoReset);
+		
+		// Text views for the status of the pose data and Tango library versions
 		mPoseStatus = (TextView) findViewById(R.id.Status);
 		mVersion = (TextView) findViewById(R.id.version);
-		mGLView = (GLSurfaceView) findViewById(R.id.gl_surface_view);
 		
+		// OpenGL view where all of the graphics are drawn
+		mGLView = (GLSurfaceView) findViewById(R.id.gl_surface_view);
+
 		// Set up button click listeners
+		mMotionReset.setOnClickListener(this);
+		mStart.setOnClickListener(this);
+		mAutoResetButton.setOnClickListener(this);
 		mFirstPersonButton.setOnClickListener(this);
 		mThirdPersonButton.setOnClickListener(this);
 		mTopDownButton.setOnClickListener(this);
@@ -79,19 +104,27 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 		mGLView.setEGLContextClientVersion(2);
 		mGLView.setRenderer(mRenderer);
 		mGLView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
+		mIsAutoReset = mAutoResetButton.isChecked();
 	}
-	
-	
+
+	/**
+	 * Set up the TangoConfig and the listeners for the Tango service, then begin using the
+	 * Motion Tracking API.  This is called in response to the user clicking the 'Start' Button.
+	 */
+	private void startMotionTracking() {
+		// Once Motion Tracking begins, these options are no longer mutable
+		mAutoResetButton.setVisibility(View.GONE);
+		mStart.setVisibility(View.GONE);
+	}
+
+	private void motionReset() {
+	}
+
 	@Override
 	protected void onPause() {
 		super.onPause();
 	}
-	
-	@Override
-	protected void onResume() {	
-		super.onResume();
-	}
-	
+
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
@@ -99,7 +132,7 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 
 	@Override
 	public void onClick(View v) {
-		switch(v.getId()) {
+		switch (v.getId()) {
 		case R.id.firstPerson:
 			mRenderer.setFirstPersonView();
 			break;
@@ -109,10 +142,18 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 		case R.id.thirdPerson:
 			mRenderer.setThirdPersonView();
 			break;
+		case R.id.autoReset:
+			mIsAutoReset = mAutoResetButton.isChecked();
+			break;
+		case R.id.start:
+			startMotionTracking();
+			break;
+		case R.id.manualReset:
+			motionReset();
+			break;
 		default:
-			Log.w("MotionTracking", "Unknown button click");
+			Log.w(TAG, "Unknown button click");
 			return;
 		}
 	}
-	
 }
