@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.projecttango.arealearningjava;
+package com.projecttango.areadescriptionjava;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -40,11 +40,11 @@ import android.widget.ToggleButton;
  * Main Activity class for the Area Learning API Sample. Handles the
  * connection to the Tango service and propagation of Tango pose data to OpenGL
  * and Layout views. OpenGL rendering logic is delegated to the
- * {@link ALRenderer} class.
+ * {@link ADRenderer} class.
  */
-public class AreaLearning extends Activity implements View.OnClickListener {
+public class AreaDescription extends Activity implements View.OnClickListener {
 
-	private static final String TAG = AreaLearning.class.getSimpleName();
+	private static final String TAG = AreaDescription.class.getSimpleName();
 	
 	private Tango mTango;
 	private TangoConfig mConfig;
@@ -67,7 +67,7 @@ public class AreaLearning extends Activity implements View.OnClickListener {
 	private boolean mIsLearningMode;
 	private boolean mIsConstantSpaceRelocalize;
 	
-	private ALRenderer mRenderer;
+	private ADRenderer mRenderer;
 	private GLSurfaceView mGLView;
 
 	@Override
@@ -103,7 +103,7 @@ public class AreaLearning extends Activity implements View.OnClickListener {
 		mTopDownButton.setOnClickListener(this);
 
 		// Configure OpenGL renderer
-		mRenderer = new ALRenderer();
+		mRenderer = new ADRenderer();
 		mGLView.setEGLContextClientVersion(2);
 		mGLView.setRenderer(mRenderer);
 		mGLView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);

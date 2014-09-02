@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.projecttango.arealearningjava;
+package com.projecttango.areadescriptionjava;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -30,7 +30,7 @@ import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 
 /**
- * OpenGL rendering class for the AreaLearning API sample.  This class manages the objects
+ * OpenGL rendering class for the AreaDescription API sample.  This class manages the objects
  * visible in the OpenGL view which are the {@link CameraFrustum}, {@link Axis}, {@link Trajectory},
  * and the {@link Grid}.  These objects are implemented in the TangoUtils library in the package
  * {@link com.projecttango.tangoutils.renderables}.
@@ -38,7 +38,7 @@ import android.opengl.Matrix;
  * This class receives also handles the user-selected camera view, which can be 1st person, 
  * 3rd person, or top-down.
  */
-public class ALRenderer extends Renderer implements GLSurfaceView.Renderer {
+public class ADRenderer extends Renderer implements GLSurfaceView.Renderer {
 	
 	private static final float CAMERA_FOV = 45f;
 	private static final float CAMERA_NEAR = 0.01f;
