@@ -35,6 +35,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.ToggleButton;
 
 /**
  * Main Activity class for the Motion Tracking API Sample.  Handles the connection to the Tango
@@ -58,9 +59,11 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 	private Button mFirstPersonButton;
 	private Button mThirdPersonButton;
 	private Button mTopDownButton;
+	private Button mStart;
+	private Button mMotionReset;
+	private ToggleButton mAutoResetButton;
 	private float mPreviousX,mPreviousY;
-	private TextView mPreviousPose;
-	
+	private boolean mIsAutoReset;
 	private MTGLRenderer mRenderer;
 	private GLSurfaceView mGLView;
 	
@@ -76,17 +79,22 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 		mPoseQuaternion1 = (TextView) findViewById(R.id.Quaternion2);
 		mPoseQuaternion2 = (TextView) findViewById(R.id.Quaternion3);
 		mPoseQuaternion3 = (TextView) findViewById(R.id.Quaternion4);
-		mPreviousPose = (TextView) findViewById(R.id.previousPose);
 		
 		mFirstPersonButton = (Button) findViewById(R.id.firstPerson);
 		mThirdPersonButton = (Button) findViewById(R.id.thirdPerson);
 		mTopDownButton = (Button) findViewById(R.id.topDown);
+		mStart =(Button) findViewById(R.id.start);
+		mMotionReset = (Button) findViewById(R.id.manualReset);
 		
+		mAutoResetButton = (ToggleButton) findViewById(R.id.autoReset);
 		mPoseStatus = (TextView) findViewById(R.id.Status);
 		mVersion = (TextView) findViewById(R.id.version);
 		mGLView = (GLSurfaceView) findViewById(R.id.gl_surface_view);
 		
 		// Set up button click listeners
+		mMotionReset.setOnClickListener(this);
+		mStart.setOnClickListener(this);
+		mAutoResetButton.setOnClickListener(this);
 		mFirstPersonButton.setOnClickListener(this);
 		mThirdPersonButton.setOnClickListener(this);
 		mTopDownButton.setOnClickListener(this);
@@ -96,19 +104,29 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 		mGLView.setEGLContextClientVersion(2);
 		mGLView.setRenderer(mRenderer);
 		mGLView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
-		
+		mIsAutoReset = mAutoResetButton.isChecked();
 		// Instantiate the Tango service
 		mTango = new Tango(this);
+		
+	}
+	
+	private void SetTangoConfig(){
+		
 		mConfig = new TangoConfig();
 		mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT, mConfig);
-		mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
-		//mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_LEARNINGMODE, false);
+		mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);	
+		if(mIsAutoReset){
+			mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_AUTORESET, true);
+			mMotionReset.setVisibility(View.GONE);
+		}
+		else{
+			mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_AUTORESET, false);
+			mMotionReset.setVisibility(View.VISIBLE);
+		}
 		mVersion.setText(mConfig.getString("tango_service_library_version"));
 		
 		// Select coordinate frame pairs
 		final ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
-        framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
-        		TangoPoseData.COORDINATE_FRAME_DEVICE));
         framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
         		TangoPoseData.COORDINATE_FRAME_DEVICE));
         mTango.lockConfig(mConfig);
@@ -118,13 +136,16 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 
 			@Override
 			public void onPoseAvailable(final TangoPoseData pose) {
+				if(!mIsAutoReset){
+					if(pose.statusCode == TangoPoseData.POSE_INVALID){
+						Log.e("Motion Tracking Invalid", "Invalid State");
+						
+					}
+				}
 				mRenderer.getTrajectory().updateTrajectory(pose.translation);
 				mRenderer.getModelMatCalculator().updateModelMatrix(pose.translation, pose.rotation);
 				mRenderer.UpdateViewMatrix();
 				mGLView.requestRender();
-//				final TangoPoseData previousPose = new TangoPoseData();
-//				final int poseAvailability = mTango.getPoseAtTime(pose.timestamp-10.0f,framePairs.get(0),previousPose);
-//				Log.e("Pose is",""+ previousPose.translation[0]+" "+ previousPose.translation[1]+" "+ previousPose.translation[2]);
 				runOnUiThread(new Runnable() {
 					@Override
 					public void run() {
@@ -137,13 +158,6 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 						mPoseQuaternion1.setText(Float.toString(pose.rotation[1]));
 						mPoseQuaternion2.setText(Float.toString(pose.rotation[2]));
 						mPoseQuaternion3.setText(Float.toString(pose.rotation[3]));
-//						if(poseAvailability == Tango.STATUS_ERROR)
-//						{
-//							mPreviousPose.setText("PoseNotAvailable");
-//						}else{
-//							mPreviousPose.setText(" "+twoDec.format(previousPose.translation[0])+" "+twoDec.format(previousPose.translation[1])+" "+twoDec.format(previousPose.translation[2])+" ");
-//						}
-						// Display status of this TangoPose object
 						if (pose.statusCode == TangoPoseData.POSE_VALID) {
 							mPoseStatus.setText("Valid");
 						} else if (pose.statusCode == TangoPoseData.POSE_INVALID) {
@@ -168,8 +182,17 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 				
 			}
 		});
+		mAutoResetButton.setVisibility(View.GONE);
+		mStart.setVisibility(View.GONE);
 	}
 	
+	private void ShowManualReset(){
+	
+	}
+	
+	private void MotionReset(){
+		mTango.resetMotionTracking();
+	}
 	
 	@Override
 	protected void onPause() {
@@ -181,8 +204,7 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 	@Override
 	protected void onResume() {	
 		super.onResume();
-		
-		
+
 	}
 	
 	@Override
@@ -203,12 +225,22 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 		case R.id.thirdPerson:
 			mRenderer.setThirdPersonView();
 			break;
+		case R.id.autoReset:
+			mIsAutoReset = mAutoResetButton.isChecked();
+			break;
+		case R.id.start:
+			SetTangoConfig();
+			break;
+		case R.id.manualReset:
+			MotionReset();
+			break;
 		default:
 			Log.w("MotionTracking", "Unknown button click");
 			return;
 		}
 	}
 	
+
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
 	        //Log.e("TOuched","Touched");

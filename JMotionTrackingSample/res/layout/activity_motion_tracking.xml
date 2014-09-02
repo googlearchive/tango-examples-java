@@ -224,6 +224,31 @@
 	         android:layout_alignParentTop="true"
 	         android:layout_centerHorizontal="true"
 	         android:text="TopDownView" />
+
+	     <Button
+	         android:id="@+id/start"
+	         android:layout_width="wrap_content"
+	         android:layout_height="wrap_content"
+	         android:layout_alignParentBottom="true"
+	         android:layout_alignParentLeft="true"
+	         android:text="Start" />
+
+	     <ToggleButton
+	         android:id="@+id/autoReset"
+	         android:layout_width="wrap_content"
+	         android:layout_height="wrap_content"
+	         android:layout_above="@+id/start"
+	         android:layout_alignParentLeft="true"
+	         android:textOff="Auto Reset Off"
+	         android:textOn="Auto Reset On" />
+
+	     <Button
+	         android:id="@+id/manualReset"
+	         android:layout_width="wrap_content"
+	         android:layout_height="wrap_content"
+	         android:layout_alignParentBottom="true"
+	         android:layout_alignParentRight="true"
+	         android:text="ResetMotion Tracking" />
 	    
 	</RelativeLayout>
    

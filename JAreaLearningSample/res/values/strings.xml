@@ -15,7 +15,7 @@
    limitations under the License.
 -->
 <resources>
-    <string name="app_name">JAreaLearning</string>
+    <string name="app_name">AreaDescriptionJava</string>
  	<string name="Quaternion1">Q1 : </string>
  	<string name="Quaternion2">Q2 :</string>
  	<string name="Quaternion3">Q3 :</string>
