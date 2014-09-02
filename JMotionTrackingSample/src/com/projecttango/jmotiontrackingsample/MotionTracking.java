@@ -64,6 +64,7 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 	private ToggleButton mAutoResetButton;
 	private float mPreviousX,mPreviousY;
 	private boolean mIsAutoReset;
+
 	private MTGLRenderer mRenderer;
 	private GLSurfaceView mGLView;
 	
@@ -144,7 +145,7 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 				}
 				mRenderer.getTrajectory().updateTrajectory(pose.translation);
 				mRenderer.getModelMatCalculator().updateModelMatrix(pose.translation, pose.rotation);
-				mRenderer.UpdateViewMatrix();
+				mRenderer.updateViewMatrix();
 				mGLView.requestRender();
 				runOnUiThread(new Runnable() {
 					@Override

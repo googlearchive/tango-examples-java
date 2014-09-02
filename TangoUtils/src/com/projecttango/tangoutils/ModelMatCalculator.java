@@ -34,6 +34,7 @@ public class ModelMatCalculator {
 	private float[] modelMatrix = new float[16];
 	private float[] mTranslation = new float[3];
 	private float[] mQuaternion = new float[4];
+	
 	public ModelMatCalculator() {
 		Matrix.setIdentityM(modelMatrix, 0);
 	}

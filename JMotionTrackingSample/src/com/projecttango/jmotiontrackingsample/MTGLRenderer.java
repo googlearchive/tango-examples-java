@@ -19,7 +19,7 @@ package com.projecttango.jmotiontrackingsample;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-import com.projecttango.tangoutils.ModelMatCalculator;
+import com.projecttango.tangoutils.Renderer;
 import com.projecttango.tangoutils.renderables.Axis;
 import com.projecttango.tangoutils.renderables.CameraFrustum;
 import com.projecttango.tangoutils.renderables.Grid;
@@ -38,23 +38,17 @@ import android.opengl.Matrix;
  * This class receives also handles the user-selected camera view, which can be 1st person, 
  * 3rd person, or top-down.
  */
-public class MTGLRenderer implements GLSurfaceView.Renderer {
+public class MTGLRenderer extends Renderer implements GLSurfaceView.Renderer {
 	
 	private static final float CAMERA_FOV = 45f;
 	private static final float CAMERA_NEAR = 0.01f;
 	private static final float CAMERA_FAR = 500f;
 	private static final int MATRIX_4X4 = 16;
-	private static final int FIRST_PERSON = 0;
-	private static final int TOP_DOWN =1;
-	private static final int THIRD_PERSON =2;
-	private static int viewId =2;
 	
 	private Trajectory mTrajectory;
 	private CameraFrustum mCameraFrustum;
 	private Axis mAxis;
 	private Grid mFloorGrid;
-	private float[] mViewMatrix = new float[MATRIX_4X4];
-	private ModelMatCalculator mModelMatCalculator;
 	private float mCameraAspect;
 	private float[] mProjectionMatrix = new float[MATRIX_4X4];
 
@@ -64,15 +58,15 @@ public class MTGLRenderer implements GLSurfaceView.Renderer {
 		GLES20.glClearColor(1f, 1f, 1f, 1.0f);
 		GLES20.glEnable(GLES20.GL_DEPTH_TEST);
 		
-		mModelMatCalculator = new ModelMatCalculator();
+		resetModelMatCalculator();
 		mCameraFrustum = new CameraFrustum();
 		mFloorGrid = new Grid();
 		mAxis = new Axis();
 		mTrajectory = new Trajectory();
 		
 		// Construct the initial view matrix
-		Matrix.setIdentityM(mViewMatrix, 0);
-		Matrix.setLookAtM(mViewMatrix, 0, 0, 5f, 5f, 0f, 0f, 0f, 0f, 1f, 0f);
+		Matrix.setIdentityM(getViewMatrix(), 0);
+		Matrix.setLookAtM(getViewMatrix(), 0, 0, 5f, 5f, 0f, 0f, 0f, 0f, 1f, 0f);
 	}
 
 	@Override
@@ -87,41 +81,13 @@ public class MTGLRenderer implements GLSurfaceView.Renderer {
 	public void onDrawFrame(GL10 gl) {
 		GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
 		
-		mAxis.setModelMatrix(mModelMatCalculator.getModelMatrix());
+		mAxis.setModelMatrix(getModelMatCalculator().getModelMatrix());
 		//mCameraFrustum.setModelMatrix(mModelMatCalculator.getModelMatrix());
 		
-		mTrajectory.draw(mViewMatrix, mProjectionMatrix);
-		mFloorGrid.draw(mViewMatrix, mProjectionMatrix);
-		mAxis.draw(mViewMatrix, mProjectionMatrix);
+		mTrajectory.draw(getViewMatrix(), mProjectionMatrix);
+		mFloorGrid.draw(getViewMatrix(), mProjectionMatrix);
+		mAxis.draw(getViewMatrix(), mProjectionMatrix);
 		//mCameraFrustum.draw(mViewMatrix, mProjectionMatrix);
-	}
-	
-	public void UpdateViewMatrix(){
-		float[] devicePosition = mModelMatCalculator.getTranslation();
-		switch(viewId){
-		case FIRST_PERSON:
-			float[] invertModelMat= new float[16];
-			Matrix.setIdentityM(invertModelMat, 0);
-			float[] temporaryMatrix= new float[16];
-			Matrix.setIdentityM(temporaryMatrix, 0);
-			Matrix.setIdentityM(mViewMatrix, 0);
-			Matrix.invertM(invertModelMat, 0, mModelMatCalculator.getModelMatrix(), 0);
-			Matrix.multiplyMM(temporaryMatrix, 0, mViewMatrix, 0, invertModelMat, 0);
-			System.arraycopy(temporaryMatrix, 0, mViewMatrix, 0, 16);
-			break;
-		case THIRD_PERSON:
-			Matrix.setIdentityM(mViewMatrix, 0);
-			Matrix.setLookAtM(mViewMatrix, 0, devicePosition[0], 5.0f+devicePosition[1], 5.0f+devicePosition[2], devicePosition[0], devicePosition[1], devicePosition[2], 0f, 1f, 0f);
-			break;
-		case TOP_DOWN:
-			Matrix.setIdentityM(mViewMatrix, 0);
-			Matrix.setLookAtM(mViewMatrix, 0, devicePosition[0], 5.0f+devicePosition[1], devicePosition[2], devicePosition[0], devicePosition[1], devicePosition[2],0f,0f,-1f);
-			break;
-		default:
-			viewId = THIRD_PERSON;
-			return;
-		}
-		
 	}
 	
 	public CameraFrustum getCameraFrustum() {
@@ -132,24 +98,8 @@ public class MTGLRenderer implements GLSurfaceView.Renderer {
 		return mAxis;
 	}
 	
-	public ModelMatCalculator getModelMatCalculator() {
-		return mModelMatCalculator;
-	}
-	
 	public Trajectory getTrajectory() {
 		return mTrajectory;
-	}
-	
-	public void setFirstPersonView(){
-		viewId= FIRST_PERSON;
-	}
-	
-	public void setThirdPersonView(){
-		viewId = THIRD_PERSON;
-	}
-	
-	public void setTopDownView(){
-		viewId = TOP_DOWN;
 	}
 	
 }
