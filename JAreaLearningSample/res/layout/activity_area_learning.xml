@@ -79,39 +79,6 @@
             android:layout_below="@+id/Adf2DeviceText"
             android:text="Adf wrt Start" />
 
-        <TextView
-            android:id="@+id/statusText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentLeft="true"
-            android:layout_below="@+id/Adf2StartText"
-            android:text="Status :" />
-
-        <TextView
-            android:id="@+id/RelocalizeText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentLeft="true"
-            android:layout_below="@+id/statusText"
-            android:text="Relocalize :" />
-
-        <TextView
-            android:id="@+id/UUIDText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentLeft="true"
-            android:layout_below="@+id/RelocalizeText"
-            android:text="UUID :" />
-
-        <TextView
-            android:id="@+id/uuid"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignBaseline="@+id/UUIDText"
-            android:layout_alignBottom="@+id/UUIDText"
-            android:layout_alignLeft="@+id/relocalize"
-            android:text="UUID Value" />
-
         <Button
             android:id="@+id/thirdPerson"
             android:layout_width="wrap_content"
@@ -172,22 +139,6 @@
             android:text="Start with this Config" />
 
         <TextView
-            android:id="@+id/status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_above="@+id/RelocalizeText"
-            android:layout_alignLeft="@+id/Adf2Start"
-            android:text="Status Value" />
-
-        <TextView
-            android:id="@+id/relocalize"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_above="@+id/uuid"
-            android:layout_alignRight="@+id/status"
-            android:text="True/False" />
-
-        <TextView
             android:id="@+id/version"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -203,6 +154,23 @@
             android:layout_alignParentRight="true"
             android:visibility="gone"
             android:text="Save Adf" />
+
+        <TextView
+            android:id="@+id/uuid"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/Adf2Start"
+            android:layout_toRightOf="@+id/Start2DeviceText"
+            android:text="UUID Value" />
+
+        <TextView
+            android:id="@+id/UUIDText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignBaseline="@+id/uuid"
+            android:layout_alignBottom="@+id/uuid"
+            android:layout_alignParentLeft="true"
+            android:text="UUID :" />
 
     </RelativeLayout>
 

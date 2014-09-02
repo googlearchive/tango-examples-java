@@ -52,8 +52,7 @@ public class ModelMatCalculator {
 		modelMatrix[12] = translation[0];
 		modelMatrix[13] = translation[2];
 		modelMatrix[14] = -1f * translation[1];		
-		mTranslation = new float[]{modelMatrix[12],modelMatrix[13],modelMatrix[14]};
-		mQuaternion = quaternion;
+		
 	}
 	
 	public float[] getModelMatrix(){
@@ -61,11 +60,7 @@ public class ModelMatCalculator {
 	}
 	
 	public float[] getTranslation(){
-		return mTranslation;
-	}
-	
-	public float[] getQuaternion(){
-		return mQuaternion;
+		return new float[]{modelMatrix[12], modelMatrix[13], modelMatrix[14]};
 	}
 	
 	/**

@@ -53,9 +53,7 @@ public class AreaLearning extends Activity implements View.OnClickListener {
 	private TextView mAdf2Device;
 	private TextView mAdf2Start;
 	private int mNoOfLocalizationEvents;
-	private TextView mPoseStatus;
 	private TextView mVersion;
-	private TextView mRelocalizationText;
 	private boolean mRelocalized;
 	private boolean mIsLearningMode;
 	private boolean mIsConstantSpaceRelocalize;
@@ -86,7 +84,6 @@ public class AreaLearning extends Activity implements View.OnClickListener {
 		mThirdPersonButton = (Button) findViewById(R.id.thirdPerson);
 		mTopDownButton = (Button) findViewById(R.id.topDown);
 		
-		mPoseStatus = (TextView) findViewById(R.id.status);
 		mVersion = (TextView) findViewById(R.id.version);
 		mGLView = (GLSurfaceView) findViewById(R.id.gl_surface_view);
 		
@@ -95,7 +92,7 @@ public class AreaLearning extends Activity implements View.OnClickListener {
 		mStartButton = (Button) findViewById(R.id.start);
 		mSaveAdf = (Button) findViewById(R.id.saveAdf);
 		mUUID = (TextView) findViewById(R.id.uuid);
-		mRelocalizationText = (TextView) findViewById(R.id.relocalize);
+
 		
 		mStartButton.setOnClickListener(this);
 		mSaveAdf.setOnClickListener(this);
@@ -136,7 +133,6 @@ public class AreaLearning extends Activity implements View.OnClickListener {
 			}
 			if(fullUUIDList.size()>0)
 			{
-				TangoAreaDescriptionMetaData metadata = new TangoAreaDescriptionMetaData();
                 mConfig.putString(TangoConfig.KEY_STRING_AREADESCRIPTION, fullUUIDList.get(fullUUIDList.size()-1));
 				mUUID.setText("No of UUIDs : " + fullUUIDList.size() + ", Latest is :"+fullUUIDList.get(fullUUIDList.size()-1));
 			}
@@ -147,7 +143,6 @@ public class AreaLearning extends Activity implements View.OnClickListener {
 		mConstantSpaceRelocaliztion.setVisibility(View.GONE);
 		mTango.lockConfig(mConfig);
 		mVersion.setText(mConfig.getString("tango_service_library_version"));
-		mRelocalizationText.setText(""+mRelocalized);
 		SetUpTangoListeners();
 		mTango.connect();
 	}
@@ -215,18 +210,16 @@ public class AreaLearning extends Activity implements View.OnClickListener {
 			@Override
 			public void run() {
 				if(pose.baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE){
-					mAdf2Device.setText("(" + twoDec.format(pose.translation[0])+","+twoDec.format(pose.translation[1])+","+twoDec.format(pose.translation[2])+")");
+					mAdf2Device.setText("(" + twoDec.format(pose.translation[0])+","+twoDec.format(pose.translation[1])+","+twoDec.format(pose.translation[2])+") " + GetPoseStatus(pose));
 				}
 				
 				if(pose.baseFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE){
-					mStart2Device.setText("(" + twoDec.format(pose.translation[0])+","+twoDec.format(pose.translation[1])+","+twoDec.format(pose.translation[2])+")");
+					mStart2Device.setText("(" + twoDec.format(pose.translation[0])+","+twoDec.format(pose.translation[1])+","+twoDec.format(pose.translation[2])+") " + GetPoseStatus(pose));
 				}
 				if(pose.baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE){
-					mAdf2Start.setText("(" + twoDec.format(pose.translation[0])+","+twoDec.format(pose.translation[1])+","+twoDec.format(pose.translation[2])+")");
+					mAdf2Start.setText("(" + twoDec.format(pose.translation[0])+","+twoDec.format(pose.translation[1])+","+twoDec.format(pose.translation[2])+") " + GetPoseStatus(pose));
 					mNoOfLocalizationEvents++;
 				}
-				mRelocalizationText.setText(""+mRelocalized+" " + mNoOfLocalizationEvents);
-				mPoseStatus.setText(GetPoseStatus(pose));
 			}
 			
 		});
@@ -285,11 +278,9 @@ public class AreaLearning extends Activity implements View.OnClickListener {
 			break;
 		case R.id.learningMode:
 			mIsLearningMode = mLearningMode.isChecked();
-			Log.e("Learning mode on:",""+mIsLearningMode);
 			break;
 		case R.id.constantSpaceRelocalization:
 			mIsConstantSpaceRelocalize = mConstantSpaceRelocaliztion.isChecked();
-			Log.e("CSR mode on:",""+mIsConstantSpaceRelocalize);
 			break;
 		case R.id.saveAdf:
 			SaveAdf();
