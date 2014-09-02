@@ -42,7 +42,7 @@ public class MTGLRenderer extends Renderer implements GLSurfaceView.Renderer {
 	
 	private static final float CAMERA_FOV = 45f;
 	private static final float CAMERA_NEAR = 0.01f;
-	private static final float CAMERA_FAR = 500f;
+	private static final float CAMERA_FAR = 200f;
 	private static final int MATRIX_4X4 = 16;
 	
 	private Trajectory mTrajectory;

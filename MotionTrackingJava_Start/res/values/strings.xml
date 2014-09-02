@@ -15,7 +15,7 @@
    limitations under the License.
 -->
 <resources>
-    <string name="app_name">JMotionTrackingSample</string>
+    <string name="app_name">MotionTrackingJava</string>
  	<string name="Quaternion1">Q1 : </string>
  	<string name="Quaternion2">Q2 :</string>
  	<string name="Quaternion3">Q3 :</string>
