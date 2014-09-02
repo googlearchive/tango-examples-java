@@ -144,7 +144,7 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 				}
 				mRenderer.getTrajectory().updateTrajectory(pose.translation);
 				mRenderer.getModelMatCalculator().updateModelMatrix(pose.translation, pose.rotation);
-				mRenderer.UpdateViewMatrix();
+				mRenderer.updateViewMatrix();
 				mGLView.requestRender();
 				runOnUiThread(new Runnable() {
 					@Override
