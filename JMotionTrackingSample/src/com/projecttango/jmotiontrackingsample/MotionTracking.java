@@ -233,12 +233,10 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 	            final float dy = y - mPreviousY;
 	            
 	            float distance =(float) Math.sqrt(Math.pow(dx, 2)+Math.pow(dy, 2));
-	           Log.e("Distance Travelled", "Distance Travelled :"+distance);
-	            // Remember this touch position for the next move event
+	          
 	            mPreviousX = x;
 	            mPreviousY = y;
 	            
-	            // Invalidate to request a redraw
 	            break;
 	        }
 	        }
