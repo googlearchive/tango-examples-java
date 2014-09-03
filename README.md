@@ -5,6 +5,8 @@ Copyright (C) 2014 Google Inc.
 
 These are the Tango Java API Examples:
 
-[Getting Started and Motion Tracking Example](https://github.com/ProjectTango/JavaAPI-Examples/wiki/Getting-Started-with-Motion-Tracking-Java-API2.0-Revised) - This example shows how to use Project Tango Java APIs in OpenGL ES 2.0.
+[QuickStartJava](https://github.com/googlesamples/tango-examples-java/wiki/Java-Quickstart-(Hello-Tango)) - This example shows gets you started with all the basics you need to use Tango Java APIs, shows you how to log the Motion Tracking Data and view it in LogCat.
+
+[Getting Started with Motion Tracking in Java ](https://github.com/googlesamples/tango-examples-java/wiki/Getting-Started-with-Motion-Tracking-in-Java) - This example shows you how to use Motion Tracking Data from Tango Java APIs in a Opengl Scene (OpenglES 2.0).
 
 Please visit Project Tango Developer [website](https://devsite.googleplex.com/project-tango/eap/) to learn more about general concepts and other information about the project.
