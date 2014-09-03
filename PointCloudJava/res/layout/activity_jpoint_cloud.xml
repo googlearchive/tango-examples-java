@@ -23,34 +23,12 @@
         android:layout_height="fill_parent"
         android:layout_gravity="top" />
 
-    <Button
-        android:id="@+id/first_person_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentLeft="true"
-        android:text="@string/first_person" />
-
-    <Button
-        android:id="@+id/third_person_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:text="@string/third_person" />
-
-    <Button
-        android:id="@+id/top_down_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentRight="true"
-        android:text="@string/top_down" />
-
     <LinearLayout
+        android:id="@+id/linearLayout1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
         android:orientation="vertical" >
 
         <LinearLayout
@@ -66,8 +44,7 @@
             <TextView
                 android:id="@+id/version"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="" />
+                android:layout_height="wrap_content" />
         </LinearLayout>
 
         <LinearLayout
@@ -83,10 +60,10 @@
             <TextView
                 android:id="@+id/vertexCount"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="" />
+                android:layout_height="wrap_content" />
         </LinearLayout>
-         <LinearLayout
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
@@ -99,9 +76,9 @@
             <TextView
                 android:id="@+id/frequency"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="" />
+                android:layout_height="wrap_content" />
         </LinearLayout>
+
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -115,10 +92,10 @@
             <TextView
                 android:id="@+id/averageZ"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="" />
+                android:layout_height="wrap_content" />
         </LinearLayout>
-         <LinearLayout
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
@@ -131,9 +108,32 @@
             <TextView
                 android:id="@+id/timestamp"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="" />
+                android:layout_height="wrap_content" />
         </LinearLayout>
     </LinearLayout>
+
+    <Button
+        android:id="@+id/third_person_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:text="@string/third_person" />
+
+    <Button
+        android:id="@+id/top_down_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_toRightOf="@+id/first_person_button"
+        android:text="@string/top_down" />
+
+    <Button
+        android:id="@+id/first_person_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_toRightOf="@+id/third_person_button"
+        android:text="@string/first_person" />
 
 </RelativeLayout>

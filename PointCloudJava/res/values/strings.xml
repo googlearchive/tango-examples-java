@@ -18,10 +18,10 @@
     <string name="app_name">PointCloudJava</string>
     <string name="vertex_count">Number of Points:</string>
     <string name="version">Version Date:</string>
-    <string name="first_person">1st Person</string>
-    <string name="third_person">3rd Person</string>
+    <string name="first_person">First</string>
+    <string name="third_person">Third</string>
     <string name="top_down">Top Down</string>
-	<string name="averageZ">Average Z :</string>
+	<string name="averageZ">Average Depth :</string>
 	<string name="frequency">Frequency :</string>
 	<string name="timestamp">Timestamp :</string>
 </resources>

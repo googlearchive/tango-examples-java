@@ -201,54 +201,54 @@
         	android:layout_height="match_parent"
         	 />
 
-	     <Button
-	         android:id="@+id/firstPerson"
-	         android:layout_width="wrap_content"
-	         android:layout_height="wrap_content"
-	         android:layout_alignParentRight="true"
-	         android:layout_alignParentTop="true"
-	         android:text="1st" />
-
-	     <Button
-	         android:id="@+id/thirdPerson"
+	     <ToggleButton
+	         android:id="@+id/autoReset"
 	         android:layout_width="wrap_content"
 	         android:layout_height="wrap_content"
 	         android:layout_alignParentLeft="true"
 	         android:layout_alignParentTop="true"
-	         android:text="3rdPerson" />
-
-	     <Button
-	         android:id="@+id/topDown"
-	         android:layout_width="wrap_content"
-	         android:layout_height="wrap_content"
-	         android:layout_alignParentTop="true"
-	         android:layout_centerHorizontal="true"
-	         android:text="TopDownView" />
+	         android:textOff="Auto Reset Off"
+	         android:textOn="Auto Reset On" />
 
 	     <Button
 	         android:id="@+id/start"
 	         android:layout_width="wrap_content"
 	         android:layout_height="wrap_content"
-	         android:layout_alignParentBottom="true"
 	         android:layout_alignParentLeft="true"
+	         android:layout_below="@+id/autoReset"
 	         android:text="Start" />
-
-	     <ToggleButton
-	         android:id="@+id/autoReset"
-	         android:layout_width="wrap_content"
-	         android:layout_height="wrap_content"
-	         android:layout_above="@+id/start"
-	         android:layout_alignParentLeft="true"
-	         android:textOff="Auto Reset Off"
-	         android:textOn="Auto Reset On" />
 
 	     <Button
 	         android:id="@+id/manualReset"
 	         android:layout_width="wrap_content"
 	         android:layout_height="wrap_content"
-	         android:layout_alignParentBottom="true"
-	         android:layout_alignParentRight="true"
+	         android:layout_alignParentLeft="true"
+	         android:layout_below="@+id/start"
 	         android:text="ResetMotion Tracking" />
+
+	     <Button
+	         android:id="@+id/thirdPerson"
+	         android:layout_width="wrap_content"
+	         android:layout_height="wrap_content"
+	         android:layout_alignParentBottom="true"
+	         android:layout_alignParentLeft="true"
+	         android:text="Third" />
+
+	     <Button
+	         android:id="@+id/firstPerson"
+	         android:layout_width="wrap_content"
+	         android:layout_height="wrap_content"
+	         android:layout_alignParentBottom="true"
+	         android:layout_toRightOf="@+id/thirdPerson"
+	         android:text="First" />
+
+	     <Button
+	         android:id="@+id/topDown"
+	         android:layout_width="wrap_content"
+	         android:layout_height="wrap_content"
+	         android:layout_alignParentBottom="true"
+	         android:layout_toRightOf="@+id/firstPerson"
+	         android:text="Top Down" />
 	    
 	</RelativeLayout>
    

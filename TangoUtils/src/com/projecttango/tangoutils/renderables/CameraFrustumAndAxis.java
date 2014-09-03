@@ -24,13 +24,13 @@ import android.opengl.GLES20;
 import android.opengl.Matrix;
 
 /**
- * {@link Renderable} OpenGL object showing the Camera Frustum in 3D.  This shows the view of the
- * Tango camera at the current translation and rotation.
+ * {@link Renderable} OpenGL object representing XYZ axes in 3D space.  X is Red, Y is Green,
+ * and Z is Blue.
  */
-public class CameraFrustum extends Renderable {
-	
-	private static final int COORDS_PER_VERTEX = 3;
+public class CameraFrustumAndAxis extends Renderable {
 
+	private static final int COORDS_PER_VERTEX = 3;
+	
 	private static final String sVertexShaderCode =
 			"uniform mat4 uMVPMatrix;"
 			+ "attribute vec4 vPosition;"
@@ -45,35 +45,43 @@ public class CameraFrustum extends Renderable {
 			"precision mediump float;"
 			+ "varying vec4 vColor;" 
 			+ "void main() {"
-			+ "gl_FragColor = vec4(0.8,0.5,0.8,1);" + 
+			+ "gl_FragColor = vColor;" + 
 			"}";
-	
 	private FloatBuffer mVertexBuffer, mColorBuffer;
 
-	private float mVertices[] = {   
+	private float mVertices[] = {  
 			0.0f, 0.0f, 0.0f,
-		    -0.4f, 0.3f, -0.5f,
+		    1.0f, 0.0f, 0.0f,
+		    
+		    0.0f, 0.0f, 0.0f,
+		    0.0f, 1.0f, 0.0f,
+		    
+		    0.0f, 0.0f, 0.0f,
+		    0.0f, 0.0f, 1.0f,
+		   
+		    0.0f, 0.0f, 0.0f,
+		   -0.4f, 0.3f, -0.5f,
 
 		    0.0f, 0.0f, 0.0f,
 		    0.4f, 0.3f, -0.5f,
 
 		    0.0f, 0.0f, 0.0f,
-		    -0.4f, -0.3f, -0.5f,
+		   -0.4f, -0.3f, -0.5f,
 
 		    0.0f, 0.0f, 0.0f,
 		    0.4f, -0.3f, -0.5f,
 
-		    -0.4f, 0.3f, -0.5f,
+		   -0.4f, 0.3f, -0.5f,
 		    0.4f, 0.3f, -0.5f,
 
 		    0.4f, 0.3f, -0.5f,
 		    0.4f, -0.3f, -0.5f,
 
 		    0.4f, -0.3f, -0.5f,
-		    -0.4f, -0.3f, -0.5f,
+		   -0.4f, -0.3f, -0.5f,
 
-		    -0.4f, -0.3f, -0.5f,
-		    -0.4f, 0.3f, -0.5f};
+		   -0.4f, -0.3f, -0.5f,
+		   -0.4f, 0.3f, -0.5f};
 
 	private float mColors[] = { 
 			1.0f, 0.0f, 0.0f, 1.0f,
@@ -85,37 +93,47 @@ public class CameraFrustum extends Renderable {
 			0.0f, 0.0f, 1.0f, 1.0f,
 			0.0f, 0.0f, 1.0f, 1.0f,
 			
-			1.0f, 0.0f, 0.0f, 1.0f,
-			1.0f, 0.0f, 0.0f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
 			
-			0.0f, 1.0f, 0.0f, 1.0f,
-			0.0f, 1.0f, 0.0f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
 			
-			0.0f, 0.0f, 1.0f, 1.0f,
-			0.0f, 0.0f, 1.0f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
 			
-			1.0f, 0.0f, 0.0f, 1.0f,
-			1.0f, 0.0f, 0.0f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
 			
-			0.0f, 1.0f, 0.0f, 1.0f,
-			0.0f, 1.0f, 0.0f, 1.0f};
+			0.8f, 0.5f, 0.8f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
+			
+			0.8f, 0.5f, 0.8f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
+			
+			0.8f, 0.5f, 0.8f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
+			
+			0.8f, 0.5f, 0.8f, 1.0f,
+			0.8f, 0.5f, 0.8f, 1.0f,
+	};
 
 	private final int mProgram;
 	private int mPosHandle, mColorHandle;
 	private int mMVPMatrixHandle;
 
-	public CameraFrustum() {
-		// Reset the model matrix to the identity
+	public CameraFrustumAndAxis() {
+		// Set model matrix to the identity
 		Matrix.setIdentityM(getModelMatrix(), 0);
 
-		// Load the vertices into a vertex buffer
+		// Put vertices into a vertex buffer
 		ByteBuffer byteBuf = ByteBuffer.allocateDirect(mVertices.length * 4);
 		byteBuf.order(ByteOrder.nativeOrder());
 		mVertexBuffer = byteBuf.asFloatBuffer();
 		mVertexBuffer.put(mVertices);
 		mVertexBuffer.position(0);
 
-		// Load the colors into a color buffer
+		// Put colors into a color buffer
 		ByteBuffer cByteBuff = ByteBuffer.allocateDirect(mColors.length * 4);
 		cByteBuff.order(ByteOrder.nativeOrder());
 		mColorBuffer = cByteBuff.asFloatBuffer();
@@ -136,7 +154,7 @@ public class CameraFrustum extends Renderable {
 		GLES20.glUseProgram(mProgram);
 		// updateViewMatrix(viewMatrix);
 
-		// Compose the model, view, and projection matrices into a single mvp matrix
+		// Compose the model, view, and projection matrices into a single m-v-p matrix
 		updateMvpMatrix(viewMatrix, projectionMatrix);
 
 		// Load vertex attribute data
@@ -150,12 +168,12 @@ public class CameraFrustum extends Renderable {
 		GLES20.glVertexAttribPointer(mColorHandle, 4, GLES20.GL_FLOAT, false, 0, mColorBuffer);
 		GLES20.glEnableVertexAttribArray(mColorHandle);
 
-		// Draw the CameraFrustum
+		// Draw the CameraFrustumAndAxis
 		mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
 		GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, getMvpMatrix(), 0);
 		GLES20.glLineWidth(1);
-		GLES20.glDrawArrays(GLES20.GL_LINES, 0, 16);
+		GLES20.glDrawArrays(GLES20.GL_LINES, 0, mVertices.length/3);
+
 	}
-	
 	
 }

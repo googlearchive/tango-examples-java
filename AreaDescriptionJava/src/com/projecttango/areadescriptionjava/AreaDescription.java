@@ -116,19 +116,24 @@ public class AreaDescription extends Activity implements View.OnClickListener {
 	private void setTangoConfig() {
 		mConfig = new TangoConfig();
 		mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT, mConfig);
-		if (mIsLearningMode) {
-			mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_LEARNINGMODE, true);
-			mSaveAdf.setVisibility(View.VISIBLE);
+		// Check if learning mode
+		if (mIsLearningMode) { 
+			//Set learning mode to config.
+			mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_LEARNINGMODE, true); 
+			// Set the ADF save button visible.
+			mSaveAdf.setVisibility(View.VISIBLE); 
 
 		}
-		
-		if (mIsConstantSpaceRelocalize) {
-			ArrayList<String> fullUUIDList = new ArrayList<String>();
-			mTango.listAreaDescriptions(fullUUIDList);
+		// Check for Load ADF/Constant Space relocalization mode
+		if (mIsConstantSpaceRelocalize) { 
+			ArrayList<String> fullUUIDList = new ArrayList<String>();  
+			// Returns a list of ADFs with their UUIDs
+			mTango.listAreaDescriptions(fullUUIDList); 
 			if (fullUUIDList.size() == 0) {
 				mUUID.setText("No UUIDs");
 			}
-
+			
+			// Load the latest ADF if ADFs are found.
 			if (fullUUIDList.size() > 0) {
 				mConfig.putString(TangoConfig.KEY_STRING_AREADESCRIPTION,
 						fullUUIDList.get(fullUUIDList.size() - 1));
@@ -138,11 +143,14 @@ public class AreaDescription extends Activity implements View.OnClickListener {
 			}
 		}
 		
+		//Set the number of loop closures to zero at start.
 		mNumOfLocalizationEvents = 0;
-		mStartButton.setVisibility(View.GONE);
+		
+		mStartButton.setVisibility(View.GONE); 
 		mLearningMode.setVisibility(View.GONE);
 		mConstantSpaceRelocalization.setVisibility(View.GONE);
 		
+		//Lock config
 		mTango.lockConfig(mConfig);
 		mVersion.setText(mConfig.getString("tango_service_library_version"));
 		
@@ -150,7 +158,10 @@ public class AreaDescription extends Activity implements View.OnClickListener {
 		mTango.connect();
 	}
 
+
 	private void setUpTangoListeners() {
+		
+		// Set Tango Listeners for Poses Device wrt Start of Service, Device wrt ADF and Start of Service wrt ADF
 		ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
 		framePairs.add(new TangoCoordinateFramePair(
 				TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
@@ -167,7 +178,8 @@ public class AreaDescription extends Activity implements View.OnClickListener {
 			public void onXyzIjAvailable(TangoXyzIjData xyzij) {
 				// Not using XyzIj data for this sample
 			}
-
+			
+			// Listen to Tango Events for Relocalization 
 			@Override
 			public void onTangoEvent(TangoEvent event) {
 				if (event.description.matches("ADFEvent:Relocalized")) {
@@ -181,6 +193,8 @@ public class AreaDescription extends Activity implements View.OnClickListener {
 
 			@Override
 			public void onPoseAvailable(TangoPoseData pose) {
+				
+				//Update the text views with Pose info.
 				updateTextViewWith(pose);
 				boolean updateRenderer = false;
 				
@@ -213,6 +227,11 @@ public class AreaDescription extends Activity implements View.OnClickListener {
 		mTango.saveAreaDescription(uuids);
 	}
 
+	/**
+	 * Updates the text view in UI screen with the Pose. Each pose is associated with 
+	 * Target and Base Frame. We need to check for that pair ad update our views accordingly.
+	 * @param pose
+	 */
 	private void updateTextViewWith(final TangoPoseData pose) {
 		final DecimalFormat twoDec = new DecimalFormat("0.00");
 		runOnUiThread(new Runnable() {
@@ -272,6 +291,7 @@ public class AreaDescription extends Activity implements View.OnClickListener {
 		super.onDestroy();
 	}
 
+	// OnClick Button Listener for all the buttons
 	@Override
 	public void onClick(View v) {
 		switch (v.getId()) {

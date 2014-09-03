@@ -20,7 +20,7 @@ import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 import com.projecttango.tangoutils.Renderer;
-import com.projecttango.tangoutils.renderables.Axis;
+import com.projecttango.tangoutils.renderables.CameraFrustumAndAxis;
 import com.projecttango.tangoutils.renderables.CameraFrustum;
 import com.projecttango.tangoutils.renderables.Grid;
 import com.projecttango.tangoutils.renderables.Trajectory;
@@ -31,7 +31,7 @@ import android.opengl.Matrix;
 
 /**
  * OpenGL rendering class for the Motion Tracking API sample.  This class managers the objects
- * visible in the OpenGL view which are the {@link CameraFrustum}, {@link Axis}, {@link Trajectory},
+ * visible in the OpenGL view which are the {@link CameraFrustum}, {@link CameraFrustumAndAxis}, {@link Trajectory},
  * and the {@link Grid}.  These objects are implemented in the TangoUtils library in the package
  * {@link com.projecttango.tangoutils.renderables}.
  * 
@@ -47,7 +47,7 @@ public class MTGLRenderer extends Renderer implements GLSurfaceView.Renderer {
 	
 	private Trajectory mTrajectory;
 	private CameraFrustum mCameraFrustum;
-	private Axis mAxis;
+	private CameraFrustumAndAxis mCameraFrustumAndAxis;
 	private Grid mFloorGrid;
 	private float mCameraAspect;
 	private float[] mProjectionMatrix = new float[MATRIX_4X4];
@@ -61,7 +61,7 @@ public class MTGLRenderer extends Renderer implements GLSurfaceView.Renderer {
 		resetModelMatCalculator();
 		mCameraFrustum = new CameraFrustum();
 		mFloorGrid = new Grid();
-		mAxis = new Axis();
+		mCameraFrustumAndAxis = new CameraFrustumAndAxis();
 		mTrajectory = new Trajectory();
 		
 		// Construct the initial view matrix
@@ -81,21 +81,18 @@ public class MTGLRenderer extends Renderer implements GLSurfaceView.Renderer {
 	public void onDrawFrame(GL10 gl) {
 		GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
 		
-		mAxis.setModelMatrix(getModelMatCalculator().getModelMatrix());
-		//mCameraFrustum.setModelMatrix(mModelMatCalculator.getModelMatrix());
-		
+		mCameraFrustumAndAxis.setModelMatrix(getModelMatCalculator().getModelMatrix());
 		mTrajectory.draw(getViewMatrix(), mProjectionMatrix);
 		mFloorGrid.draw(getViewMatrix(), mProjectionMatrix);
-		mAxis.draw(getViewMatrix(), mProjectionMatrix);
-		//mCameraFrustum.draw(mViewMatrix, mProjectionMatrix);
+		mCameraFrustumAndAxis.draw(getViewMatrix(), mProjectionMatrix);
 	}
 	
 	public CameraFrustum getCameraFrustum() {
 		return mCameraFrustum;
 	}
 
-	public Axis getAxis() {
-		return mAxis;
+	public CameraFrustumAndAxis getCameraFrustumAndAxis() {
+		return mCameraFrustumAndAxis;
 	}
 	
 	public Trajectory getTrajectory() {

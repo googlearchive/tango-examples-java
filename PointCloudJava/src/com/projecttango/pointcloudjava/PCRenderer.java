@@ -48,14 +48,12 @@ public class PCRenderer implements GLSurfaceView.Renderer {
 	private float[] mViewMatrix = new float[MATRIX_4X4];
     private float mCameraAspect;
     private float[] mProjectionMatrix = new float[MATRIX_4X4];
-	private CameraFrustum mCameraFrustum;
 	private PointCloud mPointCloud;
 	
 	@Override
 	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
 		GLES20.glClearColor(1f, 1f, 1f, 1.0f);
 	    GLES20.glEnable(GLES20.GL_DEPTH_TEST);
-	    mCameraFrustum = new CameraFrustum();
 	    mPointCloud = new PointCloud();
 	    Matrix.setIdentityM(mViewMatrix, 0);
 	    Matrix.setLookAtM(mViewMatrix, 0, 0f,  0f, 1f, 0f, 0f, 0f, 0f, 1f, 0f);
@@ -76,10 +74,6 @@ public class PCRenderer implements GLSurfaceView.Renderer {
 
 	public PointCloud getPointCloud() {
 		return mPointCloud;
-	}
-	
-	public CameraFrustum getCameraFrustum() {
-		return mCameraFrustum;
 	}
 	
 	public void setFirstPersonView(){

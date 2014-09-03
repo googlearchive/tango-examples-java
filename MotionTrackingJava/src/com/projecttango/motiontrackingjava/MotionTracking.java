@@ -114,7 +114,7 @@ public class MotionTracking extends Activity implements View.OnClickListener {
 		mGLView.setRenderer(mRenderer);
 		mGLView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
 		mIsAutoReset = mAutoResetButton.isChecked();
-
+		mMotionReset.setVisibility(View.GONE);
 		// Instantiate the Tango service
 		mTango = new Tango(this);
 	}

@@ -36,7 +36,7 @@ public class PointCloud extends Renderable {
             "attribute vec4 vPosition;" +
              "varying vec4 vColor;"+
             "void main() {" +
-            "gl_PointSize = 3.0;"+
+            "gl_PointSize = 2.0;"+
             "  gl_Position = uMVPMatrix * vPosition;" +
             "  vColor = vPosition;" +
             "}";

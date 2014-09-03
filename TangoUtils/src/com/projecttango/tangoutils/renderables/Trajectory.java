@@ -119,7 +119,7 @@ public class Trajectory extends Renderable {
 		// Draw the Grid
 		mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
 		GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, getMvpMatrix(), 0);
-		GLES20.glLineWidth(3);
+		GLES20.glLineWidth(1);
 		GLES20.glDrawArrays(GLES20.GL_LINE_STRIP, 0, mTrajectoryCount);
 	}	
 
