@@ -27,7 +27,7 @@ import android.opengl.Matrix;
  * {@link Renderable} OpenGL object representing XYZ axes in 3D space.  X is Red, Y is Green,
  * and Z is Blue.
  */
-public class Axis extends Renderable {
+public class CameraFrustumAndAxis extends Renderable {
 
 	private static final int COORDS_PER_VERTEX = 3;
 	
@@ -122,7 +122,7 @@ public class Axis extends Renderable {
 	private int mPosHandle, mColorHandle;
 	private int mMVPMatrixHandle;
 
-	public Axis() {
+	public CameraFrustumAndAxis() {
 		// Set model matrix to the identity
 		Matrix.setIdentityM(getModelMatrix(), 0);
 
@@ -168,10 +168,10 @@ public class Axis extends Renderable {
 		GLES20.glVertexAttribPointer(mColorHandle, 4, GLES20.GL_FLOAT, false, 0, mColorBuffer);
 		GLES20.glEnableVertexAttribArray(mColorHandle);
 
-		// Draw the Axis
+		// Draw the CameraFrustumAndAxis
 		mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
 		GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, getMvpMatrix(), 0);
-		GLES20.glLineWidth(5);
+		GLES20.glLineWidth(1);
 		GLES20.glDrawArrays(GLES20.GL_LINES, 0, mVertices.length/3);
 
 	}

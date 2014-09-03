@@ -153,7 +153,7 @@ public class CameraFrustum extends Renderable {
 		// Draw the CameraFrustum
 		mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
 		GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, getMvpMatrix(), 0);
-		GLES20.glLineWidth(5);
+		GLES20.glLineWidth(1);
 		GLES20.glDrawArrays(GLES20.GL_LINES, 0, 16);
 	}
 	

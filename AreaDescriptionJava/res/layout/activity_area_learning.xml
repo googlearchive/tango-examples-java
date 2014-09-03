@@ -1,0 +1,177 @@
+<!--
+   Copyright (C) 2014 Google Inc.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/Grid"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal" >
+
+    <RelativeLayout
+        android:layout_width="0dip"
+        android:layout_height="match_parent"
+        android:layout_weight="5" >
+
+        <android.opengl.GLSurfaceView
+            android:id="@+id/gl_surface_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <Button
+            android:id="@+id/firstPerson"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentTop="true"
+            android:text="1st" />
+
+        <TextView
+            android:id="@+id/Start2Device"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignBottom="@+id/Start2DeviceText"
+            android:layout_toRightOf="@+id/Start2DeviceText"
+            android:text=" (0.00, 0.00, 0.00)" />
+
+        <TextView
+            android:id="@+id/Adf2DeviceText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_below="@+id/Start2DeviceText"
+            android:text="Device wrt ADf" />
+
+        <TextView
+            android:id="@+id/Adf2Start"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignBaseline="@+id/Adf2StartText"
+            android:layout_alignBottom="@+id/Adf2StartText"
+            android:layout_toRightOf="@+id/Start2DeviceText"
+            android:text=" (0.00, 0.00, 0.00)" />
+
+        <TextView
+            android:id="@+id/Adf2Device"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_above="@+id/Adf2Start"
+            android:layout_alignLeft="@+id/Adf2Start"
+            android:text=" (0.00, 0.00, 0.00)" />
+
+        <TextView
+            android:id="@+id/Adf2StartText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_below="@+id/Adf2DeviceText"
+            android:text="Adf wrt Start" />
+
+        <Button
+            android:id="@+id/thirdPerson"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/firstPerson"
+            android:text="3rd Person" />
+
+        <TextView
+            android:id="@+id/Start2DeviceText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_below="@+id/VersionText"
+            android:text="Device Wrt Start" />
+
+        <TextView
+            android:id="@+id/VersionText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentTop="true"
+            android:text="Version" />
+
+        <Button
+            android:id="@+id/topDown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/thirdPerson"
+            android:text="TopDownView" />
+
+        <ToggleButton
+            android:id="@+id/constantSpaceRelocalization"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_below="@+id/learningMode"
+            android:textOn="Load Adf On"
+            android:textOff="Load Adf Off" />
+
+        <ToggleButton
+            android:id="@+id/learningMode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_below="@+id/topDown"
+            android:textOff="LearningMode Off"
+            android:textOn="LearningMode On" />
+
+        <Button
+            android:id="@+id/start"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignRight="@+id/uuid"
+            android:layout_below="@+id/constantSpaceRelocalization"
+            android:text="Start with this Config" />
+
+        <TextView
+            android:id="@+id/version"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_above="@+id/Start2Device"
+            android:layout_alignLeft="@+id/Start2Device"
+            android:text="versionValue" />
+
+        <Button
+            android:id="@+id/saveAdf"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentRight="true"
+            android:visibility="gone"
+            android:text="Save Adf" />
+
+        <TextView
+            android:id="@+id/uuid"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/Adf2Start"
+            android:layout_toRightOf="@+id/Start2DeviceText"
+            android:text="UUID Value" />
+
+        <TextView
+            android:id="@+id/UUIDText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignBaseline="@+id/uuid"
+            android:layout_alignBottom="@+id/uuid"
+            android:layout_alignParentLeft="true"
+            android:text="UUID :" />
+
+    </RelativeLayout>
+
+</LinearLayout>

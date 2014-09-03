@@ -63,14 +63,14 @@ public class Grid extends Renderable {
 		
 		// Load the vertices for the z-axis grid lines into the vertex buffer
 		for (int x = -GRID_RANGE_M; x <= GRID_RANGE_M; x++) {
-			mVertexBuffer.put(new float[] { x, 0f, (float) -GRID_RANGE_M });
-			mVertexBuffer.put(new float[] { x, 0f, (float) GRID_RANGE_M });
+			mVertexBuffer.put(new float[] { x, -1f, (float) -GRID_RANGE_M });
+			mVertexBuffer.put(new float[] { x, -1f, (float) GRID_RANGE_M });
 		}
 
 		// Load the vertices for the x-axis grid lines into the vertex buffer
 		for (int z = -GRID_RANGE_M; z <= GRID_RANGE_M; z++) {
-			mVertexBuffer.put(new float[] { (float) -GRID_RANGE_M, 0f, z });
-			mVertexBuffer.put(new float[] { (float) GRID_RANGE_M, 0f, z });
+			mVertexBuffer.put(new float[] { (float) -GRID_RANGE_M, -1f, z });
+			mVertexBuffer.put(new float[] { (float) GRID_RANGE_M, -1f, z });
 		}
 		
 		// Load the vertex and fragment shaders, then link the program
@@ -100,7 +100,7 @@ public class Grid extends Renderable {
 		// Draw the Grid
 		mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
 		GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, getMvpMatrix(), 0);
-		GLES20.glLineWidth(3);
+		GLES20.glLineWidth(1);
 		GLES20.glDrawArrays(GLES20.GL_LINES, 0, (GRID_RANGE_M * 2 + 1) * 4);
 	}
 
