@@ -239,7 +239,7 @@ public class AreaDescription extends Activity implements View.OnClickListener {
 			public void run() {
 				String translationString = "(" + twoDec.format(pose.translation[0]) + ","
 						+ twoDec.format(pose.translation[1]) + ","
-						+ twoDec.format(pose.translation[2]) + ")"
+						+ twoDec.format(pose.translation[2]) + ") "
 						+ getPoseStatus(pose);
 				
 				if (pose.baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
