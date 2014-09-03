@@ -30,46 +30,13 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <Button
-            android:id="@+id/firstPerson"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentRight="true"
-            android:layout_alignParentTop="true"
-            android:text="1st" />
-
-        <TextView
-            android:id="@+id/Start2Device"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignBottom="@+id/Start2DeviceText"
-            android:layout_toRightOf="@+id/Start2DeviceText"
-            android:text=" (0.00, 0.00, 0.00)" />
-
         <TextView
             android:id="@+id/Adf2DeviceText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_below="@+id/Start2DeviceText"
-            android:text="Device wrt ADf" />
-
-        <TextView
-            android:id="@+id/Adf2Start"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignBaseline="@+id/Adf2StartText"
-            android:layout_alignBottom="@+id/Adf2StartText"
-            android:layout_toRightOf="@+id/Start2DeviceText"
-            android:text=" (0.00, 0.00, 0.00)" />
-
-        <TextView
-            android:id="@+id/Adf2Device"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_above="@+id/Adf2Start"
-            android:layout_alignLeft="@+id/Adf2Start"
-            android:text=" (0.00, 0.00, 0.00)" />
+            android:text="Target->Device,Base-> ADF: " />
 
         <TextView
             android:id="@+id/Adf2StartText"
@@ -77,15 +44,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_below="@+id/Adf2DeviceText"
-            android:text="Adf wrt Start" />
-
-        <Button
-            android:id="@+id/thirdPerson"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentRight="true"
-            android:layout_below="@+id/firstPerson"
-            android:text="3rd Person" />
+            android:text="Target->Start, Base->Device: " />
 
         <TextView
             android:id="@+id/Start2DeviceText"
@@ -93,7 +52,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_below="@+id/VersionText"
-            android:text="Device Wrt Start" />
+            android:text="Target->Device,Base->Start: " />
 
         <TextView
             android:id="@+id/VersionText"
@@ -101,15 +60,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_alignParentTop="true"
-            android:text="Version" />
-
-        <Button
-            android:id="@+id/topDown"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentRight="true"
-            android:layout_below="@+id/thirdPerson"
-            android:text="TopDownView" />
+            android:text="Version: " />
 
         <ToggleButton
             android:id="@+id/constantSpaceRelocalization"
@@ -119,32 +70,6 @@
             android:layout_below="@+id/learningMode"
             android:textOn="Load Adf On"
             android:textOff="Load Adf Off" />
-
-        <ToggleButton
-            android:id="@+id/learningMode"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentLeft="true"
-            android:layout_below="@+id/topDown"
-            android:textOff="LearningMode Off"
-            android:textOn="LearningMode On" />
-
-        <Button
-            android:id="@+id/start"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentLeft="true"
-            android:layout_alignRight="@+id/uuid"
-            android:layout_below="@+id/constantSpaceRelocalization"
-            android:text="Start with this Config" />
-
-        <TextView
-            android:id="@+id/version"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_above="@+id/Start2Device"
-            android:layout_alignLeft="@+id/Start2Device"
-            android:text="versionValue" />
 
         <Button
             android:id="@+id/saveAdf"
@@ -156,14 +81,6 @@
             android:text="Save Adf" />
 
         <TextView
-            android:id="@+id/uuid"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@+id/Adf2Start"
-            android:layout_toRightOf="@+id/Start2DeviceText"
-            android:text="UUID Value" />
-
-        <TextView
             android:id="@+id/UUIDText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -171,6 +88,86 @@
             android:layout_alignBottom="@+id/uuid"
             android:layout_alignParentLeft="true"
             android:text="UUID :" />
+
+        <ToggleButton
+            android:id="@+id/learningMode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_below="@+id/UUIDText"
+            android:textOff="LearningMode Off"
+            android:textOn="LearningMode On" />
+
+        <Button
+            android:id="@+id/thirdPerson"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentLeft="true"
+            android:text="Third Person" />
+
+        <TextView
+            android:id="@+id/Adf2Device"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_above="@+id/Adf2Start"
+            android:layout_alignLeft="@+id/Start2Device"
+            android:text=" (0.00, 0.00, 0.00)" />
+
+        <TextView
+            android:id="@+id/Adf2Start"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignLeft="@+id/Adf2Device"
+            android:layout_below="@+id/Adf2DeviceText"
+            android:text=" (0.00, 0.00, 0.00)" />
+
+        <Button
+            android:id="@+id/start"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/constantSpaceRelocalization"
+            android:text="Start with this Config" />
+
+        <Button
+            android:id="@+id/firstPerson"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_toRightOf="@+id/thirdPerson"
+            android:text="First Person" />
+
+        <TextView
+            android:id="@+id/Start2Device"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_above="@+id/Adf2Device"
+            android:layout_toRightOf="@+id/Start2DeviceText"
+            android:text=" (0.00, 0.00, 0.00)" />
+
+        <TextView
+            android:id="@+id/uuid"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/Adf2StartText"
+            android:layout_toRightOf="@+id/VersionText"
+            android:text="UUID Value" />
+
+        <Button
+            android:id="@+id/topDown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_toRightOf="@+id/firstPerson"
+            android:text="Top Down" />
+
+        <TextView
+            android:id="@+id/version"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_above="@+id/Start2DeviceText"
+            android:layout_alignLeft="@+id/uuid"
+            android:text="versionValue" />
 
     </RelativeLayout>
 
