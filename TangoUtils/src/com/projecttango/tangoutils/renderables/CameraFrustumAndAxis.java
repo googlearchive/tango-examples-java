@@ -93,29 +93,29 @@ public class CameraFrustumAndAxis extends Renderable {
 			0.0f, 0.0f, 1.0f, 1.0f,
 			0.0f, 0.0f, 1.0f, 1.0f,
 			
-			0.8f, 0.5f, 0.8f, 1.0f,
-			0.8f, 0.5f, 0.8f, 1.0f,
+			0.0f, 0.0f, 0.0f, 1.0f,
+			0.0f, 0.0f, 0.0f, 1.0f,
 			
-			0.8f, 0.5f, 0.8f, 1.0f,
-			0.8f, 0.5f, 0.8f, 1.0f,
+			0.0f, 0.0f, 0.0f, 1.0f,
+			0.0f, 0.0f, 0.0f, 1.0f,
 			
-			0.8f, 0.5f, 0.8f, 1.0f,
-			0.8f, 0.5f, 0.8f, 1.0f,
+			0.0f, 0.0f, 0.0f, 1.0f,
+			0.0f, 0.0f, 0.0f, 1.0f,
 			
-			0.8f, 0.5f, 0.8f, 1.0f,
-			0.8f, 0.5f, 0.8f, 1.0f,
+			0.0f, 0.0f, 0.0f, 1.0f,
+			0.0f, 0.0f, 0.0f, 1.0f,
 			
-			0.8f, 0.5f, 0.8f, 1.0f,
-			0.8f, 0.5f, 0.8f, 1.0f,
+			0.0f, 0.0f, 0.0f, 1.0f,
+			0.0f, 0.0f, 0.0f, 1.0f,
 			
-			0.8f, 0.5f, 0.8f, 1.0f,
-			0.8f, 0.5f, 0.8f, 1.0f,
+			0.0f, 0.0f, 0.0f, 1.0f,
+			0.0f, 0.0f, 0.0f, 1.0f,
 			
-			0.8f, 0.5f, 0.8f, 1.0f,
-			0.8f, 0.5f, 0.8f, 1.0f,
+			0.0f, 0.0f, 0.0f, 1.0f,
+			0.0f, 0.0f, 0.0f, 1.0f,
 			
-			0.8f, 0.5f, 0.8f, 1.0f,
-			0.8f, 0.5f, 0.8f, 1.0f,
+			0.0f, 0.0f, 0.0f, 1.0f,
+			0.0f, 0.0f, 0.0f, 1.0f,
 	};
 
 	private final int mProgram;
@@ -150,10 +150,9 @@ public class CameraFrustumAndAxis extends Renderable {
 	}
 
 	@Override
-	public void draw(float[] viewMatrix, float[] projectionMatrix) {
+	public synchronized void draw(float[] viewMatrix, float[] projectionMatrix) {
 		GLES20.glUseProgram(mProgram);
-		// updateViewMatrix(viewMatrix);
-
+		
 		// Compose the model, view, and projection matrices into a single m-v-p matrix
 		updateMvpMatrix(viewMatrix, projectionMatrix);
 
@@ -171,7 +170,7 @@ public class CameraFrustumAndAxis extends Renderable {
 		// Draw the CameraFrustumAndAxis
 		mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
 		GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, getMvpMatrix(), 0);
-		GLES20.glLineWidth(1);
+		GLES20.glLineWidth(3);
 		GLES20.glDrawArrays(GLES20.GL_LINES, 0, mVertices.length/3);
 
 	}

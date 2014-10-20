@@ -35,7 +35,7 @@ public abstract class Renderable {
 	 */
 	public abstract void draw(float[] viewMatrix, float[] projectionMatrix);
 	
-	public void updateMvpMatrix(float[] viewMatrix, float[] projectionMatrix) {
+	public synchronized void updateMvpMatrix(float[] viewMatrix, float[] projectionMatrix) {
 		// Compose the model, view, and projection matrices into a single mvp matrix
 		Matrix.setIdentityM(mMvMatrix, 0);
 		Matrix.setIdentityM(mMvpMatrix, 0);
@@ -48,7 +48,7 @@ public abstract class Renderable {
 	}
 	
 	public void setModelMatrix(float[] modelMatrix) {
-		this.mModelMatrix = modelMatrix;
+		mModelMatrix = modelMatrix;
 	}
 	
 	public float[] getMvMatrix() {

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" 
+    android:labelFor="@string/app_name">
+
+    <ToggleButton
+        android:id="@+id/loadadf"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+         android:textOn="Load ADF On"
+        android:textOff="Load ADF Off" />
+
+    <ToggleButton
+        android:id="@+id/learningmode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textOn="Learning Mode On"
+        android:textOff="Learning Mode Off" />
+
+    <Button
+        android:id="@+id/start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/StartConfig" />
+
+    <Button
+        android:id="@+id/adfPathView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/ADFPathView"
+        android:visibility="gone" />
+
+    <Button
+        android:id="@+id/CanvasView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/CanvasView" 
+        android:visibility="gone"/>
+
+    <Button
+        android:id="@+id/ADFListView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/MangeADFs" />
+
+</LinearLayout>

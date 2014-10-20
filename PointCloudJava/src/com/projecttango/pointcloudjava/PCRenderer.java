@@ -19,9 +19,12 @@ package com.projecttango.pointcloudjava;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import com.projecttango.tangoutils.Renderer;
 import com.projecttango.tangoutils.renderables.CameraFrustum;
+import com.projecttango.tangoutils.renderables.CameraFrustumAndAxis;
 import com.projecttango.tangoutils.renderables.Grid;
 import com.projecttango.tangoutils.renderables.PointCloud;
+import com.projecttango.tangoutils.renderables.Trajectory;
 
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
@@ -38,25 +41,39 @@ import android.opengl.Matrix;
  * the user-selected camera view, which can be 1st person, 3rd person, or top-down.
  *
  */
-public class PCRenderer implements GLSurfaceView.Renderer {
+public class PCRenderer extends Renderer implements GLSurfaceView.Renderer {
 	
-    private static final float CAMERA_FOV = 45f;
-    private static final float CAMERA_NEAR = 1f;
-    private static final float CAMERA_FAR = 200f;
-    private static final int MATRIX_4X4 = 16;
-	
-	private float[] mViewMatrix = new float[MATRIX_4X4];
-    private float mCameraAspect;
-    private float[] mProjectionMatrix = new float[MATRIX_4X4];
 	private PointCloud mPointCloud;
+	private Grid mGrid;
+	private CameraFrustumAndAxis mCameraFrustumAndAxis;
+	private Trajectory mTrajectory;
+	private int mMaxDepthPoints;
+	
+	public PCRenderer(int maxDepthPoints){
+		mMaxDepthPoints = maxDepthPoints;
+	}
 	
 	@Override
 	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
 		GLES20.glClearColor(1f, 1f, 1f, 1.0f);
 	    GLES20.glEnable(GLES20.GL_DEPTH_TEST);
-	    mPointCloud = new PointCloud();
+	    String vertexShaderCode =	"uniform mat4 uMVPMatrix;" 
+				+"attribute vec4 vPosition;" 
+				+"void main() {" 
+				+"gl_Position = uMVPMatrix * vPosition;" 
+				+"}";
+		String blueFragshaderCode = "precision mediump float;"
+				+ "uniform vec4 vColor;" 
+				+ "void main() {"
+				+ " gl_FragColor = vec4(0.0,0.0,0.5,1.0);" 
+				+ "}";
+	    mPointCloud = new PointCloud(mMaxDepthPoints);
+	    mGrid = new Grid();
+	    mCameraFrustumAndAxis = new CameraFrustumAndAxis();
+	    mTrajectory = new Trajectory(vertexShaderCode,blueFragshaderCode,2);
 	    Matrix.setIdentityM(mViewMatrix, 0);
-	    Matrix.setLookAtM(mViewMatrix, 0, 0f,  0f, 1f, 0f, 0f, 0f, 0f, 1f, 0f);
+	    Matrix.setLookAtM(mViewMatrix, 0, 5f,  5f, 5f, 0f, 0f, 0f, 0f, 1f, 0f);
+	    mCameraFrustumAndAxis.setModelMatrix(getModelMatCalculator().getModelMatrix());
 	}
 
 	@Override
@@ -69,25 +86,16 @@ public class PCRenderer implements GLSurfaceView.Renderer {
 	@Override
 	public void onDrawFrame(GL10 gl) {
 		GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT); 	
+		mGrid.draw(mViewMatrix, mProjectionMatrix);
 		mPointCloud.draw(mViewMatrix,mProjectionMatrix);
+		mTrajectory.draw(mViewMatrix, mProjectionMatrix);
+		mCameraFrustumAndAxis.draw(mViewMatrix, mProjectionMatrix);
 	}
 
 	public PointCloud getPointCloud() {
 		return mPointCloud;
 	}
-	
-	public void setFirstPersonView(){
-		Matrix.setIdentityM(mViewMatrix, 0);
-		Matrix.setLookAtM(mViewMatrix, 0, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1f, 0f);
-	}
-	
-	public void setThirdPersonView(){
-		Matrix.setIdentityM(mViewMatrix, 0);
-		Matrix.setLookAtM(mViewMatrix, 0, 2f, 2f, 2f, 0f, 0f, 0f, 0f, 1f, 0f);
-	}
-	
-	public void setTopDownView(){
-		Matrix.setIdentityM(mViewMatrix, 0);
-		Matrix.setLookAtM(mViewMatrix, 0, 0f, 5f, 0f, 0f, 0f, 0f, 0f, 0f, -1f);
+	public Trajectory getTrajectory() {
+		return mTrajectory;
 	}
 }
