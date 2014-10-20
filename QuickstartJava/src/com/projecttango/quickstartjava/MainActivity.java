@@ -64,7 +64,7 @@ public class MainActivity extends Activity {
 		// 	If you want to use other APIs, add more appropriate to the config like:
 		// 	mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true)
 		mConfig = new TangoConfig();
-		mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT, mConfig);
+		mConfig = mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT);
 		mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
 		
 	    // Select coordinate frame pairs
@@ -73,7 +73,7 @@ public class MainActivity extends Activity {
 	                TangoPoseData.COORDINATE_FRAME_DEVICE));
 		
 		// Add a listener for Tango pose data
-		int statusCode = mTango.connectListener(framePairs, new OnTangoUpdateListener() {
+		mTango.connectListener(framePairs, new OnTangoUpdateListener() {
 
 			@SuppressLint("DefaultLocale") 
 			@Override
@@ -111,35 +111,27 @@ public class MainActivity extends Activity {
 			}
 			
 		});
-		
-		Log.i(TAG, "Status Code: " + statusCode);
 	}
 	
 	@Override
 	protected void onResume() {
 		super.onResume();
-		// Lock the Tango configuration and reconnect to the service each time the app
-		//	is brought to the foreground.
-		mTango.lockConfig(mConfig);
-		mTango.connect();
+		// Reconnect to the service each time the app
+		//	is brought to the foreground with the given configuration.
+		mTango.connect(mConfig);
 	}
 	
 	@Override
 	protected void onPause() {
 		super.onPause();
-		// When the app is pushed to the background, unlock the Tango configuration and disconnect
+		// When the app is pushed to the background disconnect
 		//	from the service so that other apps will behave properly.
-		mTango.unlockConfig();
 		mTango.disconnect();
 	}
 	
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		// When the app is pushed to the background, unlock the Tango configuration and disconnect
-		//	from the service so that other apps will behave properly.
-		mTango.unlockConfig();
-		mTango.disconnect();
 	}
 	
 }
