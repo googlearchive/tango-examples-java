@@ -15,13 +15,27 @@
    limitations under the License.
 -->
 <resources>
-    <string name="app_name">PointCloudJava</string>
+    <string name="app_name">Project Tango - Java Point Cloud</string>
+    <string name="menu_name">Java Point Cloud</string>
     <string name="vertex_count">Number of Points:</string>
-    <string name="version">Version Date:</string>
+    <string name="serviceversion">Service Version:</string>
+    <string name="appversion">"App Version: "</string>
+    <string name="tangoevent">"Tango System Event: "</string>
+    <string name="start2device">Target->Device, Base->Start: </string>
+    <string name="posecount">", Count: "</string>
+    <string name="status">"Status: "</string>
+    <string name="deltatime">", Delta Time(ms): "</string>
+    <string name="pose">", Pose(m): "</string>
+    <string name="quat">", Quat: "</string>
     <string name="first_person">First</string>
     <string name="third_person">Third</string>
-    <string name="top_down">Top Down</string>
-	<string name="averageZ">Average Depth :</string>
-	<string name="frequency">Frequency :</string>
-	<string name="timestamp">Timestamp :</string>
+    <string name="top_down">Top</string>
+    <string name="start">Start</string>
+    <string name="autoreseton">Auto Reset On</string>
+    <string name="autoresetoff">Auto Reset Off</string>
+    <string name = "averageZ">"Average Depth: "</string>
+    <string name="pointCount">"Point Count: "</string>
+    <string name="frameDelta">"Frame Delta: "</string>
+    <string name="TangoError">"Tango Exception! Try Again!"</string>
+    <string name="TangoOutOfDateException">"Tango Service outdated!"</string>
 </resources>

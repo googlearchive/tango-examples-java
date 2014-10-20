@@ -13,172 +13,34 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/Grid"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="horizontal" >
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content" >
 
-   <LinearLayout
-        android:layout_width="0dip"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:orientation="vertical" >
+    <android.opengl.GLSurfaceView
+        android:id="@+id/gl_surface_view"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_gravity="top" />
 
-        <LinearLayout
-            android:layout_width="fill_parent"
-            android:layout_height="0dip"
-            android:layout_weight="1"
-            android:orientation="horizontal" >
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/Position1" />
-
-            <TextView
-                android:id="@+id/poseX"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:maxLength="10" />
-        </LinearLayout>
+    <LinearLayout
+        android:id="@+id/linearLayout1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:orientation="vertical"
+        android:paddingLeft="5dp" >
 
         <LinearLayout
-            android:layout_width="fill_parent"
-            android:layout_height="0dip"
-            android:layout_weight="1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:orientation="horizontal" >
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/Position2" />
-
-            <TextView
-                android:id="@+id/poseY"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:maxLength="10" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="fill_parent"
-            android:layout_height="0dip"
-            android:layout_weight="1"
-            android:orientation="horizontal" >
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/Position3" />
-
-            <TextView
-                android:id="@+id/poseZ"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:maxLength="10" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="fill_parent"
-            android:layout_height="0dip"
-            android:layout_weight="1"
-            android:orientation="horizontal" >
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/Quaternion1" />
-
-            <TextView
-                android:id="@+id/Quaternion1"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:maxLength="10" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="fill_parent"
-            android:layout_height="0dip"
-            android:layout_weight="1"
-            android:orientation="horizontal" >
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/Quaternion2" />
-
-            <TextView
-                android:id="@+id/Quaternion2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:maxLength="10" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="fill_parent"
-            android:layout_height="0dip"
-            android:layout_weight="1"
-            android:orientation="horizontal" >
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/Quaternion3" />
-
-            <TextView
-                android:id="@+id/Quaternion3"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:maxLength="10" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="fill_parent"
-            android:layout_height="0dip"
-            android:layout_weight="1"
-            android:orientation="horizontal" >
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/Quaternion4" />
-
-            <TextView
-                android:id="@+id/Quaternion4"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:maxLength="10" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="fill_parent"
-            android:layout_height="0dip"
-            android:layout_weight="1"
-            android:orientation="horizontal" >
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/Status" />
-
-            <TextView
-                android:id="@+id/Status"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-        </LinearLayout>
-        
-          <LinearLayout
-            android:layout_width="fill_parent"
-            android:layout_height="0dip"
-            android:layout_weight="1"
-            android:orientation="horizontal" >
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/Version" />
+                android:text="@string/serviceversion" />
 
             <TextView
                 android:id="@+id/version"
@@ -186,71 +48,152 @@
                 android:layout_height="wrap_content" />
         </LinearLayout>
         
+         <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/appversion" />
+
+            <TextView
+                android:id="@+id/appversion"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1.0" />
+        </LinearLayout>
         
+           <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/tangoevent" />
+
+            <TextView
+                android:id="@+id/tangoevent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+        
+            <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/start2device" />
+
+        </LinearLayout>
+        
+          <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+			
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingLeft="20dp"
+                android:text="@string/status" />
+
+			<TextView
+                android:id="@+id/status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" /> 
+              
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/posecount" />
+
+			 <TextView
+                android:id="@+id/posecount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+			 
+			 <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/deltatime" />
+
+			 <TextView
+                android:id="@+id/deltatime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                 android:text="@string/deltatime" />
+			 
+			 <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/pose" />
+
+			 <TextView
+                android:id="@+id/pose"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+			  <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/quat" />
+
+			 <TextView
+                android:id="@+id/quat"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+			 
+        </LinearLayout>
+           
     </LinearLayout>
-	<RelativeLayout 
-	    android:layout_width="0dip"
-        android:layout_height="match_parent"
-        android:layout_gravity="fill_horizontal"
-        android:layout_weight="5">
-		
-	     <android.opengl.GLSurfaceView
-        	android:id="@+id/gl_surface_view"
-        	android:layout_width="match_parent"
-        	android:layout_height="match_parent"
-        	 />
 
-	     <Button
-	         android:id="@+id/firstPerson"
-	         android:layout_width="wrap_content"
-	         android:layout_height="wrap_content"
-	         android:layout_alignParentRight="true"
-	         android:layout_alignParentTop="true"
-	         android:text="1st" />
+    <Button
+        android:id="@+id/first_person_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/third_person_button"
+        android:layout_alignLeft="@+id/third_person_button"
+        android:layout_alignParentRight="true"
+        android:layout_marginBottom="5dp"
+        android:layout_marginRight="5dp"
+        android:paddingRight="5dp"
+        android:text="@string/first_person" />
 
-	     <Button
-	         android:id="@+id/thirdPerson"
-	         android:layout_width="wrap_content"
-	         android:layout_height="wrap_content"
-	         android:layout_alignParentLeft="true"
-	         android:layout_alignParentTop="true"
-	         android:text="3rdPerson" />
+    <Button
+        android:id="@+id/top_down_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/third_person_button"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="5dp"
+        android:paddingRight="5dp"
+        android:text="@string/top_down" />
 
-	     <Button
-	         android:id="@+id/topDown"
-	         android:layout_width="wrap_content"
-	         android:layout_height="wrap_content"
-	         android:layout_alignParentTop="true"
-	         android:layout_centerHorizontal="true"
-	         android:text="TopDownView" />
+    <Button
+        android:id="@+id/third_person_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/top_down_button"
+        android:layout_alignParentRight="true"
+        android:layout_marginBottom="5dp"
+        android:layout_marginRight="5dp"
+        android:paddingRight="5dp"
+        android:text="@string/third_person" />
 
-	     <Button
-	         android:id="@+id/start"
-	         android:layout_width="wrap_content"
-	         android:layout_height="wrap_content"
-	         android:layout_alignParentBottom="true"
-	         android:layout_alignParentLeft="true"
-	         android:text="Start" />
+    <Button
+        android:id="@+id/resetmotion"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:layout_marginLeft="5dp"
+        android:text="Reset Motion Tracking" />
 
-	     <ToggleButton
-	         android:id="@+id/autoReset"
-	         android:layout_width="wrap_content"
-	         android:layout_height="wrap_content"
-	         android:layout_above="@+id/start"
-	         android:layout_alignParentLeft="true"
-	         android:textOff="Auto Reset Off"
-	         android:textOn="Auto Reset On" />
-
-	     <Button
-	         android:id="@+id/manualReset"
-	         android:layout_width="wrap_content"
-	         android:layout_height="wrap_content"
-	         android:layout_alignParentBottom="true"
-	         android:layout_alignParentRight="true"
-	         android:text="ResetMotion Tracking" />
-	    
-	</RelativeLayout>
-   
-
-</LinearLayout>
+</RelativeLayout>

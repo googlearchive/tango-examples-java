@@ -25,18 +25,63 @@ import android.opengl.Matrix;
  */
 public class ModelMatCalculator {
 
-	private static float[] conversionMatrix = new float[]{
+	private static float[] mConversionMatrix = new float[]{
 			1.0f, 0.0f, 0.0f, 0.0f,
 			0.0f, 0.0f,-1.0f, 0.0f,
 			0.0f, 1.0f, 0.0f, 0.0f,
 			0.0f, 0.0f, 0.0f, 1.0f};
 	
-	private float[] modelMatrix = new float[16];
-	private float[] mTranslation = new float[3];
-	private float[] mQuaternion = new float[4];
+	private float[] mModelMatrix = new float[16];
+	private float[] mPointCloudModelMatrix = new float[16];
+	private float[] mDevice2IMUMatrix = new float[]{
+			1.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f,
+			0.0f, 0.0f, 0.0f, 1.0f};
+	private float[] mColorCamera2IMUMatrix = new float[]{
+			1.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f,
+			0.0f, 0.0f, 0.0f, 1.0f};
+	private float[] mOpengl2ColorCameraMatrix = new float[]{
+			1.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f,
+			0.0f, 0.0f, 0.0f, 1.0f};
 	
 	public ModelMatCalculator() {
-		Matrix.setIdentityM(modelMatrix, 0);
+		Matrix.setIdentityM(mModelMatrix, 0);
+		Matrix.setIdentityM(mPointCloudModelMatrix, 0);
+	}
+	
+	/**
+	 * Updates the model matrix (rotation and translation).
+	 * @param translation a three-element array of translation data.
+	 * @param quaternion a four-element array of rotation data.
+	 */
+	public void updatePointCloudModelMatrix(float[] translation, float[] quaternion){
+		
+		float[] tempMultMatrix = new float[16];
+		Matrix.setIdentityM(tempMultMatrix, 0);
+		Matrix.multiplyMM(tempMultMatrix, 0, mColorCamera2IMUMatrix, 0, mOpengl2ColorCameraMatrix, 0);
+		float[] tempInvertMatrix = new float[16];
+		Matrix.setIdentityM(tempInvertMatrix, 0);
+		Matrix.invertM(tempInvertMatrix,0,mDevice2IMUMatrix,0);
+		float[] tempMultMatrix2 = new float[16];
+		Matrix.setIdentityM(tempMultMatrix2, 0);
+		Matrix.multiplyMM(tempMultMatrix2, 0, tempInvertMatrix, 0, tempMultMatrix, 0);
+		
+		float[] quaternionMatrix = new float[16];
+		Matrix.setIdentityM(quaternionMatrix, 0);
+		quaternionMatrix = quaternionMatrixOpenGL(quaternion);		
+		float[] tempMultMatrix3 = new float[16];
+		Matrix.setIdentityM(tempMultMatrix3, 0);
+		Matrix.setIdentityM(mPointCloudModelMatrix, 0);
+		Matrix.multiplyMM(tempMultMatrix3, 0, quaternionMatrix, 0, tempMultMatrix2, 0);
+		Matrix.multiplyMM(mPointCloudModelMatrix, 0, mConversionMatrix, 0, tempMultMatrix3, 0);	
+		mPointCloudModelMatrix[12] += translation[0];
+		mPointCloudModelMatrix[13] += translation[2];
+		mPointCloudModelMatrix[14] += -1f * translation[1];	
 	}
 	
 	/**
@@ -46,22 +91,74 @@ public class ModelMatCalculator {
 	 */
 	public void updateModelMatrix(float[] translation, float[] quaternion){
 		
-		float[] quaternionMatrix = new float[16];
-		quaternionMatrix = quaternionMatrixOpenGL(quaternion);	
-				
-		Matrix.multiplyMM(modelMatrix, 0,  conversionMatrix, 0 , quaternionMatrix, 0);	
-		modelMatrix[12] = translation[0];
-		modelMatrix[13] = translation[2];
-		modelMatrix[14] = -1f * translation[1];		
+		float[] tempMultMatrix = new float[16];
+		Matrix.setIdentityM(tempMultMatrix, 0);
+		Matrix.multiplyMM(tempMultMatrix, 0, mColorCamera2IMUMatrix, 0, mOpengl2ColorCameraMatrix, 0);
+		float[] tempInvertMatrix = new float[16];
+		Matrix.setIdentityM(tempInvertMatrix, 0);
+		Matrix.invertM(tempInvertMatrix,0,mDevice2IMUMatrix,0);
+		float[] tempMultMatrix2 = new float[16];
+		Matrix.setIdentityM(tempMultMatrix2, 0);
+		Matrix.multiplyMM(tempMultMatrix2, 0, tempInvertMatrix, 0, tempMultMatrix, 0);
 		
+		float[] quaternionMatrix = new float[16];
+		Matrix.setIdentityM(quaternionMatrix, 0);
+		quaternionMatrix = quaternionMatrixOpenGL(quaternion);		
+		float[] tempMultMatrix3 = new float[16];
+		Matrix.setIdentityM(tempMultMatrix3, 0);
+		Matrix.setIdentityM(mModelMatrix, 0);
+		Matrix.multiplyMM(tempMultMatrix3, 0, quaternionMatrix, 0, tempMultMatrix2, 0);
+		Matrix.multiplyMM(mModelMatrix, 0, mConversionMatrix, 0, tempMultMatrix3, 0);	
+		mModelMatrix[12] += translation[0];
+		mModelMatrix[13] += translation[2];
+		mModelMatrix[14] += -1f * translation[1];	
+	}
+	
+	public void SetDevice2IMUMatrix(float[] translation, float[] quaternion){
+		mDevice2IMUMatrix = quaternionMatrixOpenGL(quaternion);	
+		mDevice2IMUMatrix[12] = translation[0];
+		mDevice2IMUMatrix[13] = translation[1];
+		mDevice2IMUMatrix[14] = translation[2];
+	}
+	
+	public void SetColorCamera2IMUMatrix(float[] translation, float[] quaternion){
+		mOpengl2ColorCameraMatrix = new float[]{
+				1.0f, 0.0f, 0.0f, 0.0f,
+				0.0f, -1.0f, 0.0f, 0.0f,
+				0.0f, 0.0f, -1.0f, 0.0f,
+				0.0f, 0.0f, 0.0f, 1.0f};
+		mColorCamera2IMUMatrix = quaternionMatrixOpenGL(quaternion);		
+		mColorCamera2IMUMatrix[12] = translation[0];
+		mColorCamera2IMUMatrix[13] = translation[1];
+		mColorCamera2IMUMatrix[14] = translation[2];
 	}
 	
 	public float[] getModelMatrix(){
-		return modelMatrix;
+		return mModelMatrix;
+	}
+	
+	public float[] getModelMatrixCopy(){
+		float[] modelMatCopy = new float[16];
+		System.arraycopy(mModelMatrix, 0, modelMatCopy, 0, 16);
+		return modelMatCopy;
+	}
+	
+	public float[] getPointCloudModelMatrixCopy(){
+		float[] modelMatCopy = new float[16];
+		float[] tempMultMat = new float[16];
+		Matrix.setIdentityM(tempMultMat, 0);
+		float[] invertYandZMatrix = new float[]{
+				1.0f, 0.0f, 0.0f, 0.0f,
+				0.0f, -1.0f, 0.0f, 0.0f,
+				0.0f, 0.0f, -1.0f, 0.0f,
+				0.0f, 0.0f, 0.0f, 1.0f};
+		Matrix.multiplyMM(tempMultMat, 0, mPointCloudModelMatrix, 0, invertYandZMatrix, 0);
+		System.arraycopy(tempMultMat, 0, modelMatCopy, 0, 16);
+		return modelMatCopy;
 	}
 	
 	public float[] getTranslation(){
-		return new float[]{modelMatrix[12], modelMatrix[13], modelMatrix[14]};
+		return new float[]{mModelMatrix[12], mModelMatrix[13], mModelMatrix[14]};
 	}
 	
 	/**
@@ -115,7 +212,7 @@ public class ModelMatCalculator {
 		matrix[7] = 0f;
 		matrix[11] = 0f;
 		matrix[15] = 1f;
-		
+
 		return matrix;
 	}
 	

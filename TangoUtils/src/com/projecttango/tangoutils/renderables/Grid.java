@@ -63,14 +63,14 @@ public class Grid extends Renderable {
 		
 		// Load the vertices for the z-axis grid lines into the vertex buffer
 		for (int x = -GRID_RANGE_M; x <= GRID_RANGE_M; x++) {
-			mVertexBuffer.put(new float[] { x, -1f, (float) -GRID_RANGE_M });
-			mVertexBuffer.put(new float[] { x, -1f, (float) GRID_RANGE_M });
+			mVertexBuffer.put(new float[] { x, -1.3f, (float) -GRID_RANGE_M });
+			mVertexBuffer.put(new float[] { x, -1.3f, (float) GRID_RANGE_M });
 		}
 
 		// Load the vertices for the x-axis grid lines into the vertex buffer
 		for (int z = -GRID_RANGE_M; z <= GRID_RANGE_M; z++) {
-			mVertexBuffer.put(new float[] { (float) -GRID_RANGE_M, -1f, z });
-			mVertexBuffer.put(new float[] { (float) GRID_RANGE_M, -1f, z });
+			mVertexBuffer.put(new float[] { (float) -GRID_RANGE_M, -1.3f, z });
+			mVertexBuffer.put(new float[] { (float) GRID_RANGE_M, -1.3f, z });
 		}
 		
 		// Load the vertex and fragment shaders, then link the program

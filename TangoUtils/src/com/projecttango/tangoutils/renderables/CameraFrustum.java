@@ -156,6 +156,4 @@ public class CameraFrustum extends Renderable {
 		GLES20.glLineWidth(1);
 		GLES20.glDrawArrays(GLES20.GL_LINES, 0, 16);
 	}
-	
-	
 }

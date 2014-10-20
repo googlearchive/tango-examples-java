@@ -24,12 +24,13 @@
         android:layout_gravity="top" />
 
     <LinearLayout
-        android:id="@+id/linearLayout1"
+        android:id="@+id/linearlayout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
         android:layout_alignParentTop="true"
-        android:orientation="vertical" >
+        android:orientation="vertical"
+        android:paddingLeft="5dp" >
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -39,15 +40,15 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/version" />
+                android:text="@string/serviceversion" />
 
             <TextView
                 android:id="@+id/version"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
         </LinearLayout>
-
-        <LinearLayout
+        
+         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
@@ -55,15 +56,15 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/vertex_count" />
+                android:text="@string/appversion" />
 
             <TextView
-                android:id="@+id/vertexCount"
+                android:id="@+id/appversion"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:text="1.0" />
         </LinearLayout>
-
-        <LinearLayout
+           <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
@@ -71,14 +72,84 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/frequency" />
+                android:text="@string/tangoevent" />
 
             <TextView
-                android:id="@+id/frequency"
+                android:id="@+id/tangoevent"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
         </LinearLayout>
+        
+            <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/start2device" />
+
+        </LinearLayout>
+        
+          <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+			
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingLeft="20dp"
+                android:text="@string/status" />
+
+			<TextView
+                android:id="@+id/status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" /> 
+              
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/posecount" />
+
+			 <TextView
+                android:id="@+id/posecount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+			 
+			 <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/deltatime" />
+
+			 <TextView
+                android:id="@+id/deltatime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                 android:text="@string/deltatime" />
+			 
+			 <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/pose" />
+
+			 <TextView
+                android:id="@+id/pose"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+			  <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/quat" />
+
+			 <TextView
+                android:id="@+id/quat"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+			 
+        </LinearLayout>
+        
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -94,8 +165,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
         </LinearLayout>
-
-        <LinearLayout
+        
+         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
@@ -103,37 +174,63 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/timestamp" />
+                android:text="@string/pointCount" />
 
             <TextView
-                android:id="@+id/timestamp"
+                android:id="@+id/pointCount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
         </LinearLayout>
+        
+         <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/frameDelta" />
+
+            <TextView
+                android:id="@+id/frameDelta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+           
     </LinearLayout>
 
     <Button
-        android:id="@+id/third_person_button"
+        android:id="@+id/first_person_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentLeft="true"
-        android:text="@string/third_person" />
+        android:layout_above="@+id/third_person_button"
+        android:layout_alignLeft="@+id/third_person_button"
+        android:layout_alignParentRight="true"
+        android:layout_marginBottom="5dp"
+        android:layout_marginRight="5dp"
+        android:paddingRight="5dp"
+        android:text="@string/first_person" />
 
     <Button
         android:id="@+id/top_down_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_toRightOf="@+id/first_person_button"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="5dp"
+        android:paddingRight="5dp"
         android:text="@string/top_down" />
 
     <Button
-        android:id="@+id/first_person_button"
+        android:id="@+id/third_person_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_toRightOf="@+id/third_person_button"
-        android:text="@string/first_person" />
+        android:layout_above="@+id/top_down_button"
+        android:layout_alignParentRight="true"
+        android:layout_marginBottom="5dp"
+        android:layout_marginRight="5dp"
+        android:paddingRight="5dp"
+        android:text="@string/third_person" />
 
 </RelativeLayout>

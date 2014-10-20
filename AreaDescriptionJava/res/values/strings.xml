@@ -15,14 +15,55 @@
    limitations under the License.
 -->
 <resources>
-    <string name="app_name">AreaDescriptionJava</string>
- 	<string name="Quaternion1">Q1 : </string>
- 	<string name="Quaternion2">Q2 :</string>
- 	<string name="Quaternion3">Q3 :</string>
- 	<string name="Quaternion4">Q4 :</string>
- 	<string name="Position1">PosX:</string>
- 	<string name="Position2">PosY:</string>
- 	<string name="Position3">PosZ:</string>
- 	<string name="Status">Status:</string>
- 		<string name="Version">Version:</string>
+    <string name="app_name">Project Tango - Java Area Description</string>
+    <string name="menu_name">Java Area Description</string>
+    <string name="vertex_count">Number of Points:</string>
+    <string name="serviceversion">"Service Version: "</string>
+    <string name="appversion">"App Version: "</string>
+    <string name="tangoevent">"Tango System Event: "</string>
+    <string name="start2device">Target->Device, Base->Start:</string>
+    <string name="adf2start">Target->Start, Base->ADF:</string>
+    <string name="adf2device">Target->Device, Base->ADF:</string>
+    <string name="posecount">", Count: "</string>
+    <string name="status">"Status: "</string>
+    <string name="deltatime">", Delta Time(ms): "</string>
+    <string name="pose">", Pose(m): "</string>
+    <string name="quat">", Quat: "</string>
+    <string name="first_person">First</string>
+    <string name="third_person">Third</string>
+    <string name="top_down">Top</string>
+    <string name="start">Start</string>
+    <string name="autoreseton">Auto Reset On</string>
+    <string name="autoresetoff">Auto Reset Off</string>
+    <string name="SetNameDialogTitle">Set the ADF Name</string>
+    <string name="Cancel">Cancel</string>  
+    <string name="SaveADF">Save ADF</string>
+    <string name="Name">Name</string>
+    <string name="OK">OK</string>  
+    <string name="StartConfig">Start with this config</string> 
+    <string name="ADFPathView">ADF Path View</string>
+    <string name="CanvasView">Canvas View</string>
+    <string name="MangeADFs">Manage ADFs</string>
+    <string name="APIADFs">API ADFs:</string>
+    <string name="ApplicationADFs">Application ADFs</string>
+    <string name="UUID">UUID</string>
+    <string name="TangoError">"Tango Exception! Try Again!"</string>
+    <string name="TangoOutOfDateException">"Tango Service outdated!"</string>
+    <string name="noUUIDTangoError">"No such UUID in ADFs"</string>
+    <string name="ADFSave">"ADF saved with UUID: "</string>
+    <string name="ADFExistsAppSpace">"Tango Error! ADF already exists in app space or File system."</string> 
+    <string name="ADFExistsAPISpace">"Tango Error! ADF already exists in API Space."</string>
+    <string name="NoADFsTangoError">No ADF UUIDs</string>
+    <string-array
+        name ="SetDialogMenuItemsAPISpace" > 
+        <item >Rename</item>
+        <item >Delete from API space</item>
+        <item >Export to App space</item>
+    </string-array>
+    
+     <string-array
+        name ="SetDialogMenuItemsAppSpace" > 
+        <item >Delete from  App space</item>
+        <item >Import to API space</item>
+    </string-array>
 </resources>
