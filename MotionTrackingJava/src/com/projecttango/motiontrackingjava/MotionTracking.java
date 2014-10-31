@@ -50,250 +50,279 @@ import android.widget.Toast;
  */
 public class MotionTracking extends Activity implements View.OnClickListener {
 
-	private static String TAG = MotionTracking.class.getSimpleName();
-	private static int SECS_TO_MILLISECS = 1000;
-	private Tango mTango;
-	private TangoConfig mConfig;
-	private TextView mDeltaTextView;
-	private TextView mPoseCountTextView;
-	private TextView mPoseTextView;
-	private TextView mQuatTextView;
-	private TextView mPoseStatusTextView;
-	private TextView mTangoServiceVersionTextView;
-	private TextView mApplicationVersionTextView;
-	private TextView mTangoEventTextView;
-	private Button mMotionResetButton;
-	private float mPreviousTimeStamp;
-	private int count;
-	private float mDeltaTime;
-	private boolean mIsAutoRecovery;
-	private MTGLRenderer mRenderer;
-	private GLSurfaceView mGLView;
+    private static String TAG = MotionTracking.class.getSimpleName();
+    private static int SECS_TO_MILLISECS = 1000;
+    private Tango mTango;
+    private TangoConfig mConfig;
+    private TextView mDeltaTextView;
+    private TextView mPoseCountTextView;
+    private TextView mPoseTextView;
+    private TextView mQuatTextView;
+    private TextView mPoseStatusTextView;
+    private TextView mTangoServiceVersionTextView;
+    private TextView mApplicationVersionTextView;
+    private TextView mTangoEventTextView;
+    private Button mMotionResetButton;
+    private float mPreviousTimeStamp;
+    private int count;
+    private float mDeltaTime;
+    private boolean mIsAutoRecovery;
+    private MTGLRenderer mRenderer;
+    private GLSurfaceView mGLView;
 
-	@Override
-	protected void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		setContentView(R.layout.activity_motion_tracking);
-		Intent intent = getIntent();
-		mIsAutoRecovery = intent.getBooleanExtra(StartActivity.KEY_MOTIONTRACKING_AUTORECOVER, false);
-		// Text views for displaying translation and rotation data
-		mPoseTextView = (TextView) findViewById(R.id.pose);
-		mQuatTextView = (TextView) findViewById(R.id.quat);
-		mPoseCountTextView =(TextView) findViewById(R.id.posecount);
-		mDeltaTextView =(TextView) findViewById(R.id.deltatime);
-		mTangoEventTextView =(TextView) findViewById(R.id.tangoevent);
-		// Buttons for selecting camera view and Set up button click listeners
-		findViewById(R.id.first_person_button).setOnClickListener(this);
-		findViewById(R.id.third_person_button).setOnClickListener(this);
-		findViewById(R.id.top_down_button).setOnClickListener(this);
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_motion_tracking);
+        Intent intent = getIntent();
+        mIsAutoRecovery = intent.getBooleanExtra(
+                StartActivity.KEY_MOTIONTRACKING_AUTORECOVER, false);
+        // Text views for displaying translation and rotation data
+        mPoseTextView = (TextView) findViewById(R.id.pose);
+        mQuatTextView = (TextView) findViewById(R.id.quat);
+        mPoseCountTextView = (TextView) findViewById(R.id.posecount);
+        mDeltaTextView = (TextView) findViewById(R.id.deltatime);
+        mTangoEventTextView = (TextView) findViewById(R.id.tangoevent);
+        // Buttons for selecting camera view and Set up button click listeners
+        findViewById(R.id.first_person_button).setOnClickListener(this);
+        findViewById(R.id.third_person_button).setOnClickListener(this);
+        findViewById(R.id.top_down_button).setOnClickListener(this);
 
-		// Button to reset motion tracking
-		mMotionResetButton = (Button) findViewById(R.id.resetmotion);
+        // Button to reset motion tracking
+        mMotionResetButton = (Button) findViewById(R.id.resetmotion);
 
-		// Text views for the status of the pose data and Tango library versions
-		mPoseStatusTextView = (TextView) findViewById(R.id.status);
-		mTangoServiceVersionTextView = (TextView) findViewById(R.id.version);
-		mApplicationVersionTextView = (TextView) findViewById(R.id.appversion);
+        // Text views for the status of the pose data and Tango library versions
+        mPoseStatusTextView = (TextView) findViewById(R.id.status);
+        mTangoServiceVersionTextView = (TextView) findViewById(R.id.version);
+        mApplicationVersionTextView = (TextView) findViewById(R.id.appversion);
 
-		// OpenGL view where all of the graphics are drawn
-		mGLView = (GLSurfaceView) findViewById(R.id.gl_surface_view);
+        // OpenGL view where all of the graphics are drawn
+        mGLView = (GLSurfaceView) findViewById(R.id.gl_surface_view);
 
-		// Set up button click listeners
-		mMotionResetButton.setOnClickListener(this);
+        // Set up button click listeners
+        mMotionResetButton.setOnClickListener(this);
 
-		// Configure OpenGL renderer
-		mRenderer = new MTGLRenderer();
-		mGLView.setEGLContextClientVersion(2);
-		mGLView.setRenderer(mRenderer);
-		mGLView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
+        // Configure OpenGL renderer
+        mRenderer = new MTGLRenderer();
+        mGLView.setEGLContextClientVersion(2);
+        mGLView.setRenderer(mRenderer);
+        mGLView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
 
-		// Instantiate the Tango service
-		mTango = new Tango(this);
-		// Create a new Tango Configuration and enable the MotionTracking API
-		mConfig = new TangoConfig();
-		mConfig= mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT);
-		mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
+        // Instantiate the Tango service
+        mTango = new Tango(this);
+        // Create a new Tango Configuration and enable the MotionTracking API
+        mConfig = new TangoConfig();
+        mConfig = mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT);
+        mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
 
-		// The Auto-Recovery ToggleButton sets a boolean variable to determine if the
-		//	Tango service should automatically attempt to recover when
-		/// MotionTracking enters an invalid state.
-		if (mIsAutoRecovery) {
-			mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_AUTORECOVERY, true);
-			Log.i(TAG, "Auto Reset On");
-		} else {
-			mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_AUTORECOVERY, false);
-			Log.i(TAG, "Auto Reset Off");
-		}
-		
-		PackageInfo packageInfo;
-		try {
-			packageInfo = this.getPackageManager().getPackageInfo(this.getPackageName(), 0);
-			mApplicationVersionTextView.setText(packageInfo.versionName);
-		} catch (NameNotFoundException e) {
-			e.printStackTrace();
-		}
-		
-		// Display the library version for debug purposes
-		mTangoServiceVersionTextView.setText(mConfig.getString("tango_service_library_version"));
+        // The Auto-Recovery ToggleButton sets a boolean variable to determine
+        // if the
+        // Tango service should automatically attempt to recover when
+        // / MotionTracking enters an invalid state.
+        if (mIsAutoRecovery) {
+            mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_AUTORECOVERY, true);
+            Log.i(TAG, "Auto Recovery On");
+        } else {
+            mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_AUTORECOVERY, false);
+            Log.i(TAG, "Auto Recovery Off");
+        }
 
-	}
+        PackageInfo packageInfo;
+        try {
+            packageInfo = this.getPackageManager().getPackageInfo(
+                    this.getPackageName(), 0);
+            mApplicationVersionTextView.setText(packageInfo.versionName);
+        } catch (NameNotFoundException e) {
+            e.printStackTrace();
+        }
 
-	/**
-	 * Set up the TangoConfig and the listeners for the Tango service, then begin using the
-	 * Motion Tracking API.  This is called in response to the user clicking the 'Start' Button.
-	 */
-	private void setTangoListeners() {
-		// Lock configuration and connect to Tango
-		// Select coordinate frame pair
-		final ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
-		framePairs.add(new TangoCoordinateFramePair(
-						TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
-						TangoPoseData.COORDINATE_FRAME_DEVICE));
-				// Listen for new Tango data
-		mTango.connectListener(framePairs, new OnTangoUpdateListener() {
+        // Display the library version for debug purposes
+        mTangoServiceVersionTextView.setText(mConfig
+                .getString("tango_service_library_version"));
 
-			@Override
-			public void onPoseAvailable(final TangoPoseData pose) {
-				// Log whenever Motion Tracking enters a   n invalid state
-				if (!mIsAutoRecovery && (pose.statusCode == TangoPoseData.POSE_INVALID)) {
-					Log.w(TAG, "Invalid State");
-				}
-				mDeltaTime = (float) (pose.timestamp - mPreviousTimeStamp) * SECS_TO_MILLISECS;
-				mPreviousTimeStamp = (float) pose.timestamp;
-				//Log.i(TAG,"Delta Time is: "+mDeltaTime);
-				count++;
-				// Update the OpenGL renderable objects with the new Tango Pose data
-				mRenderer.getTrajectory().updateTrajectory(pose.translation);
-				mRenderer.getModelMatCalculator().updateModelMatrix(
-						pose.translation, pose.rotation);
-				mRenderer.updateViewMatrix();
-				mGLView.requestRender();
+    }
 
-				// Update the UI with TangoPose information
-				runOnUiThread(new Runnable() {
-					@Override
-					public void run() {
-						DecimalFormat threeDec = new DecimalFormat("0.000");
-						String translationString = "[" + threeDec.format(pose.translation[0]) + ","
-								+ threeDec.format(pose.translation[1]) + ","
-								+ threeDec.format(pose.translation[2]) + "] ";
-						String quaternionString = "[" + threeDec.format(pose.rotation[0]) + ","
-								+ threeDec.format(pose.rotation[1]) + ","
-								+ threeDec.format(pose.rotation[2]) + ","
-								+ threeDec.format(pose.rotation[2]) +"] ";
+    /**
+     * Set up the TangoConfig and the listeners for the Tango service, then
+     * begin using the Motion Tracking API. This is called in response to the
+     * user clicking the 'Start' Button.
+     */
+    private void setTangoListeners() {
+        // Lock configuration and connect to Tango
+        // Select coordinate frame pair
+        final ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
+        framePairs.add(new TangoCoordinateFramePair(
+                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+                TangoPoseData.COORDINATE_FRAME_DEVICE));
+        // Listen for new Tango data
+        mTango.connectListener(framePairs, new OnTangoUpdateListener() {
 
-						// Display pose data on screen in TextViews
-						mPoseTextView.setText(translationString);
-						mQuatTextView.setText(quaternionString);
-						mPoseCountTextView.setText(Integer.toString(count));
-						mDeltaTextView.setText(threeDec.format(mDeltaTime));
-						if (pose.statusCode == TangoPoseData.POSE_VALID) {
-							mPoseStatusTextView.setText("Valid");
-						} else if (pose.statusCode == TangoPoseData.POSE_INVALID) {
-							mPoseStatusTextView.setText("Invalid");
-						} else if (pose.statusCode == TangoPoseData.POSE_INITIALIZING) {
-							mPoseStatusTextView.setText("Initializing");
-						} else if (pose.statusCode == TangoPoseData.POSE_UNKNOWN) {
-							mPoseStatusTextView.setText("Unknown");
-						}
-					}
-				});
-			}
+            @Override
+            public void onPoseAvailable(final TangoPoseData pose) {
+                // Log whenever Motion Tracking enters a n invalid state
+                if (!mIsAutoRecovery
+                        && (pose.statusCode == TangoPoseData.POSE_INVALID)) {
+                    Log.w(TAG, "Invalid State");
+                }
+                mDeltaTime = (float) (pose.timestamp - mPreviousTimeStamp)
+                        * SECS_TO_MILLISECS;
+                mPreviousTimeStamp = (float) pose.timestamp;
+                // Log.i(TAG,"Delta Time is: "+mDeltaTime);
+                count++;
+                // Update the OpenGL renderable objects with the new Tango Pose
+                // data
+                float[] translation = pose.getTranslationAsFloats();
+                mRenderer.getTrajectory().updateTrajectory(translation);
+                mRenderer.getModelMatCalculator().updateModelMatrix(translation,
+                                                                    pose.getRotationAsFloats());
+                mRenderer.updateViewMatrix();
+                mGLView.requestRender();
 
-			@Override
-			public void onXyzIjAvailable(TangoXyzIjData arg0) {
-				// We are not using TangoXyzIjData for this application
-			}
+                // Update the UI with TangoPose information
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        DecimalFormat threeDec = new DecimalFormat("0.000");
+                        String translationString = "["
+                                + threeDec.format(pose.translation[0]) + ", "
+                                + threeDec.format(pose.translation[1]) + ", "
+                                + threeDec.format(pose.translation[2]) + "] ";
+                        String quaternionString = "["
+                                + threeDec.format(pose.rotation[0]) + ", "
+                                + threeDec.format(pose.rotation[1]) + ", "
+                                + threeDec.format(pose.rotation[2]) + ", "
+                                + threeDec.format(pose.rotation[3]) + "] ";
 
-			@Override
-			public void onTangoEvent(final TangoEvent event) {
-				runOnUiThread(new Runnable(){
-					@Override
-					public void run() {
-						mTangoEventTextView.setText(event.eventKey + ": " + event.eventValue);
-					}
-				});
-			}
-		});
-	}
+                        // Display pose data on screen in TextViews
+                        mPoseTextView.setText(translationString);
+                        mQuatTextView.setText(quaternionString);
+                        mPoseCountTextView.setText(Integer.toString(count));
+                        mDeltaTextView.setText(threeDec.format(mDeltaTime));
+                        if (pose.statusCode == TangoPoseData.POSE_VALID) {
+                            mPoseStatusTextView.setText("Valid");
+                        } else if (pose.statusCode == TangoPoseData.POSE_INVALID) {
+                            mPoseStatusTextView.setText("Invalid");
+                        } else if (pose.statusCode == TangoPoseData.POSE_INITIALIZING) {
+                            mPoseStatusTextView.setText("Initializing");
+                        } else if (pose.statusCode == TangoPoseData.POSE_UNKNOWN) {
+                            mPoseStatusTextView.setText("Unknown");
+                        }
+                    }
+                });
+            }
 
-	private void motionReset() {
-		mTango.resetMotionTracking();
-	}
+            @Override
+            public void onXyzIjAvailable(TangoXyzIjData arg0) {
+                // We are not using TangoXyzIjData for this application
+            }
 
-	@Override
-	protected void onPause() {
-		super.onPause();
-		mTango.disconnect();
-	}
+            @Override
+            public void onTangoEvent(final TangoEvent event) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mTangoEventTextView.setText(event.eventKey + ": "
+                                + event.eventValue);
+                    }
+                });
+            }
+        });
+    }
 
-	protected void onResume() {
-		super.onResume();
-		setTangoListeners();
-		try{
-			mTango.connect(mConfig);
-		}catch(TangoOutOfDateException e){
-			Toast.makeText(getApplicationContext(), R.string.TangoOutOfDateException, Toast.LENGTH_SHORT).show();
-		}catch(TangoErrorException e){
-			Toast.makeText(getApplicationContext(), R.string.TangoError, Toast.LENGTH_SHORT).show();
-		}
-		SetUpExtrinsics();
-	}
+    private void motionReset() {
+        mTango.resetMotionTracking();
+    }
 
-	@Override
-	protected void onDestroy() {
-		super.onDestroy();
-	}
+    @Override
+    protected void onPause() {
+        super.onPause();
+        try {
+            mTango.disconnect();
+        } catch (TangoErrorException e) {
+            Toast.makeText(getApplicationContext(), R.string.TangoError,
+                    Toast.LENGTH_SHORT).show();
+        }
+    }
 
-	@Override
-	public void onClick(View v) {
-		switch (v.getId()) {
-		case R.id.first_person_button:
-			mRenderer.setFirstPersonView();
-			break;
-		case R.id.top_down_button:
-			mRenderer.setTopDownView();
-			break;
-		case R.id.third_person_button:
-			mRenderer.setThirdPersonView();
-			break;
-		case R.id.resetmotion:
-			motionReset();
-			break;
-		default:
-			Log.w(TAG, "Unknown button click");
-			return;
-		}
-	}
+    protected void onResume() {
+        super.onResume();
+        try {
+            setTangoListeners();
+        } catch (TangoErrorException e) {
+            Toast.makeText(getApplicationContext(), R.string.TangoError,
+                    Toast.LENGTH_SHORT).show();
+        }
+        try {
+            mTango.connect(mConfig);
+        } catch (TangoOutOfDateException e) {
+            Toast.makeText(getApplicationContext(),
+                    R.string.TangoOutOfDateException, Toast.LENGTH_SHORT)
+                    .show();
+        } catch (TangoErrorException e) {
+            Toast.makeText(getApplicationContext(), R.string.TangoError,
+                    Toast.LENGTH_SHORT).show();
+        }
+        SetUpExtrinsics();
+    }
 
-	@Override
-	public boolean onTouchEvent(MotionEvent event) {
-		return mRenderer.onTouchEvent(event);
-	}
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+    }
 
-	private void SetUpExtrinsics(){
-		// Get device to imu matrix.
-		TangoPoseData device2IMUPose = new TangoPoseData();
-		TangoCoordinateFramePair framePair = new TangoCoordinateFramePair();
-		framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_IMU;
-		framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_DEVICE;
-		try{
-			device2IMUPose = mTango.getPoseAtTime(0.0, framePair);
-		} catch(TangoErrorException e){
-			Toast.makeText(getApplicationContext(),  R.string.TangoError, Toast.LENGTH_SHORT).show();
-		}
-		mRenderer.getModelMatCalculator().SetDevice2IMUMatrix(device2IMUPose.translation, device2IMUPose.rotation);
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+        case R.id.first_person_button:
+            mRenderer.setFirstPersonView();
+            break;
+        case R.id.top_down_button:
+            mRenderer.setTopDownView();
+            break;
+        case R.id.third_person_button:
+            mRenderer.setThirdPersonView();
+            break;
+        case R.id.resetmotion:
+            motionReset();
+            break;
+        default:
+            Log.w(TAG, "Unknown button click");
+            return;
+        }
+    }
 
-		// Get color camera to imu matrix.
-		TangoPoseData color2IMUPose = new TangoPoseData();
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        return mRenderer.onTouchEvent(event);
+    }
 
-		framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_IMU;
-		framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR;
-		try{
-			color2IMUPose = mTango.getPoseAtTime(0.0, framePair);
-		}catch(TangoErrorException e){
-			Toast.makeText(getApplicationContext(), R.string.TangoError, Toast.LENGTH_SHORT).show();
-		}
-		mRenderer.getModelMatCalculator().SetColorCamera2IMUMatrix(color2IMUPose.translation, color2IMUPose.rotation);
-	}
+    private void SetUpExtrinsics() {
+        // Get device to imu matrix.
+        TangoPoseData device2IMUPose = new TangoPoseData();
+        TangoCoordinateFramePair framePair = new TangoCoordinateFramePair();
+        framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_IMU;
+        framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_DEVICE;
+        try {
+            device2IMUPose = mTango.getPoseAtTime(0.0, framePair);
+        } catch (TangoErrorException e) {
+            Toast.makeText(getApplicationContext(), R.string.TangoError,
+                    Toast.LENGTH_SHORT).show();
+        }
+        mRenderer.getModelMatCalculator().SetDevice2IMUMatrix(
+            device2IMUPose.getTranslationAsFloats(), device2IMUPose.getRotationAsFloats());
+
+        // Get color camera to imu matrix.
+        TangoPoseData color2IMUPose = new TangoPoseData();
+
+        framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_IMU;
+        framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR;
+        try {
+            color2IMUPose = mTango.getPoseAtTime(0.0, framePair);
+        } catch (TangoErrorException e) {
+            Toast.makeText(getApplicationContext(), R.string.TangoError,
+                    Toast.LENGTH_SHORT).show();
+        }
+        mRenderer.getModelMatCalculator().SetColorCamera2IMUMatrix(
+            color2IMUPose.getTranslationAsFloats(), color2IMUPose.getRotationAsFloats());
+    }
 }

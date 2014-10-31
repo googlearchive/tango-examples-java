@@ -24,78 +24,65 @@ import com.projecttango.tangoutils.renderables.CameraFrustum;
 import com.projecttango.tangoutils.renderables.CameraFrustumAndAxis;
 import com.projecttango.tangoutils.renderables.Grid;
 import com.projecttango.tangoutils.renderables.PointCloud;
-import com.projecttango.tangoutils.renderables.Trajectory;
 
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 
 /**
- * OpenGL rendering class for the Motion Tracking API sample.  This class managers the objects
- * visible in the OpenGL view which are the {@link CameraFrustum}, {@link PointCloud}
- * and the {@link Grid}.  These objects are implemented in the TangoUtils library in the package
+ * OpenGL rendering class for the Motion Tracking API sample. This class
+ * managers the objects visible in the OpenGL view which are the
+ * {@link CameraFrustum}, {@link PointCloud} and the {@link Grid}. These objects
+ * are implemented in the TangoUtils library in the package
  * {@link com.projecttango.tangoutils.renderables}.
  * 
- * This class receives {@link TangoPose} data from the {@link MotionTracking} class and updates the
- * model and view matrices of the {@link Renderable} objects appropriately.  It also handles
- * the user-selected camera view, which can be 1st person, 3rd person, or top-down.
- *
+ * This class receives {@link TangoPose} data from the {@link MotionTracking}
+ * class and updates the model and view matrices of the {@link Renderable}
+ * objects appropriately. It also handles the user-selected camera view, which
+ * can be 1st person, 3rd person, or top-down.
+ * 
  */
 public class PCRenderer extends Renderer implements GLSurfaceView.Renderer {
-	
-	private PointCloud mPointCloud;
-	private Grid mGrid;
-	private CameraFrustumAndAxis mCameraFrustumAndAxis;
-	private Trajectory mTrajectory;
-	private int mMaxDepthPoints;
-	
-	public PCRenderer(int maxDepthPoints){
-		mMaxDepthPoints = maxDepthPoints;
-	}
-	
-	@Override
-	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
-		GLES20.glClearColor(1f, 1f, 1f, 1.0f);
-	    GLES20.glEnable(GLES20.GL_DEPTH_TEST);
-	    String vertexShaderCode =	"uniform mat4 uMVPMatrix;" 
-				+"attribute vec4 vPosition;" 
-				+"void main() {" 
-				+"gl_Position = uMVPMatrix * vPosition;" 
-				+"}";
-		String blueFragshaderCode = "precision mediump float;"
-				+ "uniform vec4 vColor;" 
-				+ "void main() {"
-				+ " gl_FragColor = vec4(0.0,0.0,0.5,1.0);" 
-				+ "}";
-	    mPointCloud = new PointCloud(mMaxDepthPoints);
-	    mGrid = new Grid();
-	    mCameraFrustumAndAxis = new CameraFrustumAndAxis();
-	    mTrajectory = new Trajectory(vertexShaderCode,blueFragshaderCode,2);
-	    Matrix.setIdentityM(mViewMatrix, 0);
-	    Matrix.setLookAtM(mViewMatrix, 0, 5f,  5f, 5f, 0f, 0f, 0f, 0f, 1f, 0f);
-	    mCameraFrustumAndAxis.setModelMatrix(getModelMatCalculator().getModelMatrix());
-	}
 
-	@Override
-	public void onSurfaceChanged(GL10 gl, int width, int height) {
-		GLES20.glViewport(0, 0, width, height);
+    private PointCloud mPointCloud;
+    private Grid mGrid;
+    private CameraFrustumAndAxis mCameraFrustumAndAxis;
+    private int mMaxDepthPoints;
+
+    public PCRenderer(int maxDepthPoints) {
+        mMaxDepthPoints = maxDepthPoints;
+    }
+
+    @Override
+    public void onSurfaceCreated(GL10 gl, EGLConfig config) {
+        GLES20.glClearColor(1f, 1f, 1f, 1.0f);
+        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+        mPointCloud = new PointCloud(mMaxDepthPoints);
+        mGrid = new Grid();
+        mCameraFrustumAndAxis = new CameraFrustumAndAxis();
+        Matrix.setIdentityM(mViewMatrix, 0);
+        Matrix.setLookAtM(mViewMatrix, 0, 5f, 5f, 5f, 0f, 0f, 0f, 0f, 1f, 0f);
+        mCameraFrustumAndAxis.setModelMatrix(getModelMatCalculator()
+                .getModelMatrix());
+    }
+
+    @Override
+    public void onSurfaceChanged(GL10 gl, int width, int height) {
+        GLES20.glViewport(0, 0, width, height);
         mCameraAspect = (float) width / height;
-        Matrix.perspectiveM(mProjectionMatrix, 0, CAMERA_FOV, mCameraAspect, CAMERA_NEAR, CAMERA_FAR);
-	}
+        Matrix.perspectiveM(mProjectionMatrix, 0, CAMERA_FOV, mCameraAspect,
+                CAMERA_NEAR, CAMERA_FAR);
+    }
 
-	@Override
-	public void onDrawFrame(GL10 gl) {
-		GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT); 	
-		mGrid.draw(mViewMatrix, mProjectionMatrix);
-		mPointCloud.draw(mViewMatrix,mProjectionMatrix);
-		mTrajectory.draw(mViewMatrix, mProjectionMatrix);
-		mCameraFrustumAndAxis.draw(mViewMatrix, mProjectionMatrix);
-	}
+    @Override
+    public void onDrawFrame(GL10 gl) {
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
+        mGrid.draw(mViewMatrix, mProjectionMatrix);
+        mPointCloud.draw(mViewMatrix, mProjectionMatrix);
+        mCameraFrustumAndAxis.draw(mViewMatrix, mProjectionMatrix);
+    }
 
-	public PointCloud getPointCloud() {
-		return mPointCloud;
-	}
-	public Trajectory getTrajectory() {
-		return mTrajectory;
-	}
+    public PointCloud getPointCloud() {
+        return mPointCloud;
+    }
 }

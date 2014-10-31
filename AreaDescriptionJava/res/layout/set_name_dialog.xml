@@ -12,7 +12,7 @@
         android:layout_alignBaseline="@+id/Ok"
         android:layout_alignBottom="@+id/Ok"
         android:layout_toRightOf="@+id/Ok"
-        android:text="@string/Cancel" />
+        android:text="@string/cancel" />
 
     <EditText
         android:id="@+id/name"
@@ -20,7 +20,7 @@
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
         android:layout_alignParentTop="true"
-        android:hint="@string/Name"
+        android:hint="@string/name"
         android:inputType="textCapWords"
         android:selectAllOnFocus="true" >
     </EditText>
@@ -31,7 +31,7 @@
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
         android:layout_below="@+id/name"
-        android:fontFamily="sans-serif"/>
+        android:fontFamily="sans-serif" />
 
     <Button
         android:id="@+id/Ok"
@@ -40,6 +40,6 @@
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
         android:layout_below="@+id/uuidDisplay"
-        android:text="@string/OK" />
+        android:text="@string/ok" />
 
 </RelativeLayout>

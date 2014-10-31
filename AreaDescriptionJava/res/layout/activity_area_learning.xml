@@ -40,15 +40,16 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/serviceversion" />
+                android:text="@string/service_version" />
 
             <TextView
                 android:id="@+id/version"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:text="@string/na" />
         </LinearLayout>
-        
-         <LinearLayout
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
@@ -56,15 +57,16 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/appversion" />
+                android:text="@string/app_version" />
 
             <TextView
                 android:id="@+id/appversion"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:text="@string/na" />
         </LinearLayout>
-        
-           <LinearLayout
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
@@ -72,15 +74,16 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/tangoevent" />
+                android:text="@string/tango_event" />
 
             <TextView
                 android:id="@+id/tangoevent"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:text="@string/na" />
         </LinearLayout>
-        
-       <LinearLayout
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
@@ -89,67 +92,71 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/start2device" />
-
         </LinearLayout>
-        
-          <LinearLayout
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
-			
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:paddingLeft="20dp"
                 android:text="@string/status" />
 
-			<TextView
+            <TextView
                 android:id="@+id/start2deviceStatus"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" /> 
-              
+                android:layout_height="wrap_content"
+                android:text="@string/na" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/posecount" />
+                android:text="@string/pose_count" />
 
-			 <TextView
+            <TextView
                 android:id="@+id/start2devicePosecount"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-			 
-			 <TextView
+                android:layout_height="wrap_content"
+                android:text="@string/na" />
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/deltatime" />
+                android:text="@string/delta_time" />
 
-			 <TextView
+            <TextView
                 android:id="@+id/start2deviceDeltatime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                 android:text="@string/deltatime" />
-			 
-			 <TextView
+                android:text="@string/na" />
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/pose" />
 
-			 <TextView
+            <TextView
                 android:id="@+id/start2devicePose"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-			  <TextView
+                android:layout_height="wrap_content"
+                android:text="@string/na" />
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/quat" />
 
-			 <TextView
+            <TextView
                 android:id="@+id/start2deviceQuat"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-			 
+                android:layout_height="wrap_content"
+                android:text="@string/na" />
         </LinearLayout>
-      <LinearLayout
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
@@ -158,68 +165,71 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/adf2device" />
-
         </LinearLayout>
-        
-          <LinearLayout
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
-			
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:paddingLeft="20dp"
                 android:text="@string/status" />
 
-			<TextView
+            <TextView
                 android:id="@+id/adf2deviceStatus"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" /> 
-              
+                android:layout_height="wrap_content"
+                android:text="@string/na" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/posecount" />
+                android:text="@string/pose_count" />
 
-			 <TextView
+            <TextView
                 android:id="@+id/adf2devicePosecount"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-			 
-			 <TextView
+                android:layout_height="wrap_content"
+                android:text="@string/na" />
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/deltatime" />
+                android:text="@string/delta_time" />
 
-			 <TextView
+            <TextView
                 android:id="@+id/adf2deviceDeltatime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                 android:text="@string/deltatime" />
-			 
-			 <TextView
+                android:text="@string/na" />
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/pose" />
 
-			 <TextView
+            <TextView
                 android:id="@+id/adf2devicePose"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-			  <TextView
+                android:layout_height="wrap_content"
+                android:text="@string/na" />
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/quat" />
 
-			 <TextView
+            <TextView
                 android:id="@+id/adf2deviceQuat"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-			 
+                android:layout_height="wrap_content"
+                android:text="@string/na" />
         </LinearLayout>
-        
-          <LinearLayout
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
@@ -228,80 +238,85 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/adf2start" />
-
         </LinearLayout>
-        
-          <LinearLayout
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
-			
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:paddingLeft="20dp"
                 android:text="@string/status" />
 
-			<TextView
+            <TextView
                 android:id="@+id/adf2startStatus"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" /> 
-              
+                android:layout_height="wrap_content"
+                android:text="@string/na" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/posecount" />
+                android:text="@string/pose_count" />
 
-			 <TextView
+            <TextView
                 android:id="@+id/adf2startPosecount"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-			 
-			 <TextView
+                android:layout_height="wrap_content"
+                android:text="@string/na" />
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/deltatime" />
+                android:text="@string/delta_time" />
 
-			 <TextView
+            <TextView
                 android:id="@+id/adf2startDeltatime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                 android:text="@string/deltatime" />
-			 
-			 <TextView
+                android:text="@string/na" />
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/pose" />
 
-			 <TextView
+            <TextView
                 android:id="@+id/adf2startPose"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-			  <TextView
+                android:layout_height="wrap_content"
+                android:text="@string/na" />
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/quat" />
 
-			 <TextView
+            <TextView
                 android:id="@+id/adf2startQuat"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-			 
+                android:layout_height="wrap_content"
+                android:text="@string/na" />
         </LinearLayout>
+
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
-             <TextView
+
+            <TextView
                 android:id="@+id/uuid"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
-              <TextView
+
+            <TextView
                 android:id="@+id/uuidCount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
         </LinearLayout>
-           
     </LinearLayout>
 
     <Button
@@ -316,7 +331,7 @@
 
     <Button
         android:id="@+id/first_person_button"
-        android:layout_width="wrap_content"
+        android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_above="@+id/third_person_button"
         android:layout_alignLeft="@+id/third_person_button"
@@ -326,7 +341,7 @@
 
     <Button
         android:id="@+id/third_person_button"
-        android:layout_width="wrap_content"
+        android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_above="@+id/top_down_button"
         android:layout_alignParentRight="true"
@@ -336,10 +351,10 @@
     <Button
         android:id="@+id/saveAdf"
         style="?android:attr/buttonStyleSmall"
-        android:layout_width="wrap_content"
+        android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_alignParentLeft="true"
-        android:text="@string/SaveADF" />
+        android:text="@string/save_adf" />
 
 </RelativeLayout>

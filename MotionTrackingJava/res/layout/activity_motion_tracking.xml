@@ -45,10 +45,11 @@
             <TextView
                 android:id="@+id/version"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:text="@string/NA" />
         </LinearLayout>
-        
-         <LinearLayout
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
@@ -62,10 +63,10 @@
                 android:id="@+id/appversion"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="1.0" />
+                android:text="@string/NA" />
         </LinearLayout>
-        
-           <LinearLayout
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
@@ -78,10 +79,11 @@
             <TextView
                 android:id="@+id/tangoevent"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:text="@string/NA" />
         </LinearLayout>
-        
-            <LinearLayout
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
@@ -90,75 +92,76 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/start2device" />
-
         </LinearLayout>
-        
-          <LinearLayout
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" >
-			
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:paddingLeft="20dp"
                 android:text="@string/status" />
 
-			<TextView
+            <TextView
                 android:id="@+id/status"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" /> 
-              
+                android:layout_height="wrap_content"
+                android:text="@string/NA" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/posecount" />
 
-			 <TextView
+            <TextView
                 android:id="@+id/posecount"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-			 
-			 <TextView
+                android:layout_height="wrap_content"
+                android:text="@string/NA" />
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/deltatime" />
 
-			 <TextView
+            <TextView
                 android:id="@+id/deltatime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                 android:text="@string/deltatime" />
-			 
-			 <TextView
+                android:text="@string/NA" />
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/pose" />
 
-			 <TextView
+            <TextView
                 android:id="@+id/pose"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-			  <TextView
+                android:layout_height="wrap_content"
+                android:text="@string/NA" />
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/quat" />
 
-			 <TextView
+            <TextView
                 android:id="@+id/quat"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-			 
+                android:layout_height="wrap_content"
+                android:text="@string/NA" />
         </LinearLayout>
-           
     </LinearLayout>
 
     <Button
         android:id="@+id/first_person_button"
-        android:layout_width="wrap_content"
+        android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_above="@+id/third_person_button"
-        android:layout_alignLeft="@+id/third_person_button"
         android:layout_alignParentRight="true"
         android:layout_marginBottom="5dp"
         android:layout_marginRight="5dp"
@@ -167,7 +170,7 @@
 
     <Button
         android:id="@+id/top_down_button"
-        android:layout_width="wrap_content"
+        android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_alignLeft="@+id/third_person_button"
         android:layout_alignParentBottom="true"
@@ -178,7 +181,7 @@
 
     <Button
         android:id="@+id/third_person_button"
-        android:layout_width="wrap_content"
+        android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_above="@+id/top_down_button"
         android:layout_alignParentRight="true"
@@ -194,6 +197,6 @@
         android:layout_alignParentBottom="true"
         android:layout_alignParentLeft="true"
         android:layout_marginLeft="5dp"
-        android:text="Reset Motion Tracking" />
+        android:text="@string/resetmotiontracking" />
 
 </RelativeLayout>

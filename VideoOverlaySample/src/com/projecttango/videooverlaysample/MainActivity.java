@@ -47,10 +47,9 @@ public class MainActivity extends Activity  implements SurfaceHolder.Callback {
 		 Surface surface = holder.getSurface();
          if (surface.isValid()) {
         	 TangoConfig config = new TangoConfig();
-             mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT, config);
-             mTango.lockConfig(config);
+        	 config =  mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT);
              mTango.connectSurface(0, surface);
-             mTango.connect();
+             mTango.connect(config);
          }
 	}
 

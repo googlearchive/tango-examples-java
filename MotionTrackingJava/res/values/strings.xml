@@ -15,25 +15,30 @@
    limitations under the License.
 -->
 <resources>
+
     <string name="app_name">Project Tango - Java Motion Tracking </string>
     <string name="menu_name"> Java Motion Tracking</string>
     <string name="vertex_count">Number of Points:</string>
-    <string name="serviceversion">Service Version:</string>
-    <string name="appversion">"App Version: "</string>
-    <string name="tangoevent">"Tango System Event: "</string>
+    <string name="serviceversion">Tango service version:</string>
+    <string name="appversion">"App version: "</string>
+    <string name="tangoevent">"Tango system event: "</string>
     <string name="start2device">Target->Device, Base->Start: </string>
-    <string name="posecount">", Count: "</string>
-    <string name="status">"Status: "</string>
-    <string name="deltatime">", Delta Time(ms): "</string>
-    <string name="pose">", Pose(m): "</string>
-    <string name="quat">", Quat: "</string>
+    <string name="posecount">", count: "</string>
+    <string name="status">"status: "</string>
+    <string name="deltatime">", delta time(ms): "</string>
+    <string name="pose">", position(m): "</string>
+    <string name="quat">", quat: "</string>
     <string name="first_person">First</string>
     <string name="third_person">Third</string>
     <string name="top_down">Top</string>
     <string name="start">Start</string>
-    <string name="autorecoveryon">Auto Recovery On</string>
-    <string name="autorecoveryoff">Auto Recovery Off</string>
-    <string name="pointCount">Point Count: </string>
-    <string name="TangoError">"Tango Exception! Try Again!"</string>
-    <string name="TangoOutOfDateException">"Tango Service outdated!"</string>
+    <string name="autorecoveryon">Auto recovery on</string>
+    <string name="autorecoveryoff">Auto recovery off</string>
+    <string name="pointCount">Point count: </string>
+    <string name="TangoError">"Tango exception! Try again!"</string>
+    <string name="TangoOutOfDateException">"Tango service outdated!"</string>
+    <string name="resetmotiontracking">"Reset motion tracking"</string>
+    <string name="motiontrackingpermission">"Motion Tracking permission needed!"</string>
+    <string name="NA">"N/A"</string>
+
 </resources>

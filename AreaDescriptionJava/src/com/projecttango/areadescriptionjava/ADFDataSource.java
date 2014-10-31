@@ -39,14 +39,22 @@ public class ADFDataSource {
 	public ADFDataSource(Context context){
 		mContext = context;
 		mTango = new Tango(context);
-		mFullUUIDList = mTango.listAreaDescriptions(); 
+		try{
+			mFullUUIDList = mTango.listAreaDescriptions();
+		} catch(TangoErrorException e) {
+			Toast.makeText(mContext,R.string.tango_error, Toast.LENGTH_SHORT).show();
+		}
 		if (mFullUUIDList.size() == 0) {
-			Toast.makeText(context,R.string.NoADFsTangoError, Toast.LENGTH_SHORT).show();
+			Toast.makeText(context,R.string.no_adfs_tango_error, Toast.LENGTH_SHORT).show();
 		}
 	}
 	
 	public String[] getFullUUIDList() {
-		mFullUUIDList = mTango.listAreaDescriptions();
+		try{
+			mFullUUIDList = mTango.listAreaDescriptions();
+		} catch(TangoErrorException e) {
+			Toast.makeText(mContext,R.string.tango_error, Toast.LENGTH_SHORT).show();
+		}
 		return mFullUUIDList.toArray(new String[mFullUUIDList.size()]);
 	}
 	
@@ -54,7 +62,11 @@ public class ADFDataSource {
 		TangoAreaDescriptionMetaData metadata = new TangoAreaDescriptionMetaData();
 		String[] list = new String[mFullUUIDList.size()];
 		for(int i =0 ; i < list.length;i++){
-			metadata = mTango.loadAreaDescriptionMetaData(mFullUUIDList.get(i));
+			try{
+				metadata = mTango.loadAreaDescriptionMetaData(mFullUUIDList.get(i));
+			} catch(TangoErrorException e) {
+				Toast.makeText(mContext,R.string.tango_error, Toast.LENGTH_SHORT).show();
+			}
 			list[i] = new String(metadata.get("name"));
 		}
 		return list;
@@ -64,10 +76,14 @@ public class ADFDataSource {
 		try{
 			mTango.deleteAreaDescription(uuid);
 		} catch(TangoErrorException e) {
-			Toast.makeText(mContext,R.string.noUUIDTangoError, Toast.LENGTH_SHORT).show();
+			Toast.makeText(mContext,R.string.no_uuid_tango_error, Toast.LENGTH_SHORT).show();
 		}
 		mFullUUIDList.clear();
-		mFullUUIDList = mTango.listAreaDescriptions(); 
+		try{
+			mFullUUIDList = mTango.listAreaDescriptions(); 
+		} catch(TangoErrorException e) {
+			Toast.makeText(mContext,R.string.tango_error, Toast.LENGTH_SHORT).show();
+		}
 	}
 	
 	public Tango getTango() {

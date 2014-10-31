@@ -45,7 +45,8 @@
             <TextView
                 android:id="@+id/version"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content" 
+                android:text="@string/NA" />
         </LinearLayout>
         
          <LinearLayout
@@ -62,7 +63,7 @@
                 android:id="@+id/appversion"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="1.0" />
+                android:text="@string/NA" />
         </LinearLayout>
            <LinearLayout
             android:layout_width="wrap_content"
@@ -77,7 +78,8 @@
             <TextView
                 android:id="@+id/tangoevent"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content" 
+                android:text="@string/NA" />
         </LinearLayout>
         
             <LinearLayout
@@ -106,7 +108,8 @@
 			<TextView
                 android:id="@+id/status"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" /> 
+                android:layout_height="wrap_content" 
+                android:text="@string/NA" />
               
             <TextView
                 android:layout_width="wrap_content"
@@ -116,7 +119,8 @@
 			 <TextView
                 android:id="@+id/posecount"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content" 
+                android:text="@string/NA" />
 			 
 			 <TextView
                 android:layout_width="wrap_content"
@@ -127,7 +131,7 @@
                 android:id="@+id/deltatime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                 android:text="@string/deltatime" />
+                android:text="@string/NA" />
 			 
 			 <TextView
                 android:layout_width="wrap_content"
@@ -137,7 +141,8 @@
 			 <TextView
                 android:id="@+id/pose"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content" 
+                android:text="@string/NA" />
 			  <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -146,7 +151,8 @@
 			 <TextView
                 android:id="@+id/quat"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:text="@string/NA" />
 			 
         </LinearLayout>
         
@@ -163,7 +169,8 @@
             <TextView
                 android:id="@+id/averageZ"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content" 
+                android:text="@string/NA" />
         </LinearLayout>
         
          <LinearLayout
@@ -179,7 +186,8 @@
             <TextView
                 android:id="@+id/pointCount"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content" 
+                android:text="@string/NA" />
         </LinearLayout>
         
          <LinearLayout
@@ -195,14 +203,15 @@
             <TextView
                 android:id="@+id/frameDelta"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content" 
+                android:text="@string/NA" />
         </LinearLayout>
            
     </LinearLayout>
 
     <Button
         android:id="@+id/first_person_button"
-        android:layout_width="wrap_content"
+        android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_above="@+id/third_person_button"
         android:layout_alignLeft="@+id/third_person_button"
@@ -214,7 +223,7 @@
 
     <Button
         android:id="@+id/top_down_button"
-        android:layout_width="wrap_content"
+        android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_alignParentRight="true"
@@ -224,7 +233,7 @@
 
     <Button
         android:id="@+id/third_person_button"
-        android:layout_width="wrap_content"
+        android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_above="@+id/top_down_button"
         android:layout_alignParentRight="true"

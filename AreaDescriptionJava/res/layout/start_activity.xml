@@ -2,47 +2,37 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical" 
-    android:labelFor="@string/app_name">
+    android:labelFor="@string/app_name"
+    android:orientation="vertical" >
 
     <ToggleButton
         android:id="@+id/loadadf"
-        android:layout_width="wrap_content"
+        android:layout_width="150dp"
         android:layout_height="wrap_content"
-         android:textOn="Load ADF On"
-        android:textOff="Load ADF Off" />
+        android:textOff="@string/loadadf_off"
+        android:textOn="@string/loadadf_on"
+        android:textSize="15sp" />
 
     <ToggleButton
         android:id="@+id/learningmode"
-        android:layout_width="wrap_content"
+        android:layout_width="150dp"
         android:layout_height="wrap_content"
-        android:textOn="Learning Mode On"
-        android:textOff="Learning Mode Off" />
+        android:textOff="@string/learningmode_off"
+        android:textOn="@string/learningmode_on"
+        android:textSize="15sp" />
 
     <Button
         android:id="@+id/start"
-        android:layout_width="wrap_content"
+        android:layout_width="150dp"
         android:layout_height="wrap_content"
-        android:text="@string/StartConfig" />
-
-    <Button
-        android:id="@+id/adfPathView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/ADFPathView"
-        android:visibility="gone" />
-
-    <Button
-        android:id="@+id/CanvasView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/CanvasView" 
-        android:visibility="gone"/>
+        android:text="@string/start_config"
+        android:textSize="15sp" />
 
     <Button
         android:id="@+id/ADFListView"
-        android:layout_width="wrap_content"
+        android:layout_width="150dp"
         android:layout_height="wrap_content"
-        android:text="@string/MangeADFs" />
+        android:text="@string/manage_adfs"
+        android:textSize="15sp" />
 
 </LinearLayout>

@@ -22,8 +22,8 @@
         android:id="@+id/autoresetbutton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textOn="@string/autorecoveryon" 
-        android:textOff="@string/autorecoveryoff"/>
+        android:textOff="@string/autorecoveryoff"
+        android:textOn="@string/autorecoveryon" />
 
     <Button
         android:id="@+id/startbutton"

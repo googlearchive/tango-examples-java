@@ -25,54 +25,58 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.TextView;
+
 /**
  * This Class shows a dialog to set the name of an ADF. When you press okay
  * SetNameLocation Call back is called where setting the name should be handled.
  */
 public class SetADFNameDialog extends DialogFragment implements OnClickListener {
-	private EditText mNameEditText;
-	private TextView mUUIDTextView;
-	SetNameAndUUIDCommunicator mCommunicator;
-	@Override
-	public void onAttach(Activity activity) {
-		super.onAttach(activity);
-		mCommunicator = (SetNameAndUUIDCommunicator) activity;
-	}
-	
-	@Override
-	public View onCreateView(LayoutInflater inflator, ViewGroup container, Bundle savedInstanceState) {
-		View dialogView = inflator.inflate(R.layout.set_name_dialog, null);
-		getDialog().setTitle(R.string.SetNameDialogTitle);
-		mNameEditText = (EditText) dialogView.findViewById(R.id.name);
-		mUUIDTextView = (TextView) dialogView.findViewById(R.id.uuidDisplay);
-		dialogView.findViewById(R.id.Ok).setOnClickListener(this);
-		dialogView.findViewById(R.id.cancel).setOnClickListener(this);
-		setCancelable(false);
-		String name = this.getArguments().getString("name");
-		String id = this.getArguments().getString("id");
-		if(name!=null){
-			mNameEditText.setText(name);
-		}
-		if(id!=null){
-			mUUIDTextView.setText(id);
-		}
-		return dialogView;
-	}
+    private EditText mNameEditText;
+    private TextView mUUIDTextView;
+    SetNameCommunicator mCommunicator;
 
-	@Override
-	public void onClick(View v) {
-		switch(v.getId()){
-		case R.id.Ok:
-			mCommunicator.SetNameAndUUID(mNameEditText.getText().toString(), mUUIDTextView.getText().toString());
-			dismiss();
-			break;
-		case R.id.cancel:
-			dismiss();
-			break;
-		}
-	}
-	
-	interface SetNameAndUUIDCommunicator {
-		public void SetNameAndUUID(String name,String uuid);
-	}
+    @Override
+    public void onAttach(Activity activity) {
+        super.onAttach(activity);
+        mCommunicator = (SetNameCommunicator) activity;
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflator, ViewGroup container,
+            Bundle savedInstanceState) {
+        View dialogView = inflator.inflate(R.layout.set_name_dialog, null);
+        getDialog().setTitle(R.string.set_name_dialogTitle);
+        mNameEditText = (EditText) dialogView.findViewById(R.id.name);
+        mUUIDTextView = (TextView) dialogView.findViewById(R.id.uuidDisplay);
+        dialogView.findViewById(R.id.Ok).setOnClickListener(this);
+        dialogView.findViewById(R.id.cancel).setOnClickListener(this);
+        setCancelable(false);
+        String name = this.getArguments().getString("name");
+        String id = this.getArguments().getString("id");
+        if (name != null) {
+            mNameEditText.setText(name);
+        }
+        if (id != null) {
+            mUUIDTextView.setText(id);
+        }
+        return dialogView;
+    }
+
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+        case R.id.Ok:
+            mCommunicator.SetName(mNameEditText.getText().toString(),
+                    mUUIDTextView.getText().toString());
+            dismiss();
+            break;
+        case R.id.cancel:
+            dismiss();
+            break;
+        }
+    }
+
+    interface SetNameCommunicator {
+        public void SetName(String name, String uuid);
+    }
 }

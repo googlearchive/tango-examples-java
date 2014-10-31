@@ -30,76 +30,65 @@ import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 
 /**
- * OpenGL rendering class for the AreaDescription API sample.  This class manages the objects
- * visible in the OpenGL view which are the {@link CameraFrustum}, {@link CameraFrustumAndAxis}, {@link Trajectory},
- * and the {@link Grid}.  These objects are implemented in the TangoUtils library in the package
+ * OpenGL rendering class for the AreaDescription API sample. This class manages
+ * the objects visible in the OpenGL view which are the {@link CameraFrustum},
+ * {@link CameraFrustumAndAxis}, {@link Trajectory}, and the {@link Grid}. These
+ * objects are implemented in the TangoUtils library in the package
  * {@link com.projecttango.tangoutils.renderables}.
  * 
- * This class receives also handles the user-selected camera view, which can be 1st person, 
- * 3rd person, or top-down.
+ * This class receives also handles the user-selected camera view, which can be
+ * 1st person, 3rd person, or top-down.
  */
 public class ADRenderer extends Renderer implements GLSurfaceView.Renderer {
-	
-	private Trajectory mTrajectory;
-	private CameraFrustum mCameraFrustum;
-	private CameraFrustumAndAxis mCameraFrustumAndAxis;
-	private Grid mFloorGrid;
 
+    private Trajectory mTrajectory;
+    private CameraFrustum mCameraFrustum;
+    private CameraFrustumAndAxis mCameraFrustumAndAxis;
+    private Grid mFloorGrid;
 
-	@Override
-	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
-		// Set background color and enable depth testing
-		GLES20.glClearColor(1f, 1f, 1f, 1.0f);
-		GLES20.glEnable(GLES20.GL_DEPTH_TEST);
-		
-		resetModelMatCalculator();
-		String vertexShaderCode =	"uniform mat4 uMVPMatrix;" 
-				+"attribute vec4 vPosition;" 
-				+"void main() {" 
-				+"gl_Position = uMVPMatrix * vPosition;" 
-				+"}";
-		String blueFragshaderCode = "precision mediump float;"
-				+ "uniform vec4 vColor;" 
-				+ "void main() {"
-				+ " gl_FragColor = vec4(0.0,0.08,0.3,1.0);" 
-				+ "}";
-		mCameraFrustum = new CameraFrustum();
-		mFloorGrid = new Grid();
-		mCameraFrustumAndAxis = new CameraFrustumAndAxis();
-		mTrajectory = new Trajectory(vertexShaderCode,blueFragshaderCode,2);
-		
-		// Construct the initial view matrix
-		Matrix.setIdentityM(mViewMatrix, 0);
-		Matrix.setLookAtM(mViewMatrix, 0, 5f,  5f, 5f, 0f, 0f, 0f, 0f, 1f, 0f);
-		mCameraFrustumAndAxis.setModelMatrix(getModelMatCalculator().getModelMatrix());
-	}
+    @Override
+    public void onSurfaceCreated(GL10 gl, EGLConfig config) {
+        // Set background color and enable depth testing
+        GLES20.glClearColor(1f, 1f, 1f, 1.0f);
+        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+        resetModelMatCalculator();
+        mCameraFrustum = new CameraFrustum();
+        mFloorGrid = new Grid();
+        mCameraFrustumAndAxis = new CameraFrustumAndAxis();
+        mTrajectory = new Trajectory(3);
+        // Construct the initial view matrix
+        Matrix.setIdentityM(mViewMatrix, 0);
+        Matrix.setLookAtM(mViewMatrix, 0, 5f, 5f, 5f, 0f, 0f, 0f, 0f, 1f, 0f);
+        mCameraFrustumAndAxis.setModelMatrix(getModelMatCalculator()
+                .getModelMatrix());
+    }
 
-	@Override
-	public void onSurfaceChanged(GL10 gl, int width, int height) {
-		GLES20.glViewport(0, 0, width, height);
-		mCameraAspect = (float) width / height;
-		Matrix.perspectiveM(mProjectionMatrix, 0, THIRD_PERSON_FOV, mCameraAspect, CAMERA_NEAR, 
-				CAMERA_FAR);
-	}
+    @Override
+    public void onSurfaceChanged(GL10 gl, int width, int height) {
+        GLES20.glViewport(0, 0, width, height);
+        mCameraAspect = (float) width / height;
+        Matrix.perspectiveM(mProjectionMatrix, 0, THIRD_PERSON_FOV,
+                mCameraAspect, CAMERA_NEAR, CAMERA_FAR);
+    }
 
-	@Override
-	public void onDrawFrame(GL10 gl) {
-		GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
-		mTrajectory.draw(getViewMatrix(), mProjectionMatrix);
-		mFloorGrid.draw(getViewMatrix(), mProjectionMatrix);
-		mCameraFrustumAndAxis.draw(getViewMatrix(), mProjectionMatrix);
-	}
-	
-	public CameraFrustum getCameraFrustum() {
-		return mCameraFrustum;
-	}
+    @Override
+    public void onDrawFrame(GL10 gl) {
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
+        mTrajectory.draw(getViewMatrix(), mProjectionMatrix);
+        mFloorGrid.draw(getViewMatrix(), mProjectionMatrix);
+        mCameraFrustumAndAxis.draw(getViewMatrix(), mProjectionMatrix);
+    }
 
-	public CameraFrustumAndAxis getCameraFrustumAndAxis() {
-		return mCameraFrustumAndAxis;
-	}
-	
-	public Trajectory getTrajectory() {
-		return mTrajectory;
-	}
-	
+    public CameraFrustum getCameraFrustum() {
+        return mCameraFrustum;
+    }
+
+    public CameraFrustumAndAxis getCameraFrustumAndAxis() {
+        return mCameraFrustumAndAxis;
+    }
+
+    public Trajectory getTrajectory() {
+        return mTrajectory;
+    }
+
 }
