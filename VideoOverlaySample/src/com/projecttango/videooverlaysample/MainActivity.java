@@ -43,8 +43,7 @@ public class MainActivity extends Activity  implements SurfaceHolder.Callback {
 
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
-		// TODO Auto-generated method stub
-		 Surface surface = holder.getSurface();
+	Surface surface = holder.getSurface();
          if (surface.isValid()) {
         	 TangoConfig config = new TangoConfig();
         	 config =  mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT);
@@ -56,7 +55,6 @@ public class MainActivity extends Activity  implements SurfaceHolder.Callback {
 	@Override
 	public void surfaceChanged(SurfaceHolder holder, int format, int width,
 			int height) {
-		// TODO Auto-generated method stub
 		
 	}
 
