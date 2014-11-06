@@ -28,7 +28,7 @@ import com.google.atap.tangoservice.TangoConfig;
 public class MainActivity extends Activity  implements SurfaceHolder.Callback {
 	
 	private SurfaceView surfaceView;
-    private SurfaceHolder surfaceHolder;
+    	private SurfaceHolder surfaceHolder;
 	private Tango mTango;
 
     @Override
