@@ -43,8 +43,6 @@ import android.widget.Toast;
  * {@link TangoConfig}.
  */
 public class MainActivity extends Activity {
-    public static final String EXTRA_KEY_PERMISSIONTYPE = "PERMISSIONTYPE";
-    public static final String EXTRA_VALUE_MOTION_TRACKING = "MOTION_TRACKING_PERMISSION";
     private static final String TAG = MainActivity.class.getSimpleName();
     private static final String sTranslationFormat = "Translation: %f, %f, %f";
     private static final String sRotationFormat = "Rotation: %f, %f, %f, %f";
@@ -83,13 +81,9 @@ public class MainActivity extends Activity {
         // the app
         // is brought to the foreground.
         super.onResume();
-        Intent permissionIntent = new Intent();
-        permissionIntent
-                .setAction("android.intent.action.REQUEST_TANGO_PERMISSION");
-        permissionIntent.putExtra(EXTRA_KEY_PERMISSIONTYPE,
-                EXTRA_VALUE_MOTION_TRACKING);
         if (!mIsTangoServiceConnected) {
-            startActivityForResult(permissionIntent,
+            startActivityForResult(
+                    Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_MOTION_TRACKING),
                     Tango.TANGO_INTENT_ACTIVITYCODE);
         }
     }
@@ -124,7 +118,6 @@ public class MainActivity extends Activity {
                         "Tango Error! Restart the app!", Toast.LENGTH_SHORT)
                         .show();
             }
-
         }
     }
 

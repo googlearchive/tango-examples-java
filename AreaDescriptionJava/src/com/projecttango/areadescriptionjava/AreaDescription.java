@@ -24,6 +24,7 @@ import com.google.atap.tangoservice.TangoAreaDescriptionMetaData;
 import com.google.atap.tangoservice.TangoConfig;
 import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
+import com.google.atap.tangoservice.TangoInvalidException;
 import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
@@ -33,7 +34,6 @@ import com.projecttango.areadescriptionjava.SetADFNameDialog.SetNameCommunicator
 
 import android.app.Activity;
 import android.app.FragmentManager;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -53,7 +53,7 @@ import android.widget.Toast;
  */
 public class AreaDescription extends Activity implements View.OnClickListener,
         SetNameCommunicator {
-    
+
     private static final String TAG = AreaDescription.class.getSimpleName();
     private static final int SECONDS_TO_MILLI = 1000;
     private Tango mTango;
@@ -196,7 +196,8 @@ public class AreaDescription extends Activity implements View.OnClickListener,
             if (fullUUIDList.size() > 0) {
                 mConfig.putString(TangoConfig.KEY_STRING_AREADESCRIPTION,
                         fullUUIDList.get(fullUUIDList.size() - 1));
-                mUUIDTextView.setText(getString(R.string.number_of_adfs) + fullUUIDList.size()
+                mUUIDTextView.setText(getString(R.string.number_of_adfs)
+                        + fullUUIDList.size()
                         + getString(R.string.latest_adf_is)
                         + fullUUIDList.get(fullUUIDList.size() - 1));
             }
@@ -281,18 +282,22 @@ public class AreaDescription extends Activity implements View.OnClickListener,
 
     private void showSetNameDialog() {
         Bundle bundle = new Bundle();
-        if (mCurrentUUID == null) {
-            mCurrentUUID = mTango.saveAreaDescription();
+        if (mCurrentUUID != null) {
+            try {
+                TangoAreaDescriptionMetaData metaData = mTango
+                        .loadAreaDescriptionMetaData(mCurrentUUID);
+                byte[] adfNameBytes = metaData
+                        .get(TangoAreaDescriptionMetaData.KEY_NAME);
+                if (adfNameBytes != null) {
+                    String fillDialogName = new String(adfNameBytes);
+                    bundle.putString(TangoAreaDescriptionMetaData.KEY_NAME,
+                            fillDialogName);
+                }
+            } catch (TangoErrorException e) {
+            }
+            bundle.putString(TangoAreaDescriptionMetaData.KEY_UUID,
+                    mCurrentUUID);
         }
-        Log.i("UUID", " uuid is: " + mCurrentUUID);
-        TangoAreaDescriptionMetaData metaData = mTango
-                .loadAreaDescriptionMetaData(mCurrentUUID);
-        byte[] adfNameBytes = metaData.get("name");
-        if (adfNameBytes != null) {
-            String fillDialogName = new String(adfNameBytes);
-            bundle.putString("name", fillDialogName);
-        }
-        bundle.putString("id", mCurrentUUID);
         FragmentManager manager = getFragmentManager();
         SetADFNameDialog setADFNameDialog = new SetADFNameDialog();
         setADFNameDialog.setArguments(bundle);
@@ -303,11 +308,24 @@ public class AreaDescription extends Activity implements View.OnClickListener,
     public void SetName(String name, String uuids) {
 
         TangoAreaDescriptionMetaData metadata = new TangoAreaDescriptionMetaData();
-        metadata = mTango.loadAreaDescriptionMetaData(uuids);
-        metadata.set("name", name.getBytes());
-        mTango.saveAreaDescriptionMetadata(uuids, metadata);
+        try {
+            mCurrentUUID = mTango.saveAreaDescription();
+            metadata = mTango.loadAreaDescriptionMetaData(mCurrentUUID);
+            metadata.set(TangoAreaDescriptionMetaData.KEY_NAME, name.getBytes());
+            mTango.saveAreaDescriptionMetadata(mCurrentUUID, metadata);
+        } catch (TangoErrorException e) {
+            Toast.makeText(getApplicationContext(),
+                    getString(R.string.tango_error), Toast.LENGTH_SHORT).show();
+            return;
+        } catch (TangoInvalidException e) {
+            Toast.makeText(getApplicationContext(),
+                    getString(R.string.tango_invalid), Toast.LENGTH_SHORT)
+                    .show();
+            return;
+        }
         Toast.makeText(getApplicationContext(),
-                getString(R.string.adf_save) + uuids, Toast.LENGTH_SHORT).show();
+                getString(R.string.adf_save) + mCurrentUUID, Toast.LENGTH_SHORT)
+                .show();
     }
 
     /**
@@ -327,8 +345,9 @@ public class AreaDescription extends Activity implements View.OnClickListener,
                         + threeDec.format(pose.translation[1]) + ","
                         + threeDec.format(pose.translation[2]) + "] ";
 
-                String quaternionString = "[" + threeDec.format(pose.rotation[0])
-                        + "," + threeDec.format(pose.rotation[1]) + ","
+                String quaternionString = "["
+                        + threeDec.format(pose.rotation[0]) + ","
+                        + threeDec.format(pose.rotation[1]) + ","
                         + threeDec.format(pose.rotation[2]) + ","
                         + threeDec.format(pose.rotation[3]) + "] ";
 

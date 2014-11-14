@@ -28,8 +28,6 @@ import android.widget.ToggleButton;
 
 public class StartActivity extends Activity implements View.OnClickListener {
     public static final String KEY_MOTIONTRACKING_AUTORECOVER = "com.projecttango.motiontrackingjava.useautorecover";
-    public static final String EXTRA_KEY_PERMISSIONTYPE = "PERMISSIONTYPE";
-    public static final String EXTRA_VALUE_MOTION_TRACKING = "MOTION_TRACKING_PERMISSION";
     private ToggleButton mAutoResetButton;
     private Button mStartButton;
     private boolean mUseAutoReset;
@@ -37,13 +35,9 @@ public class StartActivity extends Activity implements View.OnClickListener {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Intent permissionIntent = new Intent();
-        permissionIntent
-                .setAction("android.intent.action.REQUEST_TANGO_PERMISSION");
-        permissionIntent.putExtra(EXTRA_KEY_PERMISSIONTYPE,
-                EXTRA_VALUE_MOTION_TRACKING);
-        startActivityForResult(permissionIntent, Tango.TANGO_INTENT_ACTIVITYCODE);
-
+        startActivityForResult(
+                Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_MOTION_TRACKING),
+                Tango.TANGO_INTENT_ACTIVITYCODE);
         setContentView(R.layout.start);
         this.setTitle(R.string.app_name);
         mAutoResetButton = (ToggleButton) findViewById(R.id.autoresetbutton);

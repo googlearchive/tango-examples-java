@@ -16,7 +16,7 @@
 -->
 <resources>
 
-    <string name="app_name">Project Tango - Java Motion Tracking </string>
+    <string name="app_name">Project Tango Java Motion Tracking </string>
     <string name="menu_name"> Java Motion Tracking</string>
     <string name="vertex_count">Number of Points:</string>
     <string name="serviceversion">Tango service version:</string>

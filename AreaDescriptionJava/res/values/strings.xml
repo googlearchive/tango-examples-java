@@ -16,8 +16,8 @@
 -->
 <resources>
 
-    <string name="app_name">Project Tango - Java Area Description</string>
-    <string name="menu_name">Java Area Description</string>
+    <string name="app_name">Project Tango Java Area Learning</string>
+    <string name="menu_name">Java Area Learning</string>
     <string name="service_version">"Tango service version: "</string>
     <string name="app_version">"App version: "</string>
     <string name="tango_event">"Tango system event: "</string>
@@ -44,6 +44,7 @@
     <string name="application_adfs">Application ADFs</string>
     <string name="uuid">UUID</string>
     <string name="tango_error">"Tango Exception! Try again!"</string>
+    <string name="tango_invalid">"Tango Invalid Exception! Try again!"</string>
     <string name="tango_out_of_date_exception">"Tango Service outdated!"</string>
     <string name="no_uuid_tango_error">"No ADF with that UUID!"</string>
     <string name="adf_save">"ADF saved with UUID: "</string>
