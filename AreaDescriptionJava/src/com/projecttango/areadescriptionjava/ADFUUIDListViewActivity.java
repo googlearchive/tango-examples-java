@@ -166,8 +166,8 @@ public class ADFUUIDListViewActivity extends Activity implements
         if (requestCode == Tango.TANGO_INTENT_ACTIVITYCODE) {
             // Make sure the request was successful
             if (resultCode == RESULT_CANCELED) {
-                Toast.makeText(this, R.string.no_permissions,
-                        Toast.LENGTH_LONG).show();
+                Toast.makeText(this, R.string.no_permissions, Toast.LENGTH_LONG)
+                        .show();
             }
         }
 

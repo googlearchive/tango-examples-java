@@ -54,8 +54,6 @@ import android.widget.Toast;
  */
 public class JPointCloud extends Activity implements OnClickListener {
 
-    public static final String EXTRA_KEY_PERMISSIONTYPE = "PERMISSIONTYPE";
-    public static final String EXTRA_VALUE_MOTION_TRACKING = "MOTION_TRACKING_PERMISSION";
     private static final String TAG = JPointCloud.class.getSimpleName();
     private static int SECS_TO_MILLI = 1000;
     private Tango mTango;
@@ -155,13 +153,9 @@ public class JPointCloud extends Activity implements OnClickListener {
     @Override
     protected void onResume() {
         super.onResume();
-        Intent permissionIntent = new Intent();
-        permissionIntent
-                .setAction("android.intent.action.REQUEST_TANGO_PERMISSION");
-        permissionIntent.putExtra(EXTRA_KEY_PERMISSIONTYPE,
-                EXTRA_VALUE_MOTION_TRACKING);
         if (!mIsTangoServiceConnected) {
-            startActivityForResult(permissionIntent,
+            startActivityForResult(
+                    Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_MOTION_TRACKING),
                     Tango.TANGO_INTENT_ACTIVITYCODE);
         }
         Log.i(TAG, "onResumed");
@@ -197,7 +191,6 @@ public class JPointCloud extends Activity implements OnClickListener {
                         Toast.LENGTH_SHORT).show();
             }
             SetUpExtrinsics();
-
         }
     }
 
@@ -344,11 +337,11 @@ public class JPointCloud extends Activity implements OnClickListener {
                             mRenderer.getModelMatCalculator()
                                     .getPointCloudModelMatrixCopy());
                 } catch (TangoErrorException e) {
-                    Toast.makeText(getApplicationContext(), R.string.TangoError,
-                            Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(),
+                            R.string.TangoError, Toast.LENGTH_SHORT).show();
                 } catch (TangoInvalidException e) {
-                    Toast.makeText(getApplicationContext(), R.string.TangoError,
-                            Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(),
+                            R.string.TangoError, Toast.LENGTH_SHORT).show();
                 }
 
                 // Must run UI changes on the UI thread. Running in the Tango

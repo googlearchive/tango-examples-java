@@ -16,6 +16,8 @@
 
 package com.projecttango.areadescriptionjava;
 
+import com.google.atap.tangoservice.Tango;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
@@ -28,11 +30,6 @@ public class ADStartActivity extends Activity implements View.OnClickListener {
 
     public static String USE_AREA_LEARNING = "com.projecttango.areadescriptionjava.usearealearning";
     public static String LOAD_ADF = "com.projecttango.areadescriptionjava.loadadf";
-    public static final String EXTRA_KEY_PERMISSIONTYPE = "PERMISSIONTYPE";
-    public static final String EXTRA_VALUE_MOTION_TRACKING = "MOTION_TRACKING_PERMISSION";
-    public static final String EXTRA_VALUE_ADF = "ADF_LOAD_SAVE_PERMISSION";
-    public static final String EXTRA_VALUE_IMPORT = "ADF_IMPORT_PERMISSION";
-    public static final String EXTRA_VALUE_EXPORT = "ADF_EXPORT_PERMISSION";
     private ToggleButton mLearningModeToggleButton;
     private ToggleButton mLoadADFToggleButton;
     private Button mStartButton;
@@ -51,17 +48,12 @@ public class ADStartActivity extends Activity implements View.OnClickListener {
         mLearningModeToggleButton.setOnClickListener(this);
         mLoadADFToggleButton.setOnClickListener(this);
         mStartButton.setOnClickListener(this);
-        mIsUseAreaLearning = mLearningModeToggleButton.isChecked();
-        mIsLoadADF = mLoadADFToggleButton.isChecked();
-
-        Intent permissionIntent = new Intent();
-        permissionIntent
-                .setAction("android.intent.action.REQUEST_TANGO_PERMISSION");
-        permissionIntent.putExtra(EXTRA_KEY_PERMISSIONTYPE,
-                EXTRA_VALUE_MOTION_TRACKING);
-        startActivityForResult(permissionIntent, 0);
-        permissionIntent.putExtra(EXTRA_KEY_PERMISSIONTYPE, EXTRA_VALUE_ADF);
-        startActivityForResult(permissionIntent, 1);
+        startActivityForResult(
+                Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_MOTION_TRACKING),
+                0);
+        startActivityForResult(
+                Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_ADF_LOAD_SAVE),
+                1);
 
     }
 
@@ -85,6 +77,8 @@ public class ADStartActivity extends Activity implements View.OnClickListener {
 
     private void StartAreaDescriptionActivity() {
         Intent startADIntent = new Intent(this, AreaDescription.class);
+        mIsUseAreaLearning = mLearningModeToggleButton.isChecked();
+        mIsLoadADF = mLoadADFToggleButton.isChecked();
         startADIntent.putExtra(USE_AREA_LEARNING, mIsUseAreaLearning);
         startADIntent.putExtra(LOAD_ADF, mIsLoadADF);
         startActivity(startADIntent);
