@@ -15,6 +15,7 @@
    limitations under the License.
 -->
 <resources>
+
     <string name="app_name">Project Tango Java Point Cloud</string>
     <string name="menu_name">Java Point Cloud</string>
     <string name="vertex_count">Number of points:</string>
@@ -33,11 +34,17 @@
     <string name="start">Start</string>
     <string name="autoreseton">Auto Reset On</string>
     <string name="autoresetoff">Auto Reset Off</string>
-    <string name = "averageZ">"Average depth (m): "</string>
+    <string name="averageZ">"Average depth (m): "</string>
     <string name="pointCount">"Point count: "</string>
     <string name="frameDelta">"Frame delta time (ms): "</string>
     <string name="TangoError">"Tango Exception! Try again!"</string>
     <string name="TangoOutOfDateException">"Tango Service outdated!"</string>
     <string name="motiontrackingpermission">"Motion Tracking permission needed!"</string>
     <string name="NA">"N/A"</string>
+    <string name="pose_initializing">"initializing"</string>
+    <string name="pose_valid">"valid"</string>
+    <string name="pose_invalid">"invalid"</string>
+    <string name="pose_unknown">"unknown"</string>
+    <string name="latest_adf_is">", Latest ADF is: "</string>
+
 </resources>

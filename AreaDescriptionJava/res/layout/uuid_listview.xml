@@ -16,8 +16,7 @@
             android:layout_weight="1"
             android:background="#E6E6E6"
             android:text="@string/api_adfs"
-            android:textSize="30sp"
-            android:textStyle="italic" >
+            android:textSize="30sp" >
         </TextView>
 
         <TextView
@@ -26,8 +25,7 @@
             android:layout_weight="1"
             android:text="@string/application_adfs"
             android:textAllCaps="false"
-            android:textSize="30sp"
-            android:textStyle="italic" >
+            android:textSize="30sp">
         </TextView>
     </LinearLayout>
 

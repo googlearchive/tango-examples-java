@@ -41,7 +41,8 @@ import android.opengl.Matrix;
  */
 public class ADRenderer extends Renderer implements GLSurfaceView.Renderer {
 
-    private Trajectory mTrajectory;
+    private Trajectory mGreenTrajectory;
+    private Trajectory mBlueTrajectory;
     private CameraFrustum mCameraFrustum;
     private CameraFrustumAndAxis mCameraFrustumAndAxis;
     private Grid mFloorGrid;
@@ -55,7 +56,12 @@ public class ADRenderer extends Renderer implements GLSurfaceView.Renderer {
         mCameraFrustum = new CameraFrustum();
         mFloorGrid = new Grid();
         mCameraFrustumAndAxis = new CameraFrustumAndAxis();
-        mTrajectory = new Trajectory(3);
+        mGreenTrajectory = new Trajectory(3);
+        mGreenTrajectory.setColor(
+                new float[] { 0.39f, 0.56f, 0.03f, 1.0f});
+        mBlueTrajectory = new Trajectory(3);
+        mBlueTrajectory.setColor(
+                new float[] { 0.22f, 0.28f, 0.67f, 1.0f});
         // Construct the initial view matrix
         Matrix.setIdentityM(mViewMatrix, 0);
         Matrix.setLookAtM(mViewMatrix, 0, 5f, 5f, 5f, 0f, 0f, 0f, 0f, 1f, 0f);
@@ -74,7 +80,8 @@ public class ADRenderer extends Renderer implements GLSurfaceView.Renderer {
     @Override
     public void onDrawFrame(GL10 gl) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
-        mTrajectory.draw(getViewMatrix(), mProjectionMatrix);
+        mGreenTrajectory.draw(getViewMatrix(), mProjectionMatrix);
+        mBlueTrajectory.draw(getViewMatrix(), mProjectionMatrix);
         mFloorGrid.draw(getViewMatrix(), mProjectionMatrix);
         mCameraFrustumAndAxis.draw(getViewMatrix(), mProjectionMatrix);
     }
@@ -87,8 +94,12 @@ public class ADRenderer extends Renderer implements GLSurfaceView.Renderer {
         return mCameraFrustumAndAxis;
     }
 
-    public Trajectory getTrajectory() {
-        return mTrajectory;
+    public Trajectory getBlueTrajectory() {
+        return mBlueTrajectory;
+    }
+    
+    public Trajectory getGreenTrajectory() {
+        return mGreenTrajectory;
     }
 
 }

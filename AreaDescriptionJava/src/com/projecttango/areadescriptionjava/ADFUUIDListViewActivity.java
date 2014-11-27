@@ -86,6 +86,13 @@ public class ADFUUIDListViewActivity extends Activity implements
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        updateTangoAdfsListView();
+        updateAppListView();
+    }
+
+    @Override
     public void onCreateContextMenu(ContextMenu menu, View v,
             ContextMenuInfo menuInfo) {
         AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) menuInfo;
@@ -116,10 +123,7 @@ public class ADFUUIDListViewActivity extends Activity implements
         else if (itemName.equals(mAPISpaceMenuStrings[1])) {
             mADFDataSource.deleteADFandUpdateList(mUUIDList[info.position]);
             // Update the API ADF Listview
-            mUUIDList = mADFDataSource.getFullUUIDList();
-            mUUIDNames = mADFDataSource.getUUIDNames();
-            mADFAdapter = new ADFUUIDArrayAdapter(this, mUUIDList, mUUIDNames);
-            mUUIDListView.setAdapter(mADFAdapter);
+            updateTangoAdfsListView();
         }
         // Export the ADF into application package folder and update the
         // Listview
@@ -138,11 +142,7 @@ public class ADFUUIDListViewActivity extends Activity implements
             File file = new File(mAppSpaceADFFolder + File.separator
                     + mAppSpaceUUIDList[info.position]);
             file.delete();
-            // Update App space ADF ListView
-            mAppSpaceUUIDList = getAppSpaceADFList();
-            mAppSpaceADFAdapter = new ADFUUIDArrayAdapter(this,
-                    mAppSpaceUUIDList, null);
-            mAppSpaceUUIDListView.setAdapter(mAppSpaceADFAdapter);
+            updateAppListView();
         }
 
         // Import an ADF into API private Storage and update the API ADF
@@ -170,18 +170,33 @@ public class ADFUUIDListViewActivity extends Activity implements
                         .show();
             }
         }
+        updateTangoAdfsListView();
+        updateAppListView();
+    }
 
+    /*
+     * Gets the latest ADFs from Project Tango API storage and updates them in
+     * the List View.
+     */
+    private void updateTangoAdfsListView() {
+        // Update API ADF Listview
+        mUUIDList = mADFDataSource.getFullUUIDList();
+        mUUIDNames = mADFDataSource.getUUIDNames();
+        mADFAdapter = new ADFUUIDArrayAdapter(this, mUUIDList, mUUIDNames);
+        mUUIDListView.setAdapter(mADFAdapter);
+    }
+
+    /*
+     * Gets the latest ADFs from application package folder and updates them in
+     * the List View.
+     */
+    private void updateAppListView() {
         // Update App space ADF Listview
         mAppSpaceUUIDList = getAppSpaceADFList();
         mAppSpaceADFAdapter = new ADFUUIDArrayAdapter(this, mAppSpaceUUIDList,
                 null);
         mAppSpaceUUIDListView.setAdapter(mAppSpaceADFAdapter);
 
-        // Update API ADF Listview
-        mUUIDList = mADFDataSource.getFullUUIDList();
-        mUUIDNames = mADFDataSource.getUUIDNames();
-        mADFAdapter = new ADFUUIDArrayAdapter(this, mUUIDList, mUUIDNames);
-        mUUIDListView.setAdapter(mADFAdapter);
     }
 
     /*

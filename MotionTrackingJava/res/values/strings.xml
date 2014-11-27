@@ -40,5 +40,10 @@
     <string name="resetmotiontracking">"Reset motion tracking"</string>
     <string name="motiontrackingpermission">"Motion Tracking permission needed!"</string>
     <string name="NA">"N/A"</string>
+    <string name="pose_initializing">"initializing"</string>
+    <string name="pose_valid">"valid"</string>
+    <string name="pose_invalid">"invalid"</string>
+    <string name="pose_unknown">"unknown"</string>
+    <string name="latest_adf_is">", Latest ADF is: "</string>
 
 </resources>

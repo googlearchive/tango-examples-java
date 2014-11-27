@@ -64,6 +64,7 @@ public class MotionTracking extends Activity implements View.OnClickListener {
     private TextView mTangoEventTextView;
     private Button mMotionResetButton;
     private float mPreviousTimeStamp;
+    private int mPreviousPoseStatus;
     private int count;
     private float mDeltaTime;
     private boolean mIsAutoRecovery;
@@ -121,10 +122,10 @@ public class MotionTracking extends Activity implements View.OnClickListener {
         // / MotionTracking enters an invalid state.
         if (mIsAutoRecovery) {
             mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_AUTORECOVERY, true);
-            Log.i(TAG, "Auto Recovery On");
+            Log.i(TAG, "Auto Reset On");
         } else {
             mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_AUTORECOVERY, false);
-            Log.i(TAG, "Auto Recovery Off");
+            Log.i(TAG, "Auto Reset Off");
         }
 
         PackageInfo packageInfo;
@@ -164,17 +165,20 @@ public class MotionTracking extends Activity implements View.OnClickListener {
                         && (pose.statusCode == TangoPoseData.POSE_INVALID)) {
                     Log.w(TAG, "Invalid State");
                 }
+                if (mPreviousPoseStatus != pose.statusCode) {
+                    count = 0;
+                }
+                count++;
+                mPreviousPoseStatus = pose.statusCode;
                 mDeltaTime = (float) (pose.timestamp - mPreviousTimeStamp)
                         * SECS_TO_MILLISECS;
                 mPreviousTimeStamp = (float) pose.timestamp;
-                // Log.i(TAG,"Delta Time is: "+mDeltaTime);
-                count++;
                 // Update the OpenGL renderable objects with the new Tango Pose
                 // data
                 float[] translation = pose.getTranslationAsFloats();
                 mRenderer.getTrajectory().updateTrajectory(translation);
-                mRenderer.getModelMatCalculator().updateModelMatrix(translation,
-                                                                    pose.getRotationAsFloats());
+                mRenderer.getModelMatCalculator().updateModelMatrix(
+                        translation, pose.getRotationAsFloats());
                 mRenderer.updateViewMatrix();
                 mGLView.requestRender();
 
@@ -199,13 +203,14 @@ public class MotionTracking extends Activity implements View.OnClickListener {
                         mPoseCountTextView.setText(Integer.toString(count));
                         mDeltaTextView.setText(threeDec.format(mDeltaTime));
                         if (pose.statusCode == TangoPoseData.POSE_VALID) {
-                            mPoseStatusTextView.setText("Valid");
+                            mPoseStatusTextView.setText(R.string.pose_valid);
                         } else if (pose.statusCode == TangoPoseData.POSE_INVALID) {
-                            mPoseStatusTextView.setText("Invalid");
+                            mPoseStatusTextView.setText(R.string.pose_invalid);
                         } else if (pose.statusCode == TangoPoseData.POSE_INITIALIZING) {
-                            mPoseStatusTextView.setText("Initializing");
+                            mPoseStatusTextView
+                                    .setText(R.string.pose_initializing);
                         } else if (pose.statusCode == TangoPoseData.POSE_UNKNOWN) {
-                            mPoseStatusTextView.setText("Unknown");
+                            mPoseStatusTextView.setText(R.string.pose_unknown);
                         }
                     }
                 });
@@ -251,6 +256,10 @@ public class MotionTracking extends Activity implements View.OnClickListener {
         } catch (TangoErrorException e) {
             Toast.makeText(getApplicationContext(), R.string.TangoError,
                     Toast.LENGTH_SHORT).show();
+        } catch (SecurityException e) {
+            Toast.makeText(getApplicationContext(),
+                    R.string.motiontrackingpermission, Toast.LENGTH_SHORT)
+                    .show();
         }
         try {
             mTango.connect(mConfig);
@@ -262,7 +271,16 @@ public class MotionTracking extends Activity implements View.OnClickListener {
             Toast.makeText(getApplicationContext(), R.string.TangoError,
                     Toast.LENGTH_SHORT).show();
         }
-        SetUpExtrinsics();
+        try {
+            SetUpExtrinsics();
+        } catch (TangoErrorException e) {
+            Toast.makeText(getApplicationContext(), R.string.TangoError,
+                    Toast.LENGTH_SHORT).show();
+        } catch (SecurityException e) {
+            Toast.makeText(getApplicationContext(),
+                    R.string.motiontrackingpermission, Toast.LENGTH_SHORT)
+                    .show();
+        }
     }
 
     @Override
@@ -302,27 +320,19 @@ public class MotionTracking extends Activity implements View.OnClickListener {
         TangoCoordinateFramePair framePair = new TangoCoordinateFramePair();
         framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_IMU;
         framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_DEVICE;
-        try {
-            device2IMUPose = mTango.getPoseAtTime(0.0, framePair);
-        } catch (TangoErrorException e) {
-            Toast.makeText(getApplicationContext(), R.string.TangoError,
-                    Toast.LENGTH_SHORT).show();
-        }
+        device2IMUPose = mTango.getPoseAtTime(0.0, framePair);
         mRenderer.getModelMatCalculator().SetDevice2IMUMatrix(
-            device2IMUPose.getTranslationAsFloats(), device2IMUPose.getRotationAsFloats());
+                device2IMUPose.getTranslationAsFloats(),
+                device2IMUPose.getRotationAsFloats());
 
         // Get color camera to imu matrix.
         TangoPoseData color2IMUPose = new TangoPoseData();
-
         framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_IMU;
         framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR;
-        try {
-            color2IMUPose = mTango.getPoseAtTime(0.0, framePair);
-        } catch (TangoErrorException e) {
-            Toast.makeText(getApplicationContext(), R.string.TangoError,
-                    Toast.LENGTH_SHORT).show();
-        }
+        color2IMUPose = mTango.getPoseAtTime(0.0, framePair);
+
         mRenderer.getModelMatCalculator().SetColorCamera2IMUMatrix(
-            color2IMUPose.getTranslationAsFloats(), color2IMUPose.getRotationAsFloats());
+                color2IMUPose.getTranslationAsFloats(),
+                color2IMUPose.getRotationAsFloats());
     }
 }

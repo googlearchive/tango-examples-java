@@ -79,6 +79,7 @@ public class JPointCloud extends Activity implements OnClickListener {
     private Button mTopDownButton;
 
     private int count;
+    private int mPreviousPoseStatus;
     private float mDeltaTime;
     private float mPosePreviousTimeStamp;
     private float mXyIjPreviousTimeStamp;
@@ -179,6 +180,10 @@ public class JPointCloud extends Activity implements OnClickListener {
                 Toast.makeText(this, R.string.TangoError, Toast.LENGTH_SHORT)
                         .show();
             }
+            catch (SecurityException e) {
+                Toast.makeText(getApplicationContext(), R.string.motiontrackingpermission,
+                        Toast.LENGTH_SHORT).show();
+            }
             try {
                 mTango.connect(mConfig);
                 mIsTangoServiceConnected = true;
@@ -268,7 +273,11 @@ public class JPointCloud extends Activity implements OnClickListener {
                 mDeltaTime = (float) (pose.timestamp - mPosePreviousTimeStamp)
                         * SECS_TO_MILLI;
                 mPosePreviousTimeStamp = (float) pose.timestamp;
+                if(mPreviousPoseStatus != pose.statusCode){
+                    count = 0;
+                }
                 count++;
+                mPreviousPoseStatus = pose.statusCode;
                 mRenderer.getModelMatCalculator().updateModelMatrix(
                         pose.getTranslationAsFloats(),
                         pose.getRotationAsFloats());
@@ -295,13 +304,13 @@ public class JPointCloud extends Activity implements OnClickListener {
                         mPoseCountTextView.setText(Integer.toString(count));
                         mDeltaTextView.setText(threeDec.format(mDeltaTime));
                         if (pose.statusCode == TangoPoseData.POSE_VALID) {
-                            mPoseStatusTextView.setText("Valid");
+                            mPoseStatusTextView.setText(R.string.pose_valid);
                         } else if (pose.statusCode == TangoPoseData.POSE_INVALID) {
-                            mPoseStatusTextView.setText("Invalid");
+                            mPoseStatusTextView.setText(R.string.pose_invalid);
                         } else if (pose.statusCode == TangoPoseData.POSE_INITIALIZING) {
-                            mPoseStatusTextView.setText("Initializing");
+                            mPoseStatusTextView.setText(R.string.pose_initializing);
                         } else if (pose.statusCode == TangoPoseData.POSE_UNKNOWN) {
-                            mPoseStatusTextView.setText("Unknown");
+                            mPoseStatusTextView.setText(R.string.pose_unknown);
                         }
                     }
                 });

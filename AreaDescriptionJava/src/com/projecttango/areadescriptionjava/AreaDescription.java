@@ -86,7 +86,10 @@ public class AreaDescription extends Activity implements View.OnClickListener,
     private int mStart2DevicePoseCount;
     private int mAdf2DevicePoseCount;
     private int mAdf2StartPoseCount;
-
+    private int mStart2DevicePreviousPoseStatus;
+    private int mAdf2DevicePreviousPoseStatus;
+    private int mAdf2StartPreviousPoseStatus;
+    
     private double mStart2DevicePoseDelta;
     private double mAdf2DevicePoseDelta;
     private double mAdf2StartPoseDelta;
@@ -249,24 +252,25 @@ public class AreaDescription extends Activity implements View.OnClickListener,
 
                 // Update the text views with Pose info.
                 updateTextViewWith(pose);
+                float[] translation = pose.getTranslationAsFloats();
                 boolean updateRenderer = false;
                 if (mIsRelocalized) {
                     if (pose.baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
                             && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE) {
                         updateRenderer = true;
+                        mRenderer.getGreenTrajectory().updateTrajectory(translation);
                     }
                 } else {
                     if (pose.baseFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE
                             && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE) {
                         updateRenderer = true;
+                        mRenderer.getBlueTrajectory().updateTrajectory(translation);
                     }
                 }
 
                 // Update the trajectory, model matrix, and view matrix, then
                 // render the scene again
                 if (updateRenderer) {
-                    float[] translation = pose.getTranslationAsFloats();
-                    mRenderer.getTrajectory().updateTrajectory(translation);
                     mRenderer.getModelMatCalculator().updateModelMatrix(
                             translation, pose.getRotationAsFloats());
                     mRenderer.updateViewMatrix();
@@ -353,6 +357,10 @@ public class AreaDescription extends Activity implements View.OnClickListener,
 
                 if (pose.baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
                         && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE) {
+                    if(mAdf2DevicePreviousPoseStatus != pose.statusCode){
+                        mAdf2DevicePoseCount = 0;
+                    }
+                    mAdf2DevicePreviousPoseStatus = pose.statusCode;
                     mAdf2DevicePoseCount++;
                     mAdf2DevicePoseDelta = (pose.timestamp - mAdf2DevicePreviousPoseTimeStamp)
                             * SECONDS_TO_MILLI;
@@ -368,6 +376,10 @@ public class AreaDescription extends Activity implements View.OnClickListener,
 
                 if (pose.baseFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE
                         && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE) {
+                    if(mStart2DevicePreviousPoseStatus != pose.statusCode){
+                        mStart2DevicePoseCount = 0;
+                    }
+                    mStart2DevicePreviousPoseStatus = pose.statusCode;
                     mStart2DevicePoseCount++;
                     mStart2DevicePoseDelta = (pose.timestamp - mStart2DevicePreviousPoseTimeStamp)
                             * SECONDS_TO_MILLI;
@@ -384,6 +396,10 @@ public class AreaDescription extends Activity implements View.OnClickListener,
 
                 if (pose.baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
                         && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE) {
+                    if(mAdf2StartPreviousPoseStatus != pose.statusCode){
+                        mAdf2StartPoseCount = 0;
+                    }
+                    mAdf2StartPreviousPoseStatus = pose.statusCode;
                     mAdf2StartPoseCount++;
                     mAdf2StartPoseDelta = (pose.timestamp - mAdf2StartPreviousPoseTimeStamp)
                             * SECONDS_TO_MILLI;
@@ -398,13 +414,9 @@ public class AreaDescription extends Activity implements View.OnClickListener,
                     if (pose.statusCode == TangoPoseData.POSE_VALID) {
                         mIsRelocalized = true;
                         // Set the color to green
-                        mRenderer.getTrajectory().setColor(
-                                new float[] { 0.39f, 0.56f, 0.03f, 1.0f });
                     } else {
                         mIsRelocalized = false;
                         // Set the color blue
-                        mRenderer.getTrajectory().setColor(
-                                new float[] { 0.22f, 0.28f, 0.67f, 1.0f });
                     }
                 }
             }
@@ -442,6 +454,9 @@ public class AreaDescription extends Activity implements View.OnClickListener,
             setUpTangoListeners();
         } catch (TangoErrorException e) {
             Toast.makeText(getApplicationContext(), R.string.tango_error,
+                    Toast.LENGTH_SHORT).show();
+        } catch (SecurityException e){
+            Toast.makeText(getApplicationContext(), R.string.no_permissions,
                     Toast.LENGTH_SHORT).show();
         }
         try {

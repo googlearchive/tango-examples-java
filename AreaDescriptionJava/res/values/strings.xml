@@ -40,7 +40,7 @@
     <string name="ok">OK</string>
     <string name="start_config">Start</string>
     <string name="manage_adfs">Manage ADFs</string>
-    <string name="api_adfs">API ADFs:</string>
+    <string name="api_adfs">Project Tango Local ADFs:</string>
     <string name="application_adfs">Application ADFs</string>
     <string name="uuid">UUID</string>
     <string name="tango_error">"Tango Exception! Try again!"</string>
