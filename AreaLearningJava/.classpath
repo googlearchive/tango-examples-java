@@ -13,5 +13,7 @@
 		</accessrules>
 	</classpathentry>
 	<classpathentry kind="con" path="com.android.ide.eclipse.adt.ANDROID_FRAMEWORK"/>
+	<classpathentry kind="src" path="/tango-native-service-client-helperlib"/>
+	<classpathentry kind="src" path="/TangoUtils"/>
 	<classpathentry kind="output" path="bin/classes"/>
 </classpath>
