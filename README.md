@@ -13,6 +13,7 @@ These are the Tango Java API Examples:
 
 * **Area Learning Java** - This example shows how to use the Area Learning and Area Description File (ADF) APIs. 
 
+* **TangoUtils** - This is a library project used by all the examples mentioned above. It mostly contains the Opengl and 3d Math code required for the above sample examples.
 
 <h2>Support</h2>
 
