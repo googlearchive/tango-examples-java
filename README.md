@@ -11,7 +11,7 @@ These are the Tango Java API Examples:
 
 * **Point Cloud Java** - This example shows how to use the depth APIs, and use the pose data to transform the point cloud into world coordinates.
 
-* **Area Description Java** - This example shows how to use the Area Description File (ADF) APIs. 
+* **Area Learning Java** - This example shows how to use the Area Learning and Area Description File (ADF) APIs. 
 
 
 <h2>Support</h2>
