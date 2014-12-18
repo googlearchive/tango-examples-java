@@ -27,7 +27,7 @@
     <string name="status">"status: "</string>
     <string name="deltatime">", delta time(ms): "</string>
     <string name="pose">", position(m): "</string>
-    <string name="quat">", quat: "</string>
+    <string name="quat">", orientation: "</string>
     <string name="first_person">First</string>
     <string name="third_person">Third</string>
     <string name="top_down">Top</string>
