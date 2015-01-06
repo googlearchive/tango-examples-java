@@ -113,7 +113,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         mTopDownButton.setOnClickListener(this);
 
         mTango = new Tango(this);
-        mConfig = new TangoConfig();
         mConfig = mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT);
         mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
 
@@ -261,7 +260,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
 
     private void setTangoListeners() {
         // Configure the Tango coordinate frame pair
-        final ArrayList<TangoCoordinateFramePair> framePairs = 
+        final ArrayList<TangoCoordinateFramePair> framePairs =
                 new ArrayList<TangoCoordinateFramePair>();
         framePairs.add(new TangoCoordinateFramePair(
                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,

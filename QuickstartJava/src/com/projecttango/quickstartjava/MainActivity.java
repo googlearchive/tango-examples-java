@@ -68,7 +68,6 @@ public class MainActivity extends Activity {
         // Set up Tango configuration for motion tracking
         // If you want to use other APIs, add more appropriate to the config
         // like: mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true)
-        mConfig = new TangoConfig();
         mConfig = mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT);
         mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
 
