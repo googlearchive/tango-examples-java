@@ -189,6 +189,12 @@ public class MainActivity extends Activity {
                 // Ignoring TangoEvents
             }
 
+			@Override
+			public void onFrameAvailable(int arg0) {
+				// Ignoring onFrameAvailable Events
+				
+			}
+
         });
     }
 
