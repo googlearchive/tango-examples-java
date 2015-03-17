@@ -15,52 +15,89 @@
  */
 package com.projecttango.videooverlaysample;
 
+import java.util.ArrayList;
+
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
-import android.view.Surface;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
+import android.widget.Toast;
 
 import com.google.atap.tangoservice.Tango;
+import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
+import com.google.atap.tangoservice.TangoCameraIntrinsics;
+import com.google.atap.tangoservice.TangoCameraPreview;
 import com.google.atap.tangoservice.TangoConfig;
+import com.google.atap.tangoservice.TangoCoordinateFramePair;
+import com.google.atap.tangoservice.TangoEvent;
+import com.google.atap.tangoservice.TangoPoseData;
+import com.google.atap.tangoservice.TangoXyzIjData;
 
-
-public class MainActivity extends Activity  implements SurfaceHolder.Callback {
-	
-	private SurfaceView surfaceView;
-    	private SurfaceHolder surfaceHolder;
+public class MainActivity extends Activity {
+	private TangoCameraPreview tangoCameraPreview;
 	private Tango mTango;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        surfaceView = (SurfaceView) findViewById(R.id.cameraView);
-        surfaceHolder = surfaceView.getHolder();
-        surfaceHolder.addCallback(this);
-        mTango = new Tango(this);
-    }
-
 	@Override
-	public void surfaceCreated(SurfaceHolder holder) {
-	Surface surface = holder.getSurface();
-         if (surface.isValid()) {
-        	 TangoConfig config = new TangoConfig();
-        	 config =  mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT);
-        	 mTango.connectSurface(0, surface);
-        	 mTango.connect(config);
-         }
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		tangoCameraPreview = new TangoCameraPreview(this);
+		mTango = new Tango(this);
+		startActivityForResult(
+				Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_MOTION_TRACKING),
+				Tango.TANGO_INTENT_ACTIVITYCODE);
+		setContentView(tangoCameraPreview);
+
 	}
 
 	@Override
-	public void surfaceChanged(SurfaceHolder holder, int format, int width,
-			int height) {
-		
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		// Check which request we're responding to
+		if (requestCode == Tango.TANGO_INTENT_ACTIVITYCODE) {
+			// Make sure the request was successful
+			if (resultCode == RESULT_CANCELED) {
+				Toast.makeText(this, "Motion Tracking Permissions Required!",
+						Toast.LENGTH_SHORT).show();
+				finish();
+			} else {
+				startCameraPreview();
+			}
+		}
+	}
+
+	// Camera Preview
+	private void startCameraPreview() {
+		tangoCameraPreview.connectToTangoCamera(mTango,
+				TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
+		TangoConfig config = mTango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
+		mTango.connect(config);
+		ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
+		mTango.connectListener(framePairs, new OnTangoUpdateListener() {
+			@Override
+			public void onPoseAvailable(TangoPoseData pose) {
+				// We are not using OnPoseAvailable for this app
+			}
+
+			@Override
+			public void onFrameAvailable(int cameraId) {
+				if (cameraId == TangoCameraIntrinsics.TANGO_CAMERA_COLOR) {
+					tangoCameraPreview.onFrameAvailable();
+				}
+			}
+
+			@Override
+			public void onXyzIjAvailable(TangoXyzIjData xyzIj) {
+				// We are not using OnPoseAvailable for this app
+			}
+
+			@Override
+			public void onTangoEvent(TangoEvent event) {
+				// We are not using OnPoseAvailable for this app
+			}
+		});
 	}
 
 	@Override
-	public void surfaceDestroyed(SurfaceHolder holder) {
-         mTango.disconnectSurface(0);
+	protected void onPause() {
+		super.onPause();
+		mTango.disconnect();
 	}
-
 }

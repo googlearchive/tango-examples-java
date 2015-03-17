@@ -173,6 +173,7 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
     }
 
     private void setTangoConfig() {
+        mConfig = new TangoConfig();
         mConfig = mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT);
         // Check if learning mode
         if (mIsLearningMode) {
@@ -270,6 +271,11 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
                     mGLView.requestRender();
                 }
             }
+
+            @Override
+            public void onFrameAvailable(int cameraId) {
+                // We are not using onFrameAvailable for this application.
+            }
         });
     }
 
@@ -323,7 +329,7 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
     /**
      * Updates the text view in UI screen with the Pose. Each pose is associated with Target and
      * Base Frame. We need to check for that pair ad update our views accordingly.
-     *
+     * 
      * @param pose
      */
     private void updateTextViewWith(final TangoPoseData pose) {

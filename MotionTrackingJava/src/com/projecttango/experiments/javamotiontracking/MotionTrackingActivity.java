@@ -111,6 +111,7 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
         // Instantiate the Tango service
         mTango = new Tango(this);
         // Create a new Tango Configuration and enable the MotionTrackingActivity API
+        mConfig = new TangoConfig();
         mConfig = mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT);
         mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
 
@@ -146,7 +147,7 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
     private void setTangoListeners() {
         // Lock configuration and connect to Tango
         // Select coordinate frame pair
-        final ArrayList<TangoCoordinateFramePair> framePairs =
+        final ArrayList<TangoCoordinateFramePair> framePairs = 
                 new ArrayList<TangoCoordinateFramePair>();
         framePairs.add(new TangoCoordinateFramePair(
                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
@@ -220,6 +221,11 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
                         mTangoEventTextView.setText(event.eventKey + ": " + event.eventValue);
                     }
                 });
+            }
+
+            @Override
+            public void onFrameAvailable(int cameraId) {
+                // We are not using onFrameAvailable for this application
             }
         });
     }
