@@ -47,10 +47,9 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 
 /**
- * Main Activity class for the Point Cloud Sample. Handles the connection to the
- * {@link Tango} service and propagation of Tango XyzIj data to OpenGL and
- * Layout views. OpenGL rendering logic is delegated to the {@link PCrenderer}
- * class.
+ * Main Activity class for the Point Cloud Sample. Handles the connection to the {@link Tango}
+ * service and propagation of Tango XyzIj data to OpenGL and Layout views. OpenGL rendering logic is
+ * delegated to the {@link PCrenderer} class.
  */
 public class PointCloudActivity extends Activity implements OnClickListener {
 
@@ -80,12 +79,18 @@ public class PointCloudActivity extends Activity implements OnClickListener {
 
     private int count;
     private int mPreviousPoseStatus;
+    private int mPointCount;
     private float mDeltaTime;
     private float mPosePreviousTimeStamp;
     private float mXyIjPreviousTimeStamp;
     private float mCurrentTimeStamp;
+    private float mPointCloudFrameDelta;
     private String mServiceVersion;
     private boolean mIsTangoServiceConnected;
+    private TangoPoseData mPose;
+    private static final int UPDATE_INTERVAL_MS = 100;
+    public static Object poseLock = new Object();
+    public static Object depthLock = new Object();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -122,12 +127,10 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         mGLView = (GLSurfaceView) findViewById(R.id.gl_surface_view);
         mGLView.setEGLContextClientVersion(2);
         mGLView.setRenderer(mRenderer);
-        mGLView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
 
         PackageInfo packageInfo;
         try {
-            packageInfo = this.getPackageManager().getPackageInfo(
-                    this.getPackageName(), 0);
+            packageInfo = this.getPackageManager().getPackageInfo(this.getPackageName(), 0);
             mApplicationVersionTextView.setText(packageInfo.versionName);
         } catch (NameNotFoundException e) {
             e.printStackTrace();
@@ -137,6 +140,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         mServiceVersion = mConfig.getString("tango_service_library_version");
         mTangoServiceVersionTextView.setText(mServiceVersion);
         mIsTangoServiceConnected = false;
+        startUIThread();
     }
 
     @Override
@@ -146,8 +150,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
             mTango.disconnect();
             mIsTangoServiceConnected = false;
         } catch (TangoErrorException e) {
-            Toast.makeText(getApplicationContext(), R.string.TangoError,
-                    Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), R.string.TangoError, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -169,31 +172,27 @@ public class PointCloudActivity extends Activity implements OnClickListener {
             Log.i(TAG, "Triggered");
             // Make sure the request was successful
             if (resultCode == RESULT_CANCELED) {
-                Toast.makeText(this, R.string.motiontrackingpermission,
-                        Toast.LENGTH_LONG).show();
+                Toast.makeText(this, R.string.motiontrackingpermission, Toast.LENGTH_LONG).show();
                 finish();
                 return;
             }
             try {
                 setTangoListeners();
             } catch (TangoErrorException e) {
-                Toast.makeText(this, R.string.TangoError, Toast.LENGTH_SHORT)
-                        .show();
+                Toast.makeText(this, R.string.TangoError, Toast.LENGTH_SHORT).show();
             } catch (SecurityException e) {
-                Toast.makeText(getApplicationContext(),
-                        R.string.motiontrackingpermission, Toast.LENGTH_SHORT)
-                        .show();
+                Toast.makeText(getApplicationContext(), R.string.motiontrackingpermission,
+                        Toast.LENGTH_SHORT).show();
             }
             try {
                 mTango.connect(mConfig);
                 mIsTangoServiceConnected = true;
             } catch (TangoOutOfDateException e) {
-                Toast.makeText(getApplicationContext(),
-                        R.string.TangoOutOfDateException, Toast.LENGTH_SHORT)
-                        .show();
-            } catch (TangoErrorException e) {
-                Toast.makeText(getApplicationContext(), R.string.TangoError,
+                Toast.makeText(getApplicationContext(), R.string.TangoOutOfDateException,
                         Toast.LENGTH_SHORT).show();
+            } catch (TangoErrorException e) {
+                Toast.makeText(getApplicationContext(), R.string.TangoError, Toast.LENGTH_SHORT)
+                        .show();
             }
             setUpExtrinsics();
         }
@@ -236,12 +235,10 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         try {
             device2IMUPose = mTango.getPoseAtTime(0.0, framePair);
         } catch (TangoErrorException e) {
-            Toast.makeText(getApplicationContext(), R.string.TangoError,
-                    Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), R.string.TangoError, Toast.LENGTH_SHORT).show();
         }
         mRenderer.getModelMatCalculator().SetDevice2IMUMatrix(
-                device2IMUPose.getTranslationAsFloats(),
-                device2IMUPose.getRotationAsFloats());
+                device2IMUPose.getTranslationAsFloats(), device2IMUPose.getRotationAsFloats());
 
         // Set color camera to imu matrix in Model Matrix Calculator.
         TangoPoseData color2IMUPose = new TangoPoseData();
@@ -251,18 +248,15 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         try {
             color2IMUPose = mTango.getPoseAtTime(0.0, framePair);
         } catch (TangoErrorException e) {
-            Toast.makeText(getApplicationContext(), R.string.TangoError,
-                    Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), R.string.TangoError, Toast.LENGTH_SHORT).show();
         }
         mRenderer.getModelMatCalculator().SetColorCamera2IMUMatrix(
-                color2IMUPose.getTranslationAsFloats(),
-                color2IMUPose.getRotationAsFloats());
+                color2IMUPose.getTranslationAsFloats(), color2IMUPose.getRotationAsFloats());
     }
 
     private void setTangoListeners() {
         // Configure the Tango coordinate frame pair
-        final ArrayList<TangoCoordinateFramePair> framePairs = 
-                new ArrayList<TangoCoordinateFramePair>();
+        final ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
         framePairs.add(new TangoCoordinateFramePair(
                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                 TangoPoseData.COORDINATE_FRAME_DEVICE));
@@ -271,108 +265,65 @@ public class PointCloudActivity extends Activity implements OnClickListener {
 
             @Override
             public void onPoseAvailable(final TangoPoseData pose) {
-                mDeltaTime = (float) (pose.timestamp - mPosePreviousTimeStamp)
-                        * SECS_TO_MILLISECS;
-                mPosePreviousTimeStamp = (float) pose.timestamp;
-                if (mPreviousPoseStatus != pose.statusCode) {
-                    count = 0;
-                }
-                count++;
-                mPreviousPoseStatus = pose.statusCode;
-                mRenderer.getModelMatCalculator().updateModelMatrix(
-                        pose.getTranslationAsFloats(),
-                        pose.getRotationAsFloats());
-                mRenderer.updateViewMatrix();
-                mGLView.requestRender();
-                // Update the UI with TangoPose information
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        DecimalFormat threeDec = new DecimalFormat("0.000");
-                        String translationString = "["
-                                + threeDec.format(pose.translation[0]) + ", "
-                                + threeDec.format(pose.translation[1]) + ", "
-                                + threeDec.format(pose.translation[2]) + "] ";
-                        String quaternionString = "["
-                                + threeDec.format(pose.rotation[0]) + ", "
-                                + threeDec.format(pose.rotation[1]) + ", "
-                                + threeDec.format(pose.rotation[2]) + ", "
-                                + threeDec.format(pose.rotation[3]) + "] ";
-
-                        // Display pose data on screen in TextViews
-                        mPoseTextView.setText(translationString);
-                        mQuatTextView.setText(quaternionString);
-                        mPoseCountTextView.setText(Integer.toString(count));
-                        mDeltaTextView.setText(threeDec.format(mDeltaTime));
-                        if (pose.statusCode == TangoPoseData.POSE_VALID) {
-                            mPoseStatusTextView.setText(R.string.pose_valid);
-                        } else if (pose.statusCode == TangoPoseData.POSE_INVALID) {
-                            mPoseStatusTextView.setText(R.string.pose_invalid);
-                        } else if (pose.statusCode == TangoPoseData.POSE_INITIALIZING) {
-                            mPoseStatusTextView
-                                    .setText(R.string.pose_initializing);
-                        } else if (pose.statusCode == TangoPoseData.POSE_UNKNOWN) {
-                            mPoseStatusTextView.setText(R.string.pose_unknown);
-                        }
+                // Make sure to have atomic access to Tango Pose Data so that
+                // render loop doesn't interfere while Pose call back is updating
+                // the data.
+                synchronized (poseLock) {
+                    mPose = pose;
+                    // Calculate the delta time from previous pose.
+                    mDeltaTime = (float) (pose.timestamp - mPosePreviousTimeStamp)
+                            * SECS_TO_MILLISECS;
+                    mPosePreviousTimeStamp = (float) pose.timestamp;
+                    if (mPreviousPoseStatus != pose.statusCode) {
+                        count = 0;
                     }
-                });
+                    count++;
+                    mPreviousPoseStatus = pose.statusCode;
+                    mRenderer.getModelMatCalculator().updateModelMatrix(
+                            pose.getTranslationAsFloats(), pose.getRotationAsFloats());
+                    mRenderer.updateViewMatrix();
+                }
             }
 
             @Override
             public void onXyzIjAvailable(final TangoXyzIjData xyzIj) {
-                mCurrentTimeStamp = (float) xyzIj.timestamp;
-                final float frameDelta = (mCurrentTimeStamp - mXyIjPreviousTimeStamp)
-                        * SECS_TO_MILLISECS;
-                mXyIjPreviousTimeStamp = mCurrentTimeStamp;
-                byte[] buffer = new byte[xyzIj.xyzCount * 3 * 4];
-                FileInputStream fileStream = new FileInputStream(
-                        xyzIj.xyzParcelFileDescriptor.getFileDescriptor());
-                try {
-                    fileStream.read(buffer,
-                            xyzIj.xyzParcelFileDescriptorOffset, buffer.length);
-                    fileStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                try {
-                    TangoPoseData pointCloudPose = mTango.getPoseAtTime(
-                            mCurrentTimeStamp, framePairs.get(0));
-
-                    mRenderer.getPointCloud().UpdatePoints(buffer,
-                            xyzIj.xyzCount);
-                    mRenderer.getModelMatCalculator()
-                            .updatePointCloudModelMatrix(
-                                    pointCloudPose.getTranslationAsFloats(),
-                                    pointCloudPose.getRotationAsFloats());
-                    mRenderer.getPointCloud().setModelMatrix(
-                            mRenderer.getModelMatCalculator()
-                                    .getPointCloudModelMatrixCopy());
-                } catch (TangoErrorException e) {
-                    Toast.makeText(getApplicationContext(),
-                            R.string.TangoError, Toast.LENGTH_SHORT).show();
-                } catch (TangoInvalidException e) {
-                    Toast.makeText(getApplicationContext(),
-                            R.string.TangoError, Toast.LENGTH_SHORT).show();
-                }
-
-                // Must run UI changes on the UI thread. Running in the Tango
-                // service thread
-                // will result in an error.
-                runOnUiThread(new Runnable() {
-                    DecimalFormat threeDec = new DecimalFormat("0.000");
-
-                    @Override
-                    public void run() {
-                        // Display number of points in the point cloud
-                        mPointCountTextView.setText(Integer
-                                .toString(xyzIj.xyzCount));
-                        mFrequencyTextView.setText(""
-                                + threeDec.format(frameDelta));
-                        mAverageZTextView.setText(""
-                                + threeDec.format(mRenderer.getPointCloud()
-                                        .getAverageZ()));
+                // Make sure to have atomic access to TangoXyzIjData so that
+                // render loop doesn't interfere while onXYZijAvailable callback is updating
+                // the point cloud data.
+                synchronized (depthLock) {
+                    mCurrentTimeStamp = (float) xyzIj.timestamp;
+                    mPointCloudFrameDelta = (mCurrentTimeStamp - mXyIjPreviousTimeStamp)
+                            * SECS_TO_MILLISECS;
+                    mXyIjPreviousTimeStamp = mCurrentTimeStamp;
+                    mPointCount = xyzIj.xyzCount;
+                    byte[] buffer = new byte[xyzIj.xyzCount * 3 * 4];
+                    // TODO: Use getXYZBuffer() call instead of parcel file directly.
+                    FileInputStream fileStream = new FileInputStream(xyzIj.xyzParcelFileDescriptor
+                            .getFileDescriptor());
+                    try {
+                        fileStream.read(buffer, xyzIj.xyzParcelFileDescriptorOffset, buffer.length);
+                        fileStream.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
-                });
+                    try {
+                        TangoPoseData pointCloudPose = mTango.getPoseAtTime(mCurrentTimeStamp,
+                                framePairs.get(0));
+
+                        mRenderer.getPointCloud().UpdatePoints(buffer, xyzIj.xyzCount);
+                        mRenderer.getModelMatCalculator().updatePointCloudModelMatrix(
+                                pointCloudPose.getTranslationAsFloats(),
+                                pointCloudPose.getRotationAsFloats());
+                        mRenderer.getPointCloud().setModelMatrix(
+                                mRenderer.getModelMatCalculator().getPointCloudModelMatrixCopy());
+                    } catch (TangoErrorException e) {
+                        Toast.makeText(getApplicationContext(), R.string.TangoError,
+                                Toast.LENGTH_SHORT).show();
+                    } catch (TangoInvalidException e) {
+                        Toast.makeText(getApplicationContext(), R.string.TangoError,
+                                Toast.LENGTH_SHORT).show();
+                    }
+                }
             }
 
             @Override
@@ -380,8 +331,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        mTangoEventTextView.setText(event.eventKey + ": "
-                                + event.eventValue);
+                        mTangoEventTextView.setText(event.eventKey + ": " + event.eventValue);
                     }
                 });
             }
@@ -391,5 +341,70 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                 // We are not using onFrameAvailable for this application.
             }
         });
+    }
+
+    /**
+     * Create a separate thread to update Log information on UI at the specified interval of
+     * UPDATE_INTERVAL_MS. This function also makes sure to have access to the mPose atomically.
+     */
+    private void startUIThread() {
+        new Thread(new Runnable() {
+            final DecimalFormat threeDec = new DecimalFormat("0.000");
+
+            @Override
+            public void run() {
+                while (true) {
+                    try {
+                        Thread.sleep(UPDATE_INTERVAL_MS);
+                        // Update the UI with TangoPose information
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                synchronized (poseLock) {
+                                    if (mPose == null) {
+                                        return;
+                                    }
+                                    String translationString = "["
+                                            + threeDec.format(mPose.translation[0]) + ", "
+                                            + threeDec.format(mPose.translation[1]) + ", "
+                                            + threeDec.format(mPose.translation[2]) + "] ";
+                                    String quaternionString = "["
+                                            + threeDec.format(mPose.rotation[0]) + ", "
+                                            + threeDec.format(mPose.rotation[1]) + ", "
+                                            + threeDec.format(mPose.rotation[2]) + ", "
+                                            + threeDec.format(mPose.rotation[3]) + "] ";
+
+                                    // Display pose data on screen in TextViews
+                                    mPoseTextView.setText(translationString);
+                                    mQuatTextView.setText(quaternionString);
+                                    mPoseCountTextView.setText(Integer.toString(count));
+                                    mDeltaTextView.setText(threeDec.format(mDeltaTime));
+                                    if (mPose.statusCode == TangoPoseData.POSE_VALID) {
+                                        mPoseStatusTextView.setText(R.string.pose_valid);
+                                    } else if (mPose.statusCode == TangoPoseData.POSE_INVALID) {
+                                        mPoseStatusTextView.setText(R.string.pose_invalid);
+                                    } else if (mPose.statusCode == TangoPoseData.POSE_INITIALIZING) {
+                                        mPoseStatusTextView.setText(R.string.pose_initializing);
+                                    } else if (mPose.statusCode == TangoPoseData.POSE_UNKNOWN) {
+                                        mPoseStatusTextView.setText(R.string.pose_unknown);
+                                    }
+                                }
+                                synchronized (depthLock) {
+                                    // Display number of points in the point cloud
+                                    mPointCountTextView.setText(Integer.toString(mPointCount));
+                                    mFrequencyTextView.setText(""
+                                            + threeDec.format(mPointCloudFrameDelta));
+                                    mAverageZTextView.setText(""
+                                            + threeDec.format(mRenderer.getPointCloud()
+                                                    .getAverageZ()));
+                                }
+                            }
+                        });
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
     }
 }
