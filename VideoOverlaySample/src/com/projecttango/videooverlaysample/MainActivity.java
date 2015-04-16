@@ -80,7 +80,6 @@ public class MainActivity extends Activity {
 
 			@Override
 			public void onFrameAvailable(int cameraId) {
-				Log.e("Video Sample", "onFrameAvailable");
 				if (cameraId == TangoCameraIntrinsics.TANGO_CAMERA_COLOR) {;
 					tangoCameraPreview.onFrameAvailable();
 				}
