@@ -52,7 +52,8 @@ import com.projecttango.experiments.javaarealearning.SetADFNameDialog.SetNameCom
  * and propagation of Tango pose data to OpenGL and Layout views. OpenGL rendering logic is
  * delegated to the {@link ALRenderer} class.
  */
-public class AreaLearningActivity extends Activity implements View.OnClickListener, SetNameCommunicator {
+public class AreaLearningActivity extends Activity implements View.OnClickListener,
+        SetNameCommunicator {
 
     private static final String TAG = AreaLearningActivity.class.getSimpleName();
     private static final int SECONDS_TO_MILLI = 1000;
@@ -104,6 +105,11 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
 
     private ALRenderer mRenderer;
     private GLSurfaceView mGLView;
+
+    private TangoPoseData[] mPoses;
+    private static final int UPDATE_INTERVAL_MS = 100;
+    private static final DecimalFormat threeDec = new DecimalFormat("00.000");
+    public static Object sharedLock = new Object();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -160,7 +166,6 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
         mRenderer = new ALRenderer();
         mGLView.setEGLContextClientVersion(2);
         mGLView.setRenderer(mRenderer);
-        mGLView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
 
         // Instantiate the Tango service
         mTango = new Tango(this);
@@ -170,6 +175,8 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
         mIsLearningMode = intent.getBooleanExtra(ALStartActivity.USE_AREA_LEARNING, false);
         mIsConstantSpaceRelocalize = intent.getBooleanExtra(ALStartActivity.LOAD_ADF, false);
         setTangoConfig();
+        mPoses = new TangoPoseData[3];
+        startUIThread();
     }
 
     private void setTangoConfig() {
@@ -243,32 +250,85 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
 
             @Override
             public void onPoseAvailable(TangoPoseData pose) {
+                // Make sure to have atomic access to Tango Data so that
+                // render loop doesn't interfere while Pose call back is updating
+                // the data.
+                synchronized (sharedLock) {
+                    float[] translation = pose.getTranslationAsFloats();
+                    boolean updateRenderer = false;
 
-                // Update the text views with Pose info.
-                updateTextViewWith(pose);
-                float[] translation = pose.getTranslationAsFloats();
-                boolean updateRenderer = false;
-                if (mIsRelocalized) {
+                    // Check for Device wrt ADF pose, Device wrt Start of Service pose,
+                    // Start of Service wrt ADF pose(This pose determines if device
+                    // the is relocalized or not).
                     if (pose.baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
                             && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE) {
-                        updateRenderer = true;
-                        mRenderer.getGreenTrajectory().updateTrajectory(translation);
-                    }
-                } else {
-                    if (pose.baseFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE
+                        mPoses[0] = pose;
+                        if (mAdf2DevicePreviousPoseStatus != pose.statusCode) {
+                            // Set the count to zero when status code changes.
+                            mAdf2DevicePoseCount = 0;
+                        }
+                        mAdf2DevicePreviousPoseStatus = pose.statusCode;
+                        mAdf2DevicePoseCount++;
+                        // Calculate time difference between current and last available Device wrt
+                        // ADF pose.
+                        mAdf2DevicePoseDelta = (pose.timestamp - mAdf2DevicePreviousPoseTimeStamp)
+                                * SECONDS_TO_MILLI;
+                        mAdf2DevicePreviousPoseTimeStamp = pose.timestamp;
+                        if (mIsRelocalized) {
+                            updateRenderer = true;
+                            mRenderer.getGreenTrajectory().updateTrajectory(translation);
+                        }
+                    } else if (pose.baseFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE
                             && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE) {
-                        updateRenderer = true;
-                        mRenderer.getBlueTrajectory().updateTrajectory(translation);
-                    }
-                }
+                        mPoses[1] = pose;
+                        if (mStart2DevicePreviousPoseStatus != pose.statusCode) {
+                            // Set the count to zero when status code changes.
+                            mStart2DevicePoseCount = 0;
+                        }
+                        mStart2DevicePreviousPoseStatus = pose.statusCode;
+                        mStart2DevicePoseCount++;
+                        // Calculate time difference between current and last available Device wrt
+                        // SS pose.
+                        mStart2DevicePoseDelta = (pose.timestamp - mStart2DevicePreviousPoseTimeStamp)
+                                * SECONDS_TO_MILLI;
+                        mStart2DevicePreviousPoseTimeStamp = pose.timestamp;
+                        if (!mIsRelocalized) {
+                            updateRenderer = true;
 
-                // Update the trajectory, model matrix, and view matrix, then
-                // render the scene again
-                if (updateRenderer) {
-                    mRenderer.getModelMatCalculator().updateModelMatrix(translation,
-                            pose.getRotationAsFloats());
-                    mRenderer.updateViewMatrix();
-                    mGLView.requestRender();
+                            synchronized (mRenderer.getBlueTrajectory()) {
+                                mRenderer.getBlueTrajectory().updateTrajectory(translation);
+                            }
+                        }
+                    } else if (pose.baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
+                            && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE) {
+                        mPoses[2] = pose;
+                        if (mAdf2StartPreviousPoseStatus != pose.statusCode) {
+                            // Set the count to zero when status code changes.
+                            mAdf2StartPoseCount = 0;
+                        }
+                        mAdf2StartPreviousPoseStatus = pose.statusCode;
+                        mAdf2StartPoseCount++;
+                        // Calculate time difference between current and last available SS wrt ADF
+                        // pose.
+                        mAdf2StartPoseDelta = (pose.timestamp - mAdf2StartPreviousPoseTimeStamp)
+                                * SECONDS_TO_MILLI;
+                        mAdf2StartPreviousPoseTimeStamp = pose.timestamp;
+                        if (pose.statusCode == TangoPoseData.POSE_VALID) {
+                            mIsRelocalized = true;
+                            // Set the color to green
+                        } else {
+                            mIsRelocalized = false;
+                            // Set the color blue
+                        }
+                    }
+
+                    // Update the trajectory, model matrix, and view matrix, then
+                    // render the scene again
+                    if (updateRenderer) {
+                        mRenderer.getModelMatCalculator().updateModelMatrix(translation,
+                                pose.getRotationAsFloats());
+                        mRenderer.updateViewMatrix();
+                    }
                 }
             }
 
@@ -328,84 +388,54 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
 
     /**
      * Updates the text view in UI screen with the Pose. Each pose is associated with Target and
-     * Base Frame. We need to check for that pair ad update our views accordingly.
+     * Base Frame. We need to check for that pair and update our views accordingly.
      * 
      * @param pose
      */
-    private void updateTextViewWith(final TangoPoseData pose) {
-        final DecimalFormat threeDec = new DecimalFormat("0.000");
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                String translationString = "[" + threeDec.format(pose.translation[0]) + ","
-                        + threeDec.format(pose.translation[1]) + ","
-                        + threeDec.format(pose.translation[2]) + "] ";
+    private void updateTextViews() {
+        if (mPoses[0] != null
+                && mPoses[0].baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
+                && mPoses[0].targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE) {
+            mAdf2DeviceTranslationTextView.setText(getTranslationString(mPoses[0]));
+            mAdf2DeviceQuatTextView.setText(getQuaternionString(mPoses[0]));
+            mAdf2DevicePoseStatusTextView.setText(getPoseStatus(mPoses[0]));
+            mAdf2DevicePoseCountTextView.setText(Integer.toString(mAdf2DevicePoseCount));
+            mAdf2DevicePoseDeltaTextView.setText(threeDec.format(mAdf2DevicePoseDelta));
+        }
 
-                String quaternionString = "[" + threeDec.format(pose.rotation[0]) + ","
-                        + threeDec.format(pose.rotation[1]) + ","
-                        + threeDec.format(pose.rotation[2]) + ","
-                        + threeDec.format(pose.rotation[3]) + "] ";
+        if (mPoses[1] != null
+                && mPoses[1].baseFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE
+                && mPoses[1].targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE) {
+            mStart2DeviceTranslationTextView.setText(getTranslationString(mPoses[1]));
+            mStart2DeviceQuatTextView.setText(getQuaternionString(mPoses[1]));
+            mStart2DevicePoseStatusTextView.setText(getPoseStatus(mPoses[1]));
+            mStart2DevicePoseCountTextView.setText(Integer.toString(mStart2DevicePoseCount));
+            mStart2DevicePoseDeltaTextView.setText(threeDec.format(mStart2DevicePoseDelta));
+        }
 
-                if (pose.baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
-                        && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE) {
-                    if (mAdf2DevicePreviousPoseStatus != pose.statusCode) {
-                        mAdf2DevicePoseCount = 0;
-                    }
-                    mAdf2DevicePreviousPoseStatus = pose.statusCode;
-                    mAdf2DevicePoseCount++;
-                    mAdf2DevicePoseDelta = (pose.timestamp - mAdf2DevicePreviousPoseTimeStamp)
-                            * SECONDS_TO_MILLI;
-                    mAdf2DevicePreviousPoseTimeStamp = pose.timestamp;
-                    mAdf2DeviceTranslationTextView.setText(translationString);
-                    mAdf2DeviceQuatTextView.setText(quaternionString);
-                    mAdf2DevicePoseStatusTextView.setText(getPoseStatus(pose));
-                    mAdf2DevicePoseCountTextView.setText(Integer.toString(mAdf2DevicePoseCount));
-                    mAdf2DevicePoseDeltaTextView.setText(threeDec.format(mAdf2DevicePoseDelta));
-                }
+        if (mPoses[2] != null
+                && mPoses[2].baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
+                && mPoses[2].targetFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE) {
+            mAdf2StartTranslationTextView.setText(getTranslationString(mPoses[2]));
+            mAdf2StartQuatTextView.setText(getQuaternionString(mPoses[2]));
+            mAdf2StartPoseStatusTextView.setText(getPoseStatus(mPoses[2]));
+            mAdf2StartPoseCountTextView.setText(Integer.toString(mAdf2StartPoseCount));
+            mAdf2StartPoseDeltaTextView.setText(threeDec.format(mAdf2StartPoseDelta));
+        }
+    }
 
-                if (pose.baseFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE
-                        && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE) {
-                    if (mStart2DevicePreviousPoseStatus != pose.statusCode) {
-                        mStart2DevicePoseCount = 0;
-                    }
-                    mStart2DevicePreviousPoseStatus = pose.statusCode;
-                    mStart2DevicePoseCount++;
-                    mStart2DevicePoseDelta = (pose.timestamp - mStart2DevicePreviousPoseTimeStamp)
-                            * SECONDS_TO_MILLI;
-                    mStart2DevicePreviousPoseTimeStamp = pose.timestamp;
-                    mStart2DeviceTranslationTextView.setText(translationString);
-                    mStart2DeviceQuatTextView.setText(quaternionString);
-                    mStart2DevicePoseStatusTextView.setText(getPoseStatus(pose));
-                    mStart2DevicePoseCountTextView
-                            .setText(Integer.toString(mStart2DevicePoseCount));
-                    mStart2DevicePoseDeltaTextView.setText(threeDec.format(mStart2DevicePoseDelta));
-                }
+    private String getTranslationString(TangoPoseData pose) {
+        return "[" + threeDec.format(pose.translation[0]) + ","
+                + threeDec.format(pose.translation[1]) + "," + threeDec.format(pose.translation[2])
+                + "] ";
 
-                if (pose.baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
-                        && pose.targetFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE) {
-                    if (mAdf2StartPreviousPoseStatus != pose.statusCode) {
-                        mAdf2StartPoseCount = 0;
-                    }
-                    mAdf2StartPreviousPoseStatus = pose.statusCode;
-                    mAdf2StartPoseCount++;
-                    mAdf2StartPoseDelta = (pose.timestamp - mAdf2StartPreviousPoseTimeStamp)
-                            * SECONDS_TO_MILLI;
-                    mAdf2StartPreviousPoseTimeStamp = pose.timestamp;
-                    mAdf2StartTranslationTextView.setText(translationString);
-                    mAdf2StartQuatTextView.setText(quaternionString);
-                    mAdf2StartPoseStatusTextView.setText(getPoseStatus(pose));
-                    mAdf2StartPoseCountTextView.setText(Integer.toString(mAdf2StartPoseCount));
-                    mAdf2StartPoseDeltaTextView.setText(threeDec.format(mAdf2StartPoseDelta));
-                    if (pose.statusCode == TangoPoseData.POSE_VALID) {
-                        mIsRelocalized = true;
-                        // Set the color to green
-                    } else {
-                        mIsRelocalized = false;
-                        // Set the color blue
-                    }
-                }
-            }
-        });
+    }
+
+    private String getQuaternionString(TangoPoseData pose) {
+        return "[" + threeDec.format(pose.rotation[0]) + "," + threeDec.format(pose.rotation[1])
+                + "," + threeDec.format(pose.rotation[2]) + "," + threeDec.format(pose.rotation[3])
+                + "] ";
+
     }
 
     private String getPoseStatus(TangoPoseData pose) {
@@ -485,5 +515,41 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         return mRenderer.onTouchEvent(event);
+    }
+
+    /**
+     * Create a separate thread to update Log information on UI at the specified interval of
+     * UPDATE_INTERVAL_MS. This function also makes sure to have access to the mPoses atomically.
+     */
+    private void startUIThread() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    try {
+                        Thread.sleep(UPDATE_INTERVAL_MS);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    synchronized (sharedLock) {
+
+                                        if (mPoses == null) {
+                                            return;
+                                        } else {
+                                            updateTextViews();
+                                        }
+                                    }
+                                } catch (NullPointerException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        });
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
     }
 }

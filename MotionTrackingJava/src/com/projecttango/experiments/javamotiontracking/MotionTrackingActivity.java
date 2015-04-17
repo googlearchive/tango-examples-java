@@ -69,6 +69,10 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
     private boolean mIsAutoRecovery;
     private MTGLRenderer mRenderer;
     private GLSurfaceView mGLView;
+    private boolean mIsProcessing = false;
+    private TangoPoseData mPose;
+    private static final int UPDATE_INTERVAL_MS = 100;
+    public static Object sharedLock = new Object();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,7 +110,6 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
         mRenderer = new MTGLRenderer();
         mGLView.setEGLContextClientVersion(2);
         mGLView.setRenderer(mRenderer);
-        mGLView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
 
         // Instantiate the Tango service
         mTango = new Tango(this);
@@ -137,7 +140,7 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
 
         // Display the library version for debug purposes
         mTangoServiceVersionTextView.setText(mConfig.getString("tango_service_library_version"));
-
+        startUIThread();
     }
 
     /**
@@ -147,8 +150,7 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
     private void setTangoListeners() {
         // Lock configuration and connect to Tango
         // Select coordinate frame pair
-        final ArrayList<TangoCoordinateFramePair> framePairs = 
-                new ArrayList<TangoCoordinateFramePair>();
+        final ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
         framePairs.add(new TangoCoordinateFramePair(
                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                 TangoPoseData.COORDINATE_FRAME_DEVICE));
@@ -157,55 +159,30 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
 
             @Override
             public void onPoseAvailable(final TangoPoseData pose) {
-                // Log whenever Motion Tracking enters a n invalid state
-                if (!mIsAutoRecovery && (pose.statusCode == TangoPoseData.POSE_INVALID)) {
-                    Log.w(TAG, "Invalid State");
-                }
-                if (mPreviousPoseStatus != pose.statusCode) {
-                    count = 0;
-                }
-                count++;
-                mPreviousPoseStatus = pose.statusCode;
-                mDeltaTime = (float) (pose.timestamp - mPreviousTimeStamp) * SECS_TO_MILLISECS;
-                mPreviousTimeStamp = (float) pose.timestamp;
-                // Update the OpenGL renderable objects with the new Tango Pose
-                // data
-                float[] translation = pose.getTranslationAsFloats();
-                mRenderer.getTrajectory().updateTrajectory(translation);
-                mRenderer.getModelMatCalculator().updateModelMatrix(translation,
-                        pose.getRotationAsFloats());
-                mRenderer.updateViewMatrix();
-                mGLView.requestRender();
-
-                // Update the UI with TangoPose information
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        DecimalFormat threeDec = new DecimalFormat("0.000");
-                        String translationString = "[" + threeDec.format(pose.translation[0])
-                                + ", " + threeDec.format(pose.translation[1]) + ", "
-                                + threeDec.format(pose.translation[2]) + "] ";
-                        String quaternionString = "[" + threeDec.format(pose.rotation[0]) + ", "
-                                + threeDec.format(pose.rotation[1]) + ", "
-                                + threeDec.format(pose.rotation[2]) + ", "
-                                + threeDec.format(pose.rotation[3]) + "] ";
-
-                        // Display pose data on screen in TextViews
-                        mPoseTextView.setText(translationString);
-                        mQuatTextView.setText(quaternionString);
-                        mPoseCountTextView.setText(Integer.toString(count));
-                        mDeltaTextView.setText(threeDec.format(mDeltaTime));
-                        if (pose.statusCode == TangoPoseData.POSE_VALID) {
-                            mPoseStatusTextView.setText(R.string.pose_valid);
-                        } else if (pose.statusCode == TangoPoseData.POSE_INVALID) {
-                            mPoseStatusTextView.setText(R.string.pose_invalid);
-                        } else if (pose.statusCode == TangoPoseData.POSE_INITIALIZING) {
-                            mPoseStatusTextView.setText(R.string.pose_initializing);
-                        } else if (pose.statusCode == TangoPoseData.POSE_UNKNOWN) {
-                            mPoseStatusTextView.setText(R.string.pose_unknown);
-                        }
+                //Make sure to have atomic access to Tango Pose Data so that
+                //render loop doesn't interfere while Pose call back is updating
+                // the data.
+                synchronized (sharedLock) {
+                    mPose = pose;
+                    mDeltaTime = (float) (pose.timestamp - mPreviousTimeStamp) * SECS_TO_MILLISECS;
+                    mPreviousTimeStamp = (float) pose.timestamp;
+                    // Log whenever Motion Tracking enters an invalid state
+                    if (!mIsAutoRecovery && (pose.statusCode == TangoPoseData.POSE_INVALID)) {
+                        Log.w(TAG, "Invalid State");
                     }
-                });
+                    if (mPreviousPoseStatus != pose.statusCode) {
+                        count = 0;
+                    }
+                    count++;
+                    mPreviousPoseStatus = pose.statusCode;
+                    // Update the OpenGL renderable objects with the new Tango Pose
+                    // data
+                    float[] translation = pose.getTranslationAsFloats();
+                    mRenderer.getTrajectory().updateTrajectory(translation);
+                    mRenderer.getModelMatCalculator().updateModelMatrix(translation,
+                            pose.getRotationAsFloats());
+                    mRenderer.updateViewMatrix();
+                }
             }
 
             @Override
@@ -302,7 +279,10 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
     public boolean onTouchEvent(MotionEvent event) {
         return mRenderer.onTouchEvent(event);
     }
-
+    
+    /**
+     * Setup the extrinsics of the device.
+     */
     private void setUpExtrinsics() {
         // Get device to imu matrix.
         TangoPoseData device2IMUPose = new TangoPoseData();
@@ -321,5 +301,65 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
 
         mRenderer.getModelMatCalculator().SetColorCamera2IMUMatrix(
                 color2IMUPose.getTranslationAsFloats(), color2IMUPose.getRotationAsFloats());
+    }
+    /**
+     * Create a separate thread to update Log information on UI at the specified
+     * interval of UPDATE_INTERVAL_MS. This function also makes sure to have access
+     * to the mPose atomically.
+     */
+    private void startUIThread() {
+        new Thread(new Runnable() {
+            DecimalFormat threeDec = new DecimalFormat("00.000");
+            @Override
+            public void run() {
+                while (true) {
+                    try {
+                        Thread.sleep(UPDATE_INTERVAL_MS);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    synchronized (sharedLock) {
+                                        if (mPose == null) {
+                                            return;
+                                        }
+                                       
+                                        String translationString = "["
+                                                + threeDec.format(mPose.translation[0]) + ", "
+                                                + threeDec.format(mPose.translation[1]) + ", "
+                                                + threeDec.format(mPose.translation[2]) + "] ";
+                                        String quaternionString = "["
+                                                + threeDec.format(mPose.rotation[0]) + ", "
+                                                + threeDec.format(mPose.rotation[1]) + ", "
+                                                + threeDec.format(mPose.rotation[2]) + ", "
+                                                + threeDec.format(mPose.rotation[3]) + "] ";
+
+                                        // Display pose data on screen in TextViews
+                                        mPoseTextView.setText(translationString);
+                                        mQuatTextView.setText(quaternionString);
+                                        mPoseCountTextView.setText(Integer.toString(count));
+                                        mDeltaTextView.setText(threeDec.format(mDeltaTime));
+                                        if (mPose.statusCode == TangoPoseData.POSE_VALID) {
+                                            mPoseStatusTextView.setText(R.string.pose_valid);
+                                        } else if (mPose.statusCode == TangoPoseData.POSE_INVALID) {
+                                            mPoseStatusTextView.setText(R.string.pose_invalid);
+                                        } else if (mPose.statusCode == TangoPoseData.POSE_INITIALIZING) {
+                                            mPoseStatusTextView.setText(R.string.pose_initializing);
+                                        } else if (mPose.statusCode == TangoPoseData.POSE_UNKNOWN) {
+                                            mPoseStatusTextView.setText(R.string.pose_unknown);
+                                        }
+                                    }
+                                } catch (NullPointerException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        });
+
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
     }
 }

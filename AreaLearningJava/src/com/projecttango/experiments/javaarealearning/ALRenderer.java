@@ -30,14 +30,13 @@ import com.projecttango.tangoutils.renderables.Grid;
 import com.projecttango.tangoutils.renderables.Trajectory;
 
 /**
- * OpenGL rendering class for the AreaLearningActivity API sample. This class manages
- * the objects visible in the OpenGL view which are the {@link CameraFrustum},
- * {@link CameraFrustumAndAxis}, {@link Trajectory}, and the {@link Grid}. These
- * objects are implemented in the TangoUtils library in the package
- * {@link com.projecttango.tangoutils.renderables}.
+ * OpenGL rendering class for the AreaLearningActivity API sample. This class manages the objects
+ * visible in the OpenGL view which are the {@link CameraFrustum}, {@link CameraFrustumAndAxis},
+ * {@link Trajectory}, and the {@link Grid}. These objects are implemented in the TangoUtils library
+ * in the package {@link com.projecttango.tangoutils.renderables}.
  * 
- * This class receives also handles the user-selected camera view, which can be
- * 1st person, 3rd person, or top-down.
+ * This class receives also handles the user-selected camera view, which can be 1st person, 3rd
+ * person, or top-down.
  */
 public class ALRenderer extends Renderer implements GLSurfaceView.Renderer {
 
@@ -57,33 +56,32 @@ public class ALRenderer extends Renderer implements GLSurfaceView.Renderer {
         mFloorGrid = new Grid();
         mCameraFrustumAndAxis = new CameraFrustumAndAxis();
         mGreenTrajectory = new Trajectory(3);
-        mGreenTrajectory.setColor(
-                new float[] { 0.39f, 0.56f, 0.03f, 1.0f});
+        mGreenTrajectory.setColor(new float[] { 0.39f, 0.56f, 0.03f, 1.0f });
         mBlueTrajectory = new Trajectory(3);
-        mBlueTrajectory.setColor(
-                new float[] { 0.22f, 0.28f, 0.67f, 1.0f});
+        mBlueTrajectory.setColor(new float[] { 0.22f, 0.28f, 0.67f, 1.0f });
         // Construct the initial view matrix
         Matrix.setIdentityM(mViewMatrix, 0);
         Matrix.setLookAtM(mViewMatrix, 0, 5f, 5f, 5f, 0f, 0f, 0f, 0f, 1f, 0f);
-        mCameraFrustumAndAxis.setModelMatrix(getModelMatCalculator()
-                .getModelMatrix());
+        mCameraFrustumAndAxis.setModelMatrix(getModelMatCalculator().getModelMatrix());
     }
 
     @Override
     public void onSurfaceChanged(GL10 gl, int width, int height) {
         GLES20.glViewport(0, 0, width, height);
         mCameraAspect = (float) width / height;
-        Matrix.perspectiveM(mProjectionMatrix, 0, THIRD_PERSON_FOV,
-                mCameraAspect, CAMERA_NEAR, CAMERA_FAR);
+        Matrix.perspectiveM(mProjectionMatrix, 0, THIRD_PERSON_FOV, mCameraAspect, CAMERA_NEAR,
+                CAMERA_FAR);
     }
 
     @Override
     public void onDrawFrame(GL10 gl) {
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
-        mGreenTrajectory.draw(getViewMatrix(), mProjectionMatrix);
-        mBlueTrajectory.draw(getViewMatrix(), mProjectionMatrix);
-        mFloorGrid.draw(getViewMatrix(), mProjectionMatrix);
-        mCameraFrustumAndAxis.draw(getViewMatrix(), mProjectionMatrix);
+        synchronized (AreaLearningActivity.sharedLock) {
+            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
+            mGreenTrajectory.draw(getViewMatrix(), mProjectionMatrix);
+            mBlueTrajectory.draw(getViewMatrix(), mProjectionMatrix);
+            mFloorGrid.draw(getViewMatrix(), mProjectionMatrix);
+            mCameraFrustumAndAxis.draw(getViewMatrix(), mProjectionMatrix);
+        }
     }
 
     public CameraFrustum getCameraFrustum() {
@@ -97,7 +95,7 @@ public class ALRenderer extends Renderer implements GLSurfaceView.Renderer {
     public Trajectory getBlueTrajectory() {
         return mBlueTrajectory;
     }
-    
+
     public Trajectory getGreenTrajectory() {
         return mGreenTrajectory;
     }

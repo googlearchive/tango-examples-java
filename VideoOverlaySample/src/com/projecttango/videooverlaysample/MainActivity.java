@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.google.atap.tangoservice.Tango;
@@ -69,6 +70,7 @@ public class MainActivity extends Activity {
 				TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
 		TangoConfig config = mTango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
 		mTango.connect(config);
+		
 		ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
 		mTango.connectListener(framePairs, new OnTangoUpdateListener() {
 			@Override
@@ -78,7 +80,7 @@ public class MainActivity extends Activity {
 
 			@Override
 			public void onFrameAvailable(int cameraId) {
-				if (cameraId == TangoCameraIntrinsics.TANGO_CAMERA_COLOR) {
+				if (cameraId == TangoCameraIntrinsics.TANGO_CAMERA_COLOR) {;
 					tangoCameraPreview.onFrameAvailable();
 				}
 			}
