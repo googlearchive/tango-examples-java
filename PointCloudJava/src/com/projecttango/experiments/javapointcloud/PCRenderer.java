@@ -46,7 +46,7 @@ public class PCRenderer extends Renderer implements GLSurfaceView.Renderer {
     private Grid mGrid;
     private CameraFrustumAndAxis mCameraFrustumAndAxis;
     private int mMaxDepthPoints;
-
+    private boolean mIsValid = false;
     public PCRenderer(int maxDepthPoints) {
         mMaxDepthPoints = maxDepthPoints;
     }
@@ -61,6 +61,7 @@ public class PCRenderer extends Renderer implements GLSurfaceView.Renderer {
         Matrix.setIdentityM(mViewMatrix, 0);
         Matrix.setLookAtM(mViewMatrix, 0, 5f, 5f, 5f, 0f, 0f, 0f, 0f, 1f, 0f);
         mCameraFrustumAndAxis.setModelMatrix(getModelMatCalculator().getModelMatrix());
+        mIsValid = true;
     }
 
     @Override
@@ -85,5 +86,9 @@ public class PCRenderer extends Renderer implements GLSurfaceView.Renderer {
 
     public PointCloud getPointCloud() {
         return mPointCloud;
+    }
+    
+    public boolean isValid(){
+        return mIsValid;
     }
 }

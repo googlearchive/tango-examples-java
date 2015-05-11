@@ -45,7 +45,7 @@ public class ALRenderer extends Renderer implements GLSurfaceView.Renderer {
     private CameraFrustum mCameraFrustum;
     private CameraFrustumAndAxis mCameraFrustumAndAxis;
     private Grid mFloorGrid;
-
+    private boolean mIsValid = false;
     @Override
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
         // Set background color and enable depth testing
@@ -63,6 +63,7 @@ public class ALRenderer extends Renderer implements GLSurfaceView.Renderer {
         Matrix.setIdentityM(mViewMatrix, 0);
         Matrix.setLookAtM(mViewMatrix, 0, 5f, 5f, 5f, 0f, 0f, 0f, 0f, 1f, 0f);
         mCameraFrustumAndAxis.setModelMatrix(getModelMatCalculator().getModelMatrix());
+        mIsValid = true;
     }
 
     @Override
@@ -98,6 +99,10 @@ public class ALRenderer extends Renderer implements GLSurfaceView.Renderer {
 
     public Trajectory getGreenTrajectory() {
         return mGreenTrajectory;
+    }
+    
+    public boolean isValid(){
+        return mIsValid;
     }
 
 }

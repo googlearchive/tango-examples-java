@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.projecttango.videooverlaysample;
+package com.projecttango.experiments.videooverlaysample;
 
 import java.util.ArrayList;
 
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.Toast;
 
 import com.google.atap.tangoservice.Tango;
@@ -33,6 +32,18 @@ import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
+/**
+ * An example showing the usage of TangoCameraPreview class
+ * Usage of TangoCameraPreviewClass:
+ * To use this class, we first need initialize the TangoCameraPreview class with the activity's 
+ * context and connect to the camera we want by using connectToTangoCamera class.Once the connection 
+ * is established we need to manually update the TangoCameraPreview's texture by using the
+ * onFrameAvailable callbacks.
+ * Note:
+ * To use TangoCameraPreview class we need to ask the user permissions for MotionTracking 
+ * at the minimum level. This is because in Java all the call backs such as 
+ * onPoseAvailable,onXyzIjAvailable, onTangoEvents, onFrameAvailable are set together at once. 
+ */
 public class MainActivity extends Activity {
 	private TangoCameraPreview tangoCameraPreview;
 	private Tango mTango;
@@ -46,7 +57,6 @@ public class MainActivity extends Activity {
 				Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_MOTION_TRACKING),
 				Tango.TANGO_INTENT_ACTIVITYCODE);
 		setContentView(tangoCameraPreview);
-
 	}
 
 	@Override
@@ -66,11 +76,15 @@ public class MainActivity extends Activity {
 
 	// Camera Preview
 	private void startCameraPreview() {
+	    // Connect to color camera
 		tangoCameraPreview.connectToTangoCamera(mTango,
 				TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
+		// Use default configuration for Tango Service.
 		TangoConfig config = mTango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
 		mTango.connect(config);
 		
+		// No need to add any coordinate frame pairs since we are not using 
+		// pose data. So just initialize.
 		ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
 		mTango.connectListener(framePairs, new OnTangoUpdateListener() {
 			@Override
@@ -80,7 +94,10 @@ public class MainActivity extends Activity {
 
 			@Override
 			public void onFrameAvailable(int cameraId) {
-				if (cameraId == TangoCameraIntrinsics.TANGO_CAMERA_COLOR) {;
+			    
+			    // Check if the frame available is for the camera we want and
+			    // update its frame on the camera preview.
+				if (cameraId == TangoCameraIntrinsics.TANGO_CAMERA_COLOR) {
 					tangoCameraPreview.onFrameAvailable();
 				}
 			}

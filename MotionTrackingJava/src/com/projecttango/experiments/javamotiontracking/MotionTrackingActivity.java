@@ -178,6 +178,9 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
                     // Update the OpenGL renderable objects with the new Tango Pose
                     // data
                     float[] translation = pose.getTranslationAsFloats();
+                    if(!mRenderer.isValid()){
+                        return;
+                    }
                     mRenderer.getTrajectory().updateTrajectory(translation);
                     mRenderer.getModelMatCalculator().updateModelMatrix(translation,
                             pose.getRotationAsFloats());

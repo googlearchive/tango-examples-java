@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.projecttango.quickstartjava;
+package com.projecttango.experiments.quickstartjava;
 
 import java.util.ArrayList;
 
@@ -27,6 +27,7 @@ import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
+import com.projecttango.quickstartjava.R;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -35,6 +36,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
+
 
 /**
  * Main Activity for the Tango Java Quickstart. Demonstrates establishing a
@@ -53,7 +55,7 @@ public class MainActivity extends Activity {
     private Tango mTango;
     private TangoConfig mConfig;
     private boolean mIsTangoServiceConnected;
-
+    private boolean mIsProcessing = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -153,6 +155,12 @@ public class MainActivity extends Activity {
             @SuppressLint("DefaultLocale")
             @Override
             public void onPoseAvailable(TangoPoseData pose) {
+                if (mIsProcessing) {
+                    Log.i(TAG, "Processing UI");
+                    return;
+                }
+                mIsProcessing = true;
+                
                 // Format Translation and Rotation data
                 final String translationMsg = String.format(sTranslationFormat,
                         pose.translation[0], pose.translation[1],
@@ -175,6 +183,7 @@ public class MainActivity extends Activity {
                     public void run() {
                         mTranslationTextView.setText(translationMsg);
                         mRotationTextView.setText(rotationMsg);
+                        mIsProcessing = false;
                     }
                 });
             }
