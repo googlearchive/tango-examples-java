@@ -274,7 +274,7 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
                         mAdf2DevicePoseDelta = (pose.timestamp - mAdf2DevicePreviousPoseTimeStamp)
                                 * SECONDS_TO_MILLI;
                         mAdf2DevicePreviousPoseTimeStamp = pose.timestamp;
-                        if (mIsRelocalized) {
+                        if (mIsRelocalized && mRenderer.isValid()) {
                             updateRenderer = true;
                             mRenderer.getGreenTrajectory().updateTrajectory(translation);
                         }
@@ -292,7 +292,7 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
                         mStart2DevicePoseDelta = (pose.timestamp - mStart2DevicePreviousPoseTimeStamp)
                                 * SECONDS_TO_MILLI;
                         mStart2DevicePreviousPoseTimeStamp = pose.timestamp;
-                        if (!mIsRelocalized) {
+                        if (!mIsRelocalized && mRenderer.isValid()) {
                             updateRenderer = true;
 
                             synchronized (mRenderer.getBlueTrajectory()) {
@@ -324,7 +324,7 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
 
                     // Update the trajectory, model matrix, and view matrix, then
                     // render the scene again
-                    if (updateRenderer) {
+                    if (updateRenderer && mRenderer.isValid()) {
                         mRenderer.getModelMatCalculator().updateModelMatrix(translation,
                                 pose.getRotationAsFloats());
                         mRenderer.updateViewMatrix();
