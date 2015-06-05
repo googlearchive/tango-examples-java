@@ -30,7 +30,7 @@ import com.projecttango.tangoutils.renderables.Grid;
 import com.projecttango.tangoutils.renderables.Trajectory;
 
 /**
- * OpenGL rendering class for the Motion Tracking API sample. This class managers the objects
+ * OpenGL rendering class for the Motion Tracking API sample. This class manages the objects
  * visible in the OpenGL view which are the {@link CameraFrustum}, {@link CameraFrustumAndAxis},
  * {@link Trajectory}, and the {@link Grid}. These objects are implemented in the TangoUtils library
  * in the package {@link com.projecttango.tangoutils.renderables}.
