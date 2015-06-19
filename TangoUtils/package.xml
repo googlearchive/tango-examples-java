@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package>
+  <name>tango_java_sample_utils</name>
+  <version>0.0.0</version>
+  <description>
+    Point Cloud Java Sample
+  </description>
+
+  <maintainer email="kommineni@google.com">r4ravi2008</maintainer>
+
+  <license>Apache 2.0</license>
+
+  <!-- Add your dependencies using the build_depend tag -->
+  <build_depend>tango_java_lib</build_depend>
+  
+  <!-- Use buildtool_depend for build tool packages: -->
+  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>redwood_catkin</buildtool_depend>
+  <export><group>Experimental</group></export>
+</package>
