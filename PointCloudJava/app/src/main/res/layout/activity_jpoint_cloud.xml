@@ -241,4 +241,8 @@
         android:layout_marginRight="5dp"
         android:paddingRight="5dp"
         android:text="@string/third_person" />
+    <com.google.atap.tango.ux.TangoUxLayout
+        android:id="@+id/layout_tango"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 </RelativeLayout>
