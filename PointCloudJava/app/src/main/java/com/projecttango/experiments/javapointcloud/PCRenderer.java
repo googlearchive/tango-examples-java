@@ -82,6 +82,7 @@ public class PCRenderer extends Renderer implements GLSurfaceView.Renderer {
         synchronized (PointCloudActivity.poseLock) {
             mCameraFrustumAndAxis.draw(mViewMatrix, mProjectionMatrix);
         }
+        updateViewMatrix();
     }
 
     public PointCloud getPointCloud() {

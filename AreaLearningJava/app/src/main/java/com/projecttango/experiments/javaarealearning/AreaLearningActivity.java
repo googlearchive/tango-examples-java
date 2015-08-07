@@ -327,7 +327,6 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
                     if (updateRenderer && mRenderer.isValid()) {
                         mRenderer.getModelMatCalculator().updateModelMatrix(translation,
                                 pose.getRotationAsFloats());
-                        mRenderer.updateViewMatrix();
                     }
                 }
             }
