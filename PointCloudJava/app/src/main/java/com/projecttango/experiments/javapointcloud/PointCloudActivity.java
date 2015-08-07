@@ -55,7 +55,7 @@ import java.util.ArrayList;
 /**
  * Main Activity class for the Point Cloud Sample. Handles the connection to the {@link Tango}
  * service and propagation of Tango XyzIj data to OpenGL and Layout views. OpenGL rendering logic is
- * delegated to the {@link PCRenderer} class.
+ * delegated to the {@link PCrenderer} class.
  */
 public class PointCloudActivity extends Activity implements OnClickListener {
 
@@ -354,7 +354,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                     }
                     mRenderer.getModelMatCalculator().updateModelMatrix(
                             pose.getTranslationAsFloats(), pose.getRotationAsFloats());
-                    mRenderer.updateViewMatrix();
                 }
             }
 

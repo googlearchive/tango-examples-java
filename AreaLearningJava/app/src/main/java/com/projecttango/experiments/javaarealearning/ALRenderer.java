@@ -83,6 +83,7 @@ public class ALRenderer extends Renderer implements GLSurfaceView.Renderer {
             mFloorGrid.draw(getViewMatrix(), mProjectionMatrix);
             mCameraFrustumAndAxis.draw(getViewMatrix(), mProjectionMatrix);
         }
+        updateViewMatrix();
     }
 
     public CameraFrustum getCameraFrustum() {

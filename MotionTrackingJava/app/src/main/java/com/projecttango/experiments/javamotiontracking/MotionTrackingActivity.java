@@ -184,7 +184,6 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
                     mRenderer.getTrajectory().updateTrajectory(translation);
                     mRenderer.getModelMatCalculator().updateModelMatrix(translation,
                             pose.getRotationAsFloats());
-                    mRenderer.updateViewMatrix();
                 }
             }
 
