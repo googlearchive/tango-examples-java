@@ -30,6 +30,7 @@ import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
 import com.google.atap.tango.ux.TangoUx;
+import com.google.atap.tango.ux.TangoUx.StartParams;
 import com.google.atap.tango.ux.TangoUxLayout;
 
 
@@ -140,9 +141,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
             if(uxExceptionEvent.getType() == UxExceptionEvent.TYPE_TANGO_SERVICE_NOT_RESPONDING){
                 Log.i(TAG, "TangoService is not responding ");
             }
-            if(uxExceptionEvent.getType() == UxExceptionEvent.TYPE_TANGO_UPDATE_NEEDED){
-                Log.i(TAG, "Device not running on ART");
-            }
             if(uxExceptionEvent.getType() == UxExceptionEvent.TYPE_UNDER_EXPOSED){
                 Log.i(TAG, "Camera Under Exposed " );
             }
@@ -179,9 +177,9 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         mConfig = mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT);
         mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
 
-        mTangoUx = new TangoUx.Builder(this).build();
+        mTangoUx = new TangoUx(this);
         mTangoUxLayout = (TangoUxLayout) findViewById(R.id.layout_tango);
-        mTangoUx = new TangoUx.Builder(this).setTangoUxLayout(mTangoUxLayout).build();
+        mTangoUx.setLayout(mTangoUxLayout);
         mTangoUx.setUxExceptionEventListener(mUxExceptionListener);
 
 
@@ -221,7 +219,8 @@ public class PointCloudActivity extends Activity implements OnClickListener {
     @Override
     protected void onResume() {
         super.onResume();
-        mTangoUx.start();
+        StartParams params = new StartParams();
+        mTangoUx.start(params);
         if (!mIsTangoServiceConnected) {
             startActivityForResult(
                     Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_MOTION_TRACKING),
@@ -254,7 +253,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                 mIsTangoServiceConnected = true;
             } catch (TangoOutOfDateException outDateEx) {
                 if (mTangoUx != null) {
-                    mTangoUx.onTangoOutOfDate();
+                    mTangoUx.showTangoOutOfDate();
                 }
             } catch (TangoErrorException e) {
                 Toast.makeText(getApplicationContext(), R.string.TangoError, Toast.LENGTH_SHORT)
@@ -396,7 +395,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
             @Override
             public void onTangoEvent(final TangoEvent event) {
                 if(mTangoUx!=null){
-                    mTangoUx.onTangoEvent(event);
+                    mTangoUx.updateTangoEvent(event);
                 }
                 runOnUiThread(new Runnable() {
                     @Override
