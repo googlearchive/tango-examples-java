@@ -1,3 +1,1 @@
 include ':app'
-include ':TangoUtils'
-project(':TangoUtils').projectDir = new File('../TangoUtils/TangoUtils')
