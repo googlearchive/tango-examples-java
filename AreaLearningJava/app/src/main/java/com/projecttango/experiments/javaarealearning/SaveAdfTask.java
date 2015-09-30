@@ -92,7 +92,7 @@ public class SaveAdfTask extends AsyncTask<Void, Integer, String> {
     }
 
     /**
-     * Responds to progress updates events by updating the UI.
+     * Responds to progress update events by updating the UI.
      */
     @Override
     protected void onProgressUpdate(Integer... progress) {
@@ -102,7 +102,7 @@ public class SaveAdfTask extends AsyncTask<Void, Integer, String> {
     }
 
     /**
-     * Dismisses the progress dialog and call the activity.
+     * Dismisses the progress dialog and executes callbacks.
      */
     @Override
     protected void onPostExecute(String adfUuid) {

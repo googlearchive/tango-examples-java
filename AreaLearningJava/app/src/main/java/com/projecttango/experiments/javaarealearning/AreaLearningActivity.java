@@ -433,7 +433,7 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
             return getString(R.string.pose_invalid);
         case TangoPoseData.POSE_VALID:
             return getString(R.string.pose_valid);
-            default:
+        default:
             return getString(R.string.pose_unknown);
         }
     }
@@ -580,7 +580,7 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
      */
     private void showSetADFNameDialog() {
         Bundle bundle = new Bundle();
-        bundle.putString("name", "New ADF");
+        bundle.putString("name",getResources().getString(R.string.default_adf_name) );
         bundle.putString("id", ""); // UUID is generated after the ADF is saved.
 
         FragmentManager manager = getFragmentManager();
@@ -588,13 +588,22 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
         setADFNameDialog.setArguments(bundle);
         setADFNameDialog.show(manager, "ADFNameDialog");
     }
+
+
+    /**
+     * Implements SetADFNameDialog.CallbackListener.
+     */
     @Override
     public void onAdfNameOk(String name, String uuid) {
         saveAdf(name);
     }
 
+
+    /**
+     * Implements SetADFNameDialog.CallbackListener.
+     */
     @Override
     public void onAdfNameCancelled() {
-
+        // Continue running.s
     }
 }
