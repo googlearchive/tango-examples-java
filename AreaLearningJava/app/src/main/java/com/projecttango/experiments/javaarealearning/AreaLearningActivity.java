@@ -148,7 +148,6 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
         mSaveAdfButton = (Button) findViewById(R.id.saveAdf);
         mUUIDTextView = (TextView) findViewById(R.id.uuid);
 
-        mSaveAdfButton.setVisibility(View.GONE);
         // Set up button click listeners
         mFirstPersonButton.setOnClickListener(this);
         mThirdPersonButton.setOnClickListener(this);
@@ -328,10 +327,8 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
                         mAdf2StartPreviousPoseTimeStamp = pose.timestamp;
                         if (pose.statusCode == TangoPoseData.POSE_VALID) {
                             mIsRelocalized = true;
-                            // Set the color to green
                         } else {
                             mIsRelocalized = false;
-                            // Set the color blue
                         }
                     }
 
