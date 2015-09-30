@@ -222,6 +222,9 @@ public class ADFUUIDListViewActivity extends Activity implements SetADFNameDialo
         setADFNameDialog.show(manager, "ADFNameDialog");
     }
 
+    /**
+     * Implements SetADFNameDialog.CallbackListener.
+     */
     @Override
     public void onAdfNameOk(String name, String uuid) {
         TangoAreaDescriptionMetaData metadata = new TangoAreaDescriptionMetaData();
