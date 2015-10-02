@@ -45,15 +45,13 @@ import android.widget.Toast;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 
-import com.projecttango.experiments.javaarealearning.SetADFNameDialog.SetNameCommunicator;
-
 /**
  * Main Activity class for the Area Learning API Sample. Handles the connection to the Tango service
  * and propagation of Tango pose data to OpenGL and Layout views. OpenGL rendering logic is
  * delegated to the {@link ALRenderer} class.
  */
 public class AreaLearningActivity extends Activity implements View.OnClickListener,
-        SetNameCommunicator {
+        SetADFNameDialog.CallbackListener, SaveAdfTask.SaveAdfListener  {
 
     private static final String TAG = AreaLearningActivity.class.getSimpleName();
     private static final int SECONDS_TO_MILLI = 1000;
@@ -79,7 +77,7 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
     private TextView mAdf2DevicePoseDeltaTextView;
     private TextView mAdf2StartPoseDeltaTextView;
 
-    private Button mSaveAdf;
+    private Button mSaveAdfButton;
     private Button mFirstPersonButton;
     private Button mThirdPersonButton;
     private Button mTopDownButton;
@@ -109,6 +107,8 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
     private TangoPoseData[] mPoses;
     private static final int UPDATE_INTERVAL_MS = 100;
     private static final DecimalFormat threeDec = new DecimalFormat("00.000");
+    // Long-running task to save the ADF.
+    private SaveAdfTask mSaveAdfTask;
     public static Object sharedLock = new Object();
 
     @Override
@@ -145,10 +145,9 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
         mApplicationVersionTextView = (TextView) findViewById(R.id.appversion);
         mGLView = (GLSurfaceView) findViewById(R.id.gl_surface_view);
 
-        mSaveAdf = (Button) findViewById(R.id.saveAdf);
+        mSaveAdfButton = (Button) findViewById(R.id.saveAdf);
         mUUIDTextView = (TextView) findViewById(R.id.uuid);
 
-        mSaveAdf.setVisibility(View.GONE);
         // Set up button click listeners
         mFirstPersonButton.setOnClickListener(this);
         mThirdPersonButton.setOnClickListener(this);
@@ -187,8 +186,11 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
             // Set learning mode to config.
             mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_LEARNINGMODE, true);
             // Set the ADF save button visible.
-            mSaveAdf.setVisibility(View.VISIBLE);
-            mSaveAdf.setOnClickListener(this);
+            mSaveAdfButton.setEnabled(false);
+            mSaveAdfButton.setOnClickListener(this);
+        }else {
+            // Hide to save ADF button if leanring mode is off.
+            mSaveAdfButton.setVisibility(View.GONE);
         }
         // Check for Load ADF/Constant Space relocalization mode
         if (mIsConstantSpaceRelocalize) {
@@ -243,7 +245,17 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+                        // Update the debug UI with information about this event.
                         mTangoEventTextView.setText(event.eventKey + ": " + event.eventValue);
+
+                        // When saving an ADF, update the progress bar UI.
+                        if (event.eventType == TangoEvent.EVENT_AREA_LEARNING &&
+                                TangoEvent.KEY_AREA_DESCRIPTION_SAVE_PROGRESS.equals(event.eventKey)) {
+                            int progressPercent = (int) (Double.parseDouble(event.eventValue) * 100);
+                            if (mSaveAdfTask != null) {
+                                mSaveAdfTask.publishProgress(progressPercent);
+                            }
+                        }
                     }
                 });
             }
@@ -315,10 +327,8 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
                         mAdf2StartPreviousPoseTimeStamp = pose.timestamp;
                         if (pose.statusCode == TangoPoseData.POSE_VALID) {
                             mIsRelocalized = true;
-                            // Set the color to green
                         } else {
                             mIsRelocalized = false;
-                            // Set the color blue
                         }
                     }
 
@@ -363,35 +373,13 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
         setADFNameDialog.show(manager, "ADFNameDialog");
     }
 
-    @Override
-    public void onSetName(String name, String uuids) {
-
-        TangoAreaDescriptionMetaData metadata = new TangoAreaDescriptionMetaData();
-        try {
-            mCurrentUUID = mTango.saveAreaDescription();
-            metadata = mTango.loadAreaDescriptionMetaData(mCurrentUUID);
-            metadata.set(TangoAreaDescriptionMetaData.KEY_NAME, name.getBytes());
-            mTango.saveAreaDescriptionMetadata(mCurrentUUID, metadata);
-        } catch (TangoErrorException e) {
-            Toast.makeText(getApplicationContext(), getString(R.string.tango_error),
-                    Toast.LENGTH_SHORT).show();
-            return;
-        } catch (TangoInvalidException e) {
-            Toast.makeText(getApplicationContext(), getString(R.string.tango_invalid),
-                    Toast.LENGTH_SHORT).show();
-            return;
-        }
-        Toast.makeText(getApplicationContext(), getString(R.string.adf_save) + mCurrentUUID,
-                Toast.LENGTH_SHORT).show();
-    }
-
     /**
      * Updates the text view in UI screen with the Pose. Each pose is associated with Target and
      * Base Frame. We need to check for that pair and update our views accordingly.
-     * 
-     * @param pose
      */
     private void updateTextViews() {
+        // Allow clicking of the save button only when Tango is localized to the current ADF.
+        mSaveAdfButton.setEnabled(mIsRelocalized);
         if (mPoses[0] != null
                 && mPoses[0].baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
                 && mPoses[0].targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE) {
@@ -456,31 +444,31 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
         try {
             mTango.disconnect();
         } catch (TangoErrorException e) {
-            Toast.makeText(getApplicationContext(), R.string.tango_error, Toast.LENGTH_SHORT)
-                    .show();
+            Toast.makeText(getApplicationContext(), R.string.tango_error, Toast.LENGTH_SHORT).show();
         }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        // Clear the relocalization state: we don't know where the device has been since our app was paused
+        mIsRelocalized = false;
         try {
             setUpTangoListeners();
         } catch (TangoErrorException e) {
-            Toast.makeText(getApplicationContext(), R.string.tango_error, Toast.LENGTH_SHORT)
-                    .show();
+            Toast.makeText(getApplicationContext(), R.string.tango_error, Toast.LENGTH_SHORT).show();
         } catch (SecurityException e) {
-            Toast.makeText(getApplicationContext(), R.string.no_permissions, Toast.LENGTH_SHORT)
-                    .show();
+            Toast.makeText(getApplicationContext(), R.string.no_permissions, Toast.LENGTH_SHORT).show();
         }
+        // Connect to the tango service (start receiving pose updates).
         try {
             mTango.connect(mConfig);
         } catch (TangoOutOfDateException e) {
-            Toast.makeText(getApplicationContext(), R.string.tango_out_of_date_exception,
-                    Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), R.string.tango_out_of_date_exception, Toast.LENGTH_SHORT).show();
         } catch (TangoErrorException e) {
-            Toast.makeText(getApplicationContext(), R.string.tango_error, Toast.LENGTH_SHORT)
-                    .show();
+            Toast.makeText(getApplicationContext(), R.string.tango_error, Toast.LENGTH_SHORT).show();
+        } catch (TangoInvalidException e) {
+            Toast.makeText(getApplicationContext(), R.string.tango_invalid, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -503,7 +491,8 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
             mRenderer.setThirdPersonView();
             break;
         case R.id.saveAdf:
-            saveAdf();
+            // Query the user for an ADF name and save if OK was clicked.
+            showSetADFNameDialog();
             break;
         default:
             Log.w(TAG, "Unknown button click");
@@ -550,5 +539,71 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
                 }
             }
         }).start();
+    }
+
+    /**
+     * Save the current Area Description File.
+     * Performs saving on a background thread and displays a progress dialog.
+     */
+    private void saveAdf(String adfName) {
+        mSaveAdfTask = new SaveAdfTask(this, this, mTango, adfName);
+        mSaveAdfTask.execute();
+    }
+
+    /**
+     * Handles failed save from mSaveAdfTask.
+     */
+    @Override
+    public void onSaveAdfFailed(String adfName) {
+        String toastMessage = String.format(
+                getResources().getString(R.string.save_adf_failed_toast_format),
+                adfName);
+        Toast.makeText(this, toastMessage, Toast.LENGTH_LONG).show();
+        mSaveAdfTask = null;
+    }
+
+    /**
+     * Handles successful save from mSaveAdfTask.
+     */
+    @Override
+    public void onSaveAdfSuccess(String adfName, String adfUuid) {
+        String toastMessage = String.format(
+                getResources().getString(R.string.save_adf_success_toast_format),
+                adfName, adfUuid);
+        Toast.makeText(this, toastMessage, Toast.LENGTH_LONG).show();
+        mSaveAdfTask = null;
+        finish();
+    }
+
+    /**
+     * Shows a dialog for setting the ADF name.
+     */
+    private void showSetADFNameDialog() {
+        Bundle bundle = new Bundle();
+        bundle.putString("name",getResources().getString(R.string.default_adf_name) );
+        bundle.putString("id", ""); // UUID is generated after the ADF is saved.
+
+        FragmentManager manager = getFragmentManager();
+        SetADFNameDialog setADFNameDialog = new SetADFNameDialog();
+        setADFNameDialog.setArguments(bundle);
+        setADFNameDialog.show(manager, "ADFNameDialog");
+    }
+
+
+    /**
+     * Implements SetADFNameDialog.CallbackListener.
+     */
+    @Override
+    public void onAdfNameOk(String name, String uuid) {
+        saveAdf(name);
+    }
+
+
+    /**
+     * Implements SetADFNameDialog.CallbackListener.
+     */
+    @Override
+    public void onAdfNameCancelled() {
+        // Continue running.s
     }
 }

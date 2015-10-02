@@ -35,12 +35,16 @@ import android.widget.TextView;
 public class SetADFNameDialog extends DialogFragment implements OnClickListener {
     private EditText mNameEditText;
     private TextView mUUIDTextView;
-    SetNameCommunicator mCommunicator;
+    CallbackListener mCallbackListener;
 
+    interface CallbackListener {
+        public void onAdfNameOk(String name, String uuid);
+        public void onAdfNameCancelled();
+    }
     @Override
     public void onAttach(Activity activity) {
         super.onAttach(activity);
-        mCommunicator = (SetNameCommunicator) activity;
+        mCallbackListener = (CallbackListener) activity;
     }
 
     @Override
@@ -68,17 +72,14 @@ public class SetADFNameDialog extends DialogFragment implements OnClickListener 
     public void onClick(View v) {
         switch (v.getId()) {
         case R.id.Ok:
-            mCommunicator.onSetName(mNameEditText.getText().toString(),
+            mCallbackListener.onAdfNameOk(mNameEditText.getText().toString(),
                     mUUIDTextView.getText().toString());
             dismiss();
             break;
         case R.id.cancel:
+            mCallbackListener.onAdfNameCancelled();
             dismiss();
             break;
         }
-    }
-
-    interface SetNameCommunicator {
-        public void onSetName(String name, String uuid);
     }
 }
