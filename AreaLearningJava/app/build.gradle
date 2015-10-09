@@ -38,6 +38,7 @@ if (project.hasProperty("Tango.catkin_devel_prefix")) {
 dependencies {
     compile fileTree(dir: external_lib_prefix + '/jar', include: ['**/*.jar'])
     compile(name: 'TangoUtils', ext: 'aar')
+    compile 'org.rajawali3d:rajawali:1.0.294-SNAPSHOT@aar'
 }
 
 repositories{

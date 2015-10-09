@@ -47,6 +47,8 @@ import com.google.atap.tangoservice.TangoXyzIjData;
 public class MainActivity extends Activity {
 	private TangoCameraPreview tangoCameraPreview;
 	private Tango mTango;
+	private boolean mIsConnected;
+	private boolean mIsPermissionGranted;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -70,6 +72,7 @@ public class MainActivity extends Activity {
 				finish();
 			} else {
 				startCameraPreview();
+				mIsPermissionGranted = true;
 			}
 		}
 	}
@@ -82,6 +85,7 @@ public class MainActivity extends Activity {
 		// Use default configuration for Tango Service.
 		TangoConfig config = mTango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
 		mTango.connect(config);
+		mIsConnected = true;
 		
 		// No need to add any coordinate frame pairs since we are not using 
 		// pose data. So just initialize.
@@ -117,6 +121,18 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onPause() {
 		super.onPause();
-		mTango.disconnect();
+		if(mIsConnected) {
+			mTango.disconnect();
+			tangoCameraPreview.disconnectFromTangoCamera();
+			mIsConnected = false;
+		}
+	}
+
+	@Override
+	protected void onResume() {
+		super.onResume();
+		if (!mIsConnected && mIsPermissionGranted) {
+			startCameraPreview();
+		}
 	}
 }

@@ -29,22 +29,23 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 /**
- * This Class shows a dialog to set the name of an ADF. When you press okay
- * SetNameLocation Call back is called where setting the name should be handled.
+ * Queries the user for an ADF name, optionally showing the ADF UUID.
  */
 public class SetADFNameDialog extends DialogFragment implements OnClickListener {
-    private EditText mNameEditText;
-    private TextView mUUIDTextView;
+
+    EditText mNameEditText;
+    TextView mUUIDTextView;
     CallbackListener mCallbackListener;
 
     interface CallbackListener {
         public void onAdfNameOk(String name, String uuid);
         public void onAdfNameCancelled();
     }
+
     @Override
     public void onAttach(Activity activity) {
         super.onAttach(activity);
-        mCallbackListener = (CallbackListener) activity;
+        mCallbackListener = (CallbackListener)activity;
     }
 
     @Override
@@ -72,8 +73,9 @@ public class SetADFNameDialog extends DialogFragment implements OnClickListener 
     public void onClick(View v) {
         switch (v.getId()) {
         case R.id.Ok:
-            mCallbackListener.onAdfNameOk(mNameEditText.getText().toString(),
-                    mUUIDTextView.getText().toString());
+            mCallbackListener.onAdfNameOk(
+                mNameEditText.getText().toString(),
+                mUUIDTextView.getText().toString());
             dismiss();
             break;
         case R.id.cancel:

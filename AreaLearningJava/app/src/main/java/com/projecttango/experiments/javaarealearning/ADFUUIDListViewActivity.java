@@ -40,6 +40,7 @@ import android.widget.Toast;
 import java.io.File;
 import java.util.Arrays;
 
+
 /**
  * This class lets you manage ADFs between this class's Application Package folder and API private
  * space. This show cases mainly three things: Import, Export, Delete an ADF file from API private
@@ -241,13 +242,12 @@ public class ADFUUIDListViewActivity extends Activity implements SetADFNameDialo
         mUUIDListView.setAdapter(mADFAdapter);
     }
 
-
     /**
      * Implements SetADFNameDialog.CallbackListener.
      */
     @Override
     public void onAdfNameCancelled() {
-    // Nothing to do here.
+        // Nothing to do here.
     }
 }
 
