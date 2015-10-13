@@ -51,6 +51,7 @@ public class AreaLearningRajawaliRenderer extends RajawaliRenderer {
 
     // Latest available device pose;
     private Pose mDevicePose = new Pose(Vector3.ZERO, Quaternion.getIdentity());
+    private boolean mPoseUpdated = false;
 
     public AreaLearningRajawaliRenderer(Context context) {
         super(context);
@@ -60,17 +61,17 @@ public class AreaLearningRajawaliRenderer extends RajawaliRenderer {
 
     @Override
     protected void initScene() {
-        Grid grid = new Grid(100, 1);
+        Grid grid = new Grid(100, 1, 1, 0xFFCCCCCC);
         grid.setPosition(0, -1.3f, 0);
         getCurrentScene().addChild(grid);
 
-        mFrustumAxes = new FrustumAxes();
+        mFrustumAxes = new FrustumAxes(3);
         getCurrentScene().addChild(mFrustumAxes);
 
-        mBlueTrajectory = new Trajectory(Color.BLUE);
+        mBlueTrajectory = new Trajectory(Color.BLUE, 2);
         getCurrentScene().addChild(mBlueTrajectory);
 
-        mGreenTrajectory = new Trajectory(Color.GREEN);
+        mGreenTrajectory = new Trajectory(Color.GREEN, 2);
         getCurrentScene().addChild(mGreenTrajectory);
 
         getCurrentScene().setBackgroundColor(Color.WHITE);
@@ -86,18 +87,21 @@ public class AreaLearningRajawaliRenderer extends RajawaliRenderer {
         // Update the scene objects with the latest device position and orientation information.
         // Synchronize to avoid concurrent access from the Tango callback thread below.
         synchronized (this) {
-            mFrustumAxes.setPosition(mDevicePose.getPosition());
-            mFrustumAxes.setOrientation(mDevicePose.getOrientation());
-            if(mIsRelocalized){
-                if (mGreenTrajectory.getLastPoint().distanceTo2(mDevicePose.getPosition()) > THRESHOLD) {
-                    mGreenTrajectory.addSegmentTo(mDevicePose.getPosition());
+            if (mPoseUpdated) {
+                mPoseUpdated = false;
+                mFrustumAxes.setPosition(mDevicePose.getPosition());
+                mFrustumAxes.setOrientation(mDevicePose.getOrientation());
+                if (mIsRelocalized) {
+                    if (mGreenTrajectory.getLastPoint().distanceTo2(mDevicePose.getPosition()) > THRESHOLD) {
+                        mGreenTrajectory.addSegmentTo(mDevicePose.getPosition());
+                    }
+                } else {
+                    if (mBlueTrajectory.getLastPoint().distanceTo2(mDevicePose.getPosition()) > THRESHOLD) {
+                        mBlueTrajectory.addSegmentTo(mDevicePose.getPosition());
+                    }
                 }
-            } else {
-                if (mBlueTrajectory.getLastPoint().distanceTo2(mDevicePose.getPosition()) > THRESHOLD) {
-                    mBlueTrajectory.addSegmentTo(mDevicePose.getPosition());
-                }
+                mTouchViewHandler.updateCamera(mDevicePose.getPosition(), mDevicePose.getOrientation());
             }
-            mTouchViewHandler.updateCamera(mDevicePose.getPosition(), mDevicePose.getOrientation());
         }
     }
 
@@ -113,6 +117,7 @@ public class AreaLearningRajawaliRenderer extends RajawaliRenderer {
     public synchronized void updateDevicePose(TangoPoseData tangoPoseData, boolean isRelocalized) {
         mDevicePose = ScenePoseCalcuator.toOpenGLPose(tangoPoseData);
         mIsRelocalized = isRelocalized;
+        mPoseUpdated = true;
     }
 
     @Override

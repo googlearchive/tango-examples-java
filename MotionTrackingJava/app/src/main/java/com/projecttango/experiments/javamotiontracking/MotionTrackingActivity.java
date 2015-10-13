@@ -39,6 +39,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.rajawali3d.surface.IRajawaliSurface;
 import org.rajawali3d.surface.RajawaliSurfaceView;
 
 import java.text.DecimalFormat;
@@ -99,6 +100,7 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
         // OpenGL view where all of the graphics are drawn
         RajawaliSurfaceView glView = (RajawaliSurfaceView) findViewById(R.id.gl_surface_view);
         glView.setEGLContextClientVersion(2);
+        glView.setRenderMode(IRajawaliSurface.RENDERMODE_CONTINUOUSLY);
         glView.setSurfaceRenderer(renderer);
         return renderer;
 

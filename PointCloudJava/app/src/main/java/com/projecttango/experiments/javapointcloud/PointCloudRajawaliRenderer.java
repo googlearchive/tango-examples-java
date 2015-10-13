@@ -51,7 +51,6 @@ public class PointCloudRajawaliRenderer extends RajawaliRenderer {
     private Points mPoints;
     private PointCloudManager mPointCloudManager;
 
-
     public PointCloudRajawaliRenderer(Context context, PointCloudManager pointCloudManager) {
         super(context);
         mTouchViewHandler = new TouchViewHandler(mContext, getCurrentCamera());
@@ -61,11 +60,11 @@ public class PointCloudRajawaliRenderer extends RajawaliRenderer {
 
     @Override
     protected void initScene() {
-        mGrid = new Grid(100, 1);
+        mGrid = new Grid(100, 1, 1, 0xFFCCCCCC);
         mGrid.setPosition(0, -1.3f, 0);
         getCurrentScene().addChild(mGrid);
 
-        mFrustumAxes = new FrustumAxes();
+        mFrustumAxes = new FrustumAxes(3);
         getCurrentScene().addChild(mFrustumAxes);
 
         mPoints = new Points(MAX_NUMBER_OF_POINTS);

@@ -15,12 +15,16 @@
  */
 package com.projecttango.rajawali.renderables;
 
+import android.opengl.GLES20;
+
+import org.rajawali3d.Geometry3D;
 import org.rajawali3d.Object3D;
 import org.rajawali3d.materials.Material;
 import org.rajawali3d.math.vector.Vector3;
-import org.rajawali3d.primitives.Line3D;
 
-import java.util.Stack;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 
 /**
  * Rajawali object showing the Trajectory of the Project Tango
@@ -28,25 +32,55 @@ import java.util.Stack;
  * passing translation data obtained from Tango Pose Data.
  */
 public class Trajectory extends Object3D {
+    private int mMaxNumberOfVertices = 9000;
     private Vector3 mLastPoint = new Vector3();
-    private Material mTrajectorymaterial;
-    private float mThickness = 2f;
+    private FloatBuffer mVertexBuffer;
+    private int mTrajectoryCount;
+    public Trajectory(int color, float thickness) {
+        super();
+        init(true);
+        Material m = new Material();
+        m.setColor(color);
+        setMaterial(m);
+        mVertexBuffer = ByteBuffer
+                .allocateDirect(mMaxNumberOfVertices * Geometry3D.FLOAT_SIZE_BYTES)
+                .order(ByteOrder.nativeOrder()).asFloatBuffer();
 
-    public Trajectory(int color) {
-        mTrajectorymaterial = new Material();
-        mTrajectorymaterial.setColor(color);
     }
 
-    public void addSegmentTo(Vector3 newPoint) {
-        Stack<Vector3> points = new Stack<Vector3>();
-        points.add(mLastPoint);
-        points.add(newPoint);
-        Line3D line = new Line3D(points, mThickness);
-        line.setMaterial(mTrajectorymaterial);
-        addChild(line);
-        mLastPoint = newPoint;
+    // Initialize the buffers for Trajectory primitive.
+    // Since only vertex and Index buffers are used, we only initialize them using setdata call.
+    protected void init(boolean createVBOs) {
+        float[] vertices = new float[mMaxNumberOfVertices*3];
+        int[] indices = new int[mMaxNumberOfVertices];
+        for(int i = 0; i < indices.length; ++i){
+            indices[i] = i;
+        }
+        setData(vertices, GLES20.GL_STATIC_DRAW,
+                null, GLES20.GL_STATIC_DRAW,
+                null, GLES20.GL_STATIC_DRAW,
+                null, GLES20.GL_STATIC_DRAW,
+                indices, GLES20.GL_STATIC_DRAW,
+                createVBOs);
     }
 
+    // Update the geometry of the Trajectory once new vertex is available.
+    public void addSegmentTo(Vector3 vertex) {
+        mVertexBuffer.position(mTrajectoryCount * 3);
+        mVertexBuffer.put((float) vertex.x);
+        mVertexBuffer.put((float) vertex.y);
+        mVertexBuffer.put((float) vertex.z);
+        mTrajectoryCount++;
+        mLastPoint = vertex.clone();
+        mGeometry.setNumIndices(mTrajectoryCount);
+        mGeometry.getVertices().position(0);
+        mGeometry.changeBufferData(mGeometry.getVertexBufferInfo(), mVertexBuffer, 0, mTrajectoryCount * 3);
+    }
+
+    public void preRender() {
+        super.preRender();
+        setDrawingMode(GLES20.GL_LINE_STRIP);
+    }
     public Vector3 getLastPoint() {
         return mLastPoint;
     }

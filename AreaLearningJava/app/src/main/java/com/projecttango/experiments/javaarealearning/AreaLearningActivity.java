@@ -48,6 +48,7 @@ import java.util.ArrayList;
 
 import com.projecttango.tangoutils.TangoPoseUtilities;
 
+import org.rajawali3d.surface.IRajawaliSurface;
 import org.rajawali3d.surface.RajawaliSurfaceView;
 
 /**
@@ -242,6 +243,7 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
         // OpenGL view where all of the graphics are drawn
         RajawaliSurfaceView glView = (RajawaliSurfaceView) findViewById(R.id.gl_surface_view);
         glView.setEGLContextClientVersion(2);
+        glView.setRenderMode(IRajawaliSurface.RENDERMODE_CONTINUOUSLY);
         glView.setSurfaceRenderer(renderer);
         return renderer;
     }

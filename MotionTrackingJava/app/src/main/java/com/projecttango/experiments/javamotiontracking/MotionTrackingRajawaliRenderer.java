@@ -51,7 +51,8 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
     private TouchViewHandler touchViewHandler;
 
     // Latest available device pose;
-    private Pose devicePose = new Pose(Vector3.ZERO, Quaternion.getIdentity());
+    private Pose mDevicePose = new Pose(Vector3.ZERO, Quaternion.getIdentity());
+    private boolean mPoseUpdated = false;
 
     public MotionTrackingRajawaliRenderer(Context context) {
         super(context);
@@ -60,14 +61,14 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
 
     @Override
     protected void initScene() {
-        Grid grid = new Grid(100, 1);
+        Grid grid = new Grid(100, 1, 1, 0xFFCCCCCC);
         grid.setPosition(0, -1.3f, 0);
         getCurrentScene().addChild(grid);
 
-        mFrustumAxes = new FrustumAxes();
+        mFrustumAxes = new FrustumAxes(3);
         getCurrentScene().addChild(mFrustumAxes);
 
-        mTrajectory = new Trajectory(Color.BLUE);
+        mTrajectory = new Trajectory(Color.BLUE, 2);
         getCurrentScene().addChild(mTrajectory);
 
         getCurrentScene().setBackgroundColor(Color.WHITE);
@@ -83,14 +84,17 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
         // Update the scene objects with the latest device position and orientation information.
         // Synchronize to avoid concurrent access from the Tango callback thread below.
         synchronized (this) {
-            mFrustumAxes.setPosition(devicePose.getPosition());
-            mFrustumAxes.setOrientation(devicePose.getOrientation());
+            if (mPoseUpdated) {
+                mPoseUpdated = false;
+                mFrustumAxes.setPosition(mDevicePose.getPosition());
+                mFrustumAxes.setOrientation(mDevicePose.getOrientation());
 
-            if (mTrajectory.getLastPoint().distanceTo2(devicePose.getPosition()) > THRESHOLD) {
-                mTrajectory.addSegmentTo(devicePose.getPosition());
+                if (mTrajectory.getLastPoint().distanceTo2(mDevicePose.getPosition()) > THRESHOLD) {
+                    mTrajectory.addSegmentTo(mDevicePose.getPosition());
+                }
+
+                touchViewHandler.updateCamera(mDevicePose.getPosition(), mDevicePose.getOrientation());
             }
-
-            touchViewHandler.updateCamera(devicePose.getPosition(), devicePose.getOrientation());
         }
     }
 
@@ -100,7 +104,8 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
      * concurrent access from the OpenGL thread above.
      */
     public synchronized void updateDevicePose(TangoPoseData tangoPoseData) {
-        devicePose = ScenePoseCalcuator.toOpenGLPose(tangoPoseData);
+        mDevicePose = ScenePoseCalcuator.toOpenGLPose(tangoPoseData);
+        mPoseUpdated = true;
     }
 
     @Override
