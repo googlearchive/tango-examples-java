@@ -337,21 +337,19 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         }).start();
     }
 
-    private void setupExtrinsics(){
+    private void setupExtrinsics() {
         TangoCoordinateFramePair framePair = new TangoCoordinateFramePair();
         framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_IMU;
         framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR;
         TangoPoseData imuTColorCameraPose = mTango.getPoseAtTime(0.0,framePair);
 
-        framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_IMU;
         framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH;
         TangoPoseData imuTDepthCameraPose = mTango.getPoseAtTime(0.0,framePair);
 
-        framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_IMU;
         framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_DEVICE;
         TangoPoseData imuTDevicePose = mTango.getPoseAtTime(0.0,framePair);
 
-        mRenderer.setupExtrinsics(imuTColorCameraPose, imuTDepthCameraPose, imuTDevicePose);
+        mRenderer.setupExtrinsics(imuTDevicePose, imuTColorCameraPose, imuTDepthCameraPose);
     }
 
     /*

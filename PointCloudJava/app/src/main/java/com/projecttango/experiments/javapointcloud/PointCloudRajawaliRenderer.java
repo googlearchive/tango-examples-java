@@ -132,15 +132,14 @@ public class PointCloudRajawaliRenderer extends RajawaliRenderer {
 
     /**
      * Sets the extrinsics between different sensors of a Tango Device
+     *
+     * @param imuTDevicePose : Pose transformation between Device and IMU sensor.
      * @param imuTColorCameraPose : Pose transformation between Color camera and IMU sensor.
      * @param imuTDepthCameraPose : Pose transformation between Depth camera and IMU sensor.
-     * @param imuTDevicePose : Pose transformation between Device and IMU sensor.
      */
-    public void setupExtrinsics(TangoPoseData imuTColorCameraPose, TangoPoseData imuTDepthCameraPose, TangoPoseData imuTDevicePose) {
-        Matrix4 imuTColorCamera = ScenePoseCalcuator.tangoPoseToMatrix(imuTColorCameraPose);
-        Matrix4 imuTDevice = ScenePoseCalcuator.tangoPoseToMatrix(imuTDevicePose);
-        Matrix4 imuTDepthCamera = ScenePoseCalcuator.tangoPoseToMatrix(imuTDepthCameraPose);
-        mScenePoseCalcuator.setupExtrinsics(imuTColorCamera, imuTDepthCamera, imuTDevice);
+    public void setupExtrinsics(TangoPoseData imuTDevicePose, TangoPoseData imuTColorCameraPose,
+                                TangoPoseData imuTDepthCameraPose) {
+        mScenePoseCalcuator.setupExtrinsics(imuTDevicePose, imuTColorCameraPose, imuTDepthCameraPose);
     }
 
 }

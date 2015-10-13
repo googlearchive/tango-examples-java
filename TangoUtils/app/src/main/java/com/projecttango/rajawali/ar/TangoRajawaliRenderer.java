@@ -16,10 +16,13 @@
 package com.projecttango.rajawali.ar;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.google.atap.tangoservice.Tango;
 import com.google.atap.tangoservice.TangoCameraIntrinsics;
 import com.google.atap.tangoservice.TangoCoordinateFramePair;
+import com.google.atap.tangoservice.TangoErrorException;
+import com.google.atap.tangoservice.TangoInvalidException;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.projecttango.rajawali.Pose;
 import com.projecttango.rajawali.ScenePoseCalcuator;
@@ -30,6 +33,8 @@ import org.rajawali3d.materials.textures.StreamingTexture;
 import org.rajawali3d.math.Matrix4;
 import org.rajawali3d.primitives.ScreenQuad;
 import org.rajawali3d.renderer.RajawaliRenderer;
+
+import javax.microedition.khronos.opengles.GL10;
 
 /**
  * This is a specialization of <code>RajawaliRenderer</code> that makes it easy to build
@@ -70,11 +75,11 @@ public abstract class TangoRajawaliRenderer extends RajawaliRenderer {
     private ScreenQuad mBackgroundQuad;
     private boolean mIsCameraConfigured = false;
 
-    protected ScenePoseCalcuator scenePoseCalcuator;
+    protected ScenePoseCalcuator mScenePoseCalcuator;
 
     public TangoRajawaliRenderer(Context context) {
         super(context);
-        scenePoseCalcuator = new ScenePoseCalcuator();
+        mScenePoseCalcuator = new ScenePoseCalcuator();
     }
 
     /**
@@ -105,34 +110,52 @@ public abstract class TangoRajawaliRenderer extends RajawaliRenderer {
 
         synchronized (this) {
             if (mTango != null) {
-                if (mUpdatePending) {
-                    mLastRGBFrameTimestamp = updateTexture();
-                    mUpdatePending = false;
-                }
-                if (mLastRGBFrameTimestamp != mLastSceneCameraFrameTimestamp) {
-                    // We delay the camera set-up until now because if we do it earlier (i.e.: when the
-                    // camera is connected to the renderer) the Tango service may still not have the
-                    // necessary intrinsic and extrinsic transformation information available
-                    if (!mIsCameraConfigured) {
-                        configureCamera();
-                        mIsCameraConfigured = true;
+                try {
+                    if (mUpdatePending) {
+                        mLastRGBFrameTimestamp = updateTexture();
+                        mUpdatePending = false;
                     }
+                    if (mLastRGBFrameTimestamp != mLastSceneCameraFrameTimestamp) {
+                        // We delay the camera set-up until now because if we do it earlier (i.e.: when the
+                        // camera is connected to the renderer) the Tango service may still not have the
+                        // necessary intrinsic and extrinsic transformation information available
+                        if (!mIsCameraConfigured) {
+                            configureCamera();
+                            mIsCameraConfigured = true;
+                        }
 
-                    // Calculate the device pose at the camera frame update time
-                    TangoPoseData lastFramePose =
-                            mTango.getPoseAtTime(mLastRGBFrameTimestamp, TANGO_WORLD_T_DEVICE);
-                    // Fall back to latest available time if for some reason that fails
-                    if (lastFramePose.statusCode != TangoPoseData.POSE_VALID) {
-                        lastFramePose = mTango.getPoseAtTime(0, TANGO_WORLD_T_DEVICE);
+                        // Calculate the device pose at the camera frame update time
+                        TangoPoseData lastFramePose =
+                                mTango.getPoseAtTime(mLastRGBFrameTimestamp, TANGO_WORLD_T_DEVICE);
+                        // Fall back to latest available time if for some reason that fails
+                        if (lastFramePose.statusCode != TangoPoseData.POSE_VALID) {
+                            lastFramePose = mTango.getPoseAtTime(0, TANGO_WORLD_T_DEVICE);
+                        } else {
+                            Pose sceneCameraPose = mScenePoseCalcuator.toOpenGLCameraPose(lastFramePose);
+                            updateCameraPose(sceneCameraPose);
+                            mLastSceneCameraFrameTimestamp = mLastRGBFrameTimestamp;
+                        }
                     }
-                    if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
-                        Pose sceneCameraPose = scenePoseCalcuator.toOpenGLCameraPose(lastFramePose);
-                        updateCameraPose(sceneCameraPose);
-                        mLastSceneCameraFrameTimestamp = mLastRGBFrameTimestamp;
-                    }
+                } catch (TangoInvalidException ex) {
+                    Log.e(TAG, "Error while updating texture!", ex);
+                } catch (TangoErrorException ex) {
+                    Log.e(TAG, "Error while updating texture!", ex);
                 }
             }
         }
+    }
+
+    /**
+     * Override onRenderSurfaceSizeChanged() so that it will be called after onSurfaceCreated,
+     * nested view get reset or resized, including activity get paused and resumed, in this function
+     * sets mIsCameracConfigured to false since Rajawali will reset the scene camera if SurfaceSizeChanged
+     * get called.
+     */
+    @Override
+    public void onRenderSurfaceSizeChanged(GL10 gl, int width, int height) {
+        super.onRenderSurfaceSizeChanged(gl, width, height);
+        mConnectedTextureId = -1;
+        mIsCameraConfigured = false;
     }
 
     /**
@@ -198,40 +221,18 @@ public abstract class TangoRajawaliRenderer extends RajawaliRenderer {
 
         // Configure the Rajawali Scene camera projection to match the Tango camera intrinsic
         TangoCameraIntrinsics intrinsics = mTango.getCameraIntrinsics(mCameraId);
-        Matrix4 projectionMatrix = scenePoseCalcuator.calculateProjectionMatrix(
+        Matrix4 projectionMatrix = mScenePoseCalcuator.calculateProjectionMatrix(
                 intrinsics.width, intrinsics.height, intrinsics.fx, intrinsics.fy, intrinsics.cx,
                 intrinsics.cy);
         getCurrentCamera().setProjectionMatrix(projectionMatrix);
+    }
 
-        // Configure the scene pose calculator with the transformation between the selected
-        // camera and the device.
-        // Note that this requires going through the IMU since the Tango service can't calculate
-        // the transform between the camera and the device directly
-
-        // 1- Create Camera to IMU Transform
-        TangoCoordinateFramePair framePair = new TangoCoordinateFramePair();
-        switch (mCameraId) {
-            case TangoCameraIntrinsics.TANGO_CAMERA_COLOR:
-                framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR;
-                break;
-            case TangoCameraIntrinsics.TANGO_CAMERA_FISHEYE:
-                framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_CAMERA_FISHEYE;
-                break;
-            default:
-                throw new RuntimeException("Unsupported camera ID: " + mCameraId);
-        }
-        framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_IMU;
-        final TangoPoseData imuTrgbPose = mTango.getPoseAtTime(0.0, framePair);
-        Matrix4 imuTrgb = ScenePoseCalcuator.tangoPoseToMatrix(imuTrgbPose);
-
-        // 2- Create Device to IMU Transform and invert
-        framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_IMU;
-        framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_DEVICE;
-        final TangoPoseData imuTdevicePose = mTango.getPoseAtTime(0.0, framePair);
-        Matrix4 imuTdev = ScenePoseCalcuator.tangoPoseToMatrix(imuTdevicePose);
-
-        // 3- Combine both to get the transform from the device pose to the RGB camera pose
-        scenePoseCalcuator.setupExtrinsics(imuTrgb, imuTdev);
+    /**
+     * Set-up device to sensors transforms
+     */
+    public void setupExtrinsics(TangoPoseData imuTDevicePose, TangoPoseData imuTColorCameraPose,
+                                 TangoPoseData imuTDepthCameraPose) {
+        mScenePoseCalcuator.setupExtrinsics(imuTDevicePose, imuTColorCameraPose, imuTDepthCameraPose);
     }
 
     /**
