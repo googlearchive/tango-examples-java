@@ -24,7 +24,6 @@ import android.content.Context;
 import android.widget.Toast;
 
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * This class interfaces a Tango Object and maintains a full list of ADF UUIds. Whenever an adf is
