@@ -16,6 +16,10 @@
 
 package com.projecttango.experiments.javamotiontracking;
 
+import com.firebase.client.DataSnapshot;
+import com.firebase.client.Firebase;
+import com.firebase.client.FirebaseError;
+import com.firebase.client.ValueEventListener;
 import com.google.atap.tangoservice.Tango;
 import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
 import com.google.atap.tangoservice.TangoConfig;
@@ -73,6 +77,10 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
     private TangoPoseData mPose;
     private static final int UPDATE_INTERVAL_MS = 100;
     public static Object sharedLock = new Object();
+
+    private static final String FIREBASE_URL = "https://flickering-torch-1816.firebaseio.com";
+    private Firebase mFirebaseRef;
+    private ValueEventListener mConnectedListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -141,6 +149,23 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
         // Display the library version for debug purposes
         mTangoServiceVersionTextView.setText(mConfig.getString("tango_service_library_version"));
         startUIThread();
+
+        mFirebaseRef = new Firebase(FIREBASE_URL);
+        mConnectedListener = mFirebaseRef.getRoot().child(".info/connected").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                boolean connected = (Boolean) dataSnapshot.getValue();
+                if (connected) {
+                    Toast.makeText(MotionTrackingActivity.this, "Connected to Firebase", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(MotionTrackingActivity.this, "Disconnected from Firebase", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(FirebaseError firebaseError) {
+            }
+        });
     }
 
     /**
@@ -254,6 +279,7 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        mFirebaseRef.getRoot().child(".info/connected").removeEventListener(mConnectedListener);
     }
 
     @Override

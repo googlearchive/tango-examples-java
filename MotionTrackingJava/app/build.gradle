@@ -21,6 +21,12 @@ android {
     lintOptions {
         abortOnError false
     }
+
+    packagingOptions {
+        exclude 'META-INF/LICENSE'
+        exclude 'META-INF/LICENSE-FIREBASE.txt'
+        exclude 'META-INF/NOTICE'
+    }
 }
 
 if (project.hasProperty("Tango.signing")
@@ -39,6 +45,7 @@ if (project.hasProperty("Tango.catkin_devel_prefix")) {
 dependencies {
     compile fileTree(dir: external_lib_prefix + '/jar', include: ['**/*.jar'])
     compile(name: 'TangoUtils', ext: 'aar')
+    compile 'com.firebase:firebase-client-android:2.4.0+'
 }
 
 repositories{
