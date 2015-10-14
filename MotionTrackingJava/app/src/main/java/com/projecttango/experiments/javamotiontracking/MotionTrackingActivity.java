@@ -69,6 +69,7 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
     private TextView mTangoEventTextView;
     private Button mMotionResetButton;
     private float mPreviousTimeStamp;
+    private double mPreviousSyncedTimestamp;
     private int mPreviousPoseStatus;
     private int count;
     private float mDeltaTime;
@@ -152,13 +153,15 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
         // Display the library version for debug purposes
         mTangoServiceVersionTextView.setText(mConfig.getString("tango_service_library_version"));
         startUIThread();
+        firebaseSetup();
+    }
 
+    private void firebaseSetup() {
         mUserPose = new UserPose();
         SharedPreferences prefs = getApplication().getSharedPreferences("DataPrefs", 0);
         String userId = prefs.getString("userId", null);
         if (userId == null) {
             Random r = new Random();
-            // Assign a random user name if we don't have one saved.
             userId = Integer.toString(r.nextInt(100000));
             mUserPose.setUserId(userId);
             prefs.edit().putString("userId", userId).commit();
@@ -218,8 +221,14 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
                     // Update the OpenGL renderable objects with the new Tango Pose
                     // data
                     float[] translation = pose.getTranslationAsFloats();
-                    mUserPose.setTranslation(translation);
-                    if(!mRenderer.isValid()){
+
+                    if (pose.timestamp - mPreviousSyncedTimestamp > 0.5) {
+                        mUserPose.setTranslation(translation);
+                        mFirebaseRef.setValue(mUserPose);
+                        mPreviousSyncedTimestamp = pose.timestamp;
+                    }
+
+                    if (!mRenderer.isValid()) {
                         return;
                     }
                     mRenderer.getTrajectory().updateTrajectory(translation);
@@ -303,7 +312,6 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
         switch (v.getId()) {
         case R.id.first_person_button:
             mRenderer.setFirstPersonView();
-            pushData();
             break;
         case R.id.top_down_button:
             mRenderer.setTopDownView();
@@ -318,10 +326,6 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
             Log.w(TAG, "Unknown button click");
             return;
         }
-    }
-
-    private void pushData() {
-        mFirebaseRef.setValue(mUserPose);
     }
 
     @Override
