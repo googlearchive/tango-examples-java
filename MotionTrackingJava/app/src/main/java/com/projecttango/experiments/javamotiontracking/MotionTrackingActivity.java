@@ -32,6 +32,7 @@ import com.google.atap.tangoservice.TangoXyzIjData;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.opengl.GLSurfaceView;
@@ -45,6 +46,7 @@ import android.widget.Toast;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Random;
 
 /**
  * Main Activity class for the Motion Tracking API Sample. Handles the connection to the Tango
@@ -78,9 +80,10 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
     private static final int UPDATE_INTERVAL_MS = 100;
     public static Object sharedLock = new Object();
 
-    private static final String FIREBASE_URL = "https://flickering-torch-1816.firebaseio.com";
+    private static final String FIREBASE_URL = "https://flickering-torch-1816.firebaseio.com/users";
     private Firebase mFirebaseRef;
     private ValueEventListener mConnectedListener;
+    private UserPose mUserPose;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -150,7 +153,19 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
         mTangoServiceVersionTextView.setText(mConfig.getString("tango_service_library_version"));
         startUIThread();
 
-        mFirebaseRef = new Firebase(FIREBASE_URL);
+        mUserPose = new UserPose();
+        SharedPreferences prefs = getApplication().getSharedPreferences("DataPrefs", 0);
+        String userId = prefs.getString("userId", null);
+        if (userId == null) {
+            Random r = new Random();
+            // Assign a random user name if we don't have one saved.
+            userId = Integer.toString(r.nextInt(100000));
+            mUserPose.setUserId(userId);
+            prefs.edit().putString("userId", userId).commit();
+        }
+
+        mFirebaseRef = new Firebase(FIREBASE_URL).child(userId);
+
         mConnectedListener = mFirebaseRef.getRoot().child(".info/connected").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
@@ -203,6 +218,7 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
                     // Update the OpenGL renderable objects with the new Tango Pose
                     // data
                     float[] translation = pose.getTranslationAsFloats();
+                    mUserPose.setTranslation(translation);
                     if(!mRenderer.isValid()){
                         return;
                     }
@@ -287,6 +303,7 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
         switch (v.getId()) {
         case R.id.first_person_button:
             mRenderer.setFirstPersonView();
+            pushData();
             break;
         case R.id.top_down_button:
             mRenderer.setTopDownView();
@@ -301,6 +318,10 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
             Log.w(TAG, "Unknown button click");
             return;
         }
+    }
+
+    private void pushData() {
+        mFirebaseRef.setValue(mUserPose);
     }
 
     @Override
