@@ -46,6 +46,7 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
     private static final float CAMERA_FAR = 200f;
 
     private FrustumAxes mFrustumAxes;
+    private FrustumAxes mOther;
     private Trajectory mTrajectory;
 
     private TouchViewHandler touchViewHandler;
@@ -66,7 +67,11 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
         getCurrentScene().addChild(grid);
 
         mFrustumAxes = new FrustumAxes(3);
+
+        mOther = new FrustumAxes(1);
+        mOther.setPosition(0, 0, 0);
         getCurrentScene().addChild(mFrustumAxes);
+        getCurrentScene().addChild(mOther);
 
         mTrajectory = new Trajectory(Color.BLUE, 2);
         getCurrentScene().addChild(mTrajectory);
@@ -106,6 +111,10 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
     public synchronized void updateDevicePose(TangoPoseData tangoPoseData) {
         mDevicePose = ScenePoseCalcuator.toOpenGLPose(tangoPoseData);
         mPoseUpdated = true;
+    }
+
+    public void updateOtherPosition(float[] translation) {
+        mOther.setPosition(translation[0], translation[2], -translation[1]);
     }
 
     @Override
