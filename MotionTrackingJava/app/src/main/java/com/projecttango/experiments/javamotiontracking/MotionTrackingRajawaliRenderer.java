@@ -113,8 +113,20 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
         mPoseUpdated = true;
     }
 
-    public void updateOtherPosition(float[] translation) {
-        mOther.setPosition(translation[0], translation[2], -translation[1]);
+    public void updateOtherPose(float[] translation, float[] orientation) {
+        TangoPoseData pose = new TangoPoseData();
+        pose.translation[0] = translation[0];
+        pose.translation[1] = translation[1];
+        pose.translation[2] = translation[2];
+
+        pose.rotation[0] = orientation[0];
+        pose.rotation[1] = orientation[1];
+        pose.rotation[2] = orientation[2];
+        pose.rotation[3] = orientation[3];
+
+        Pose otherPose = ScenePoseCalcuator.toOpenGLPose(pose);
+        mOther.setPosition(otherPose.getPosition());
+        mOther.setOrientation(otherPose.getOrientation());
     }
 
     @Override

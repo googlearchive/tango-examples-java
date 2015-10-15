@@ -181,15 +181,22 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
                 for (DataSnapshot tempSnapshot: snapshot.getChildren()) {
                     String key = tempSnapshot.getKey();
                     if(key!=null && !key.equals(mUserId)){
-                        int count = 0;
-                        float[] translation = new float[3];
+                        float[] translation = {0, 0, 0};
+                        float[] orientation = {1.f, 0, 0, 0};
                         for(DataSnapshot s: tempSnapshot.getChildren()){
-                            double data = (Double) s.getValue();
-                            translation[count] = (float) data;
-                            count++;
+                            if(s.getKey().equals("poseString")) {
+                                String[] floatsString = (s.getValue()+"").split(",");
+                                translation[0] = Float.parseFloat(floatsString[0]);
+                                translation[1] = Float.parseFloat(floatsString[1]);
+                                translation[2] = Float.parseFloat(floatsString[2]);
+                                orientation[0] = Float.parseFloat(floatsString[3]);
+                                orientation[1] = Float.parseFloat(floatsString[4]);
+                                orientation[2] = Float.parseFloat(floatsString[5]);
+                                orientation[3] = Float.parseFloat(floatsString[6]);
+                            }
                         }
                         if(mRenderer!=null){
-                            mRenderer.updateOtherPosition(translation);
+                            mRenderer.updateOtherPose(translation, orientation);
                         }
                     }
                 }
@@ -277,8 +284,8 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
                     mCount++;
                     mPreviousPoseStatus = pose.statusCode;
 
-                    if (pose.timestamp - mPreviousSyncedTimestamp > 0.07) {
-                        mUserPose.setTranslation(pose.getTranslationAsFloats());
+                    if (pose.timestamp - mPreviousSyncedTimestamp > 0.05) {
+                        mUserPose.setPose(pose.getTranslationAsFloats(), pose.getRotationAsFloats());
                         mFirebaseRef.setValue(mUserPose);
                         mPreviousSyncedTimestamp = pose.timestamp;
                     }
