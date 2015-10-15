@@ -87,6 +87,7 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
     private Firebase mOtherRef;
     private ValueEventListener mConnectedListener;
     private UserPose mUserPose;
+    private String mUserId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -163,33 +164,34 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
     private void firebaseSetup() {
         mUserPose = new UserPose();
         SharedPreferences prefs = getApplication().getSharedPreferences("DataPrefs", 0);
-        String userId = prefs.getString("userId", null);
-        if (userId == null) {
+        mUserId = prefs.getString("userId", null);
+        if (mUserId == null) {
             Random r = new Random();
-            userId = Integer.toString(r.nextInt(100000));
-            mUserPose.setUserId(userId);
-            prefs.edit().putString("userId", userId).commit();
+            mUserId = Integer.toString(r.nextInt(100000));
+            mUserPose.setUserId(mUserId);
+            prefs.edit().putString("userId", mUserId).commit();
         }
 
-        mFirebaseRef = new Firebase(FIREBASE_URL).child(userId);
-        if(userId.equals("733")) {
-            mOtherRef = new Firebase(FIREBASE_URL).child("57888");
-        }else {
-            mOtherRef = new Firebase(FIREBASE_URL).child("733");
-        }
+        mFirebaseRef = new Firebase(FIREBASE_URL).child(mUserId);
 
+        mOtherRef = new Firebase(FIREBASE_URL);
         mOtherRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
-                int count = 0;
-                float[] translation = new float[3];
                 for (DataSnapshot tempSnapshot: snapshot.getChildren()) {
-                    double data = (Double) tempSnapshot.getValue();
-                    translation[count] = (float) data;
-                    count++;
-                }
-                if(mRenderer!=null){
-                    mRenderer.updateOtherPosition(translation);
+                    String key = tempSnapshot.getKey();
+                    if(key!=null && !key.equals(mUserId)){
+                        int count = 0;
+                        float[] translation = new float[3];
+                        for(DataSnapshot s: tempSnapshot.getChildren()){
+                            double data = (Double) s.getValue();
+                            translation[count] = (float) data;
+                            count++;
+                        }
+                        if(mRenderer!=null){
+                            mRenderer.updateOtherPosition(translation);
+                        }
+                    }
                 }
             }
             @Override
@@ -275,7 +277,7 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
                     mCount++;
                     mPreviousPoseStatus = pose.statusCode;
 
-                    if (pose.timestamp - mPreviousSyncedTimestamp > 0.1) {
+                    if (pose.timestamp - mPreviousSyncedTimestamp > 0.07) {
                         mUserPose.setTranslation(pose.getTranslationAsFloats());
                         mFirebaseRef.setValue(mUserPose);
                         mPreviousSyncedTimestamp = pose.timestamp;
