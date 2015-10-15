@@ -2,40 +2,33 @@ package com.projecttango.experiments.javamotiontracking;
 
 public class UserPose {
     private String mUserId;
-    private float mX;
-    private float mY;
-    private float mZ;
+    private String mPose;
+    static private String FORMAT = "%.4f";
 
     public UserPose(){}
-    public UserPose(String userId, float[] translation) {
+    public UserPose(String userId, float[] translation, float[] orientation) {
         mUserId = userId;
-        mX = translation[0];
-        mY = translation[1];
-        mZ = translation[2];
+        setPose(translation, orientation);
     }
     public void setUserId(String userId){
         mUserId = userId;
     }
 
-    public void setTranslation(float[] translation) {
-        mX = translation[0];
-        mY = translation[1];
-        mZ = translation[2];
+    public void setPose(float[] translation, float[] orientation) {
+        mPose = String.format(FORMAT, translation[0]) + "," +
+                String.format(FORMAT, translation[1]) + "," +
+                String.format(FORMAT, translation[2]) + "," +
+                String.format(FORMAT, orientation[0]) + "," +
+                String.format(FORMAT, orientation[1]) + "," +
+                String.format(FORMAT, orientation[2]) + "," +
+                String.format(FORMAT, orientation[3]);
     }
 
     public String getUserId() {
         return mUserId;
     }
 
-    public float getX() {
-        return mX;
-    }
-
-    public float getY() {
-        return mY;
-    }
-
-    public float getZ() {
-        return mZ;
+    public String getPoseString() {
+        return mPose;
     }
 }
