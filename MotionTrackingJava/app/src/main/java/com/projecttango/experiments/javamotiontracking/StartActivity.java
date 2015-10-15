@@ -31,7 +31,7 @@ import android.widget.ToggleButton;
  * next activity.
  */
 public class StartActivity extends Activity implements View.OnClickListener {
-    public static final String KEY_MOTIONTRACKING_AUTORECOVER = 
+    public static final String KEY_MOTIONTRACKING_AUTORECOVER =
             "com.projecttango.experiments.javamotiontracking.useautorecover";
     private ToggleButton mAutoResetButton;
     private Button mStartButton;

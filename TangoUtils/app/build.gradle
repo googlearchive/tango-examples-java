@@ -16,3 +16,16 @@ android {
         }
     }
 }
+
+def external_lib_prefix = null
+if (project.hasProperty("Tango.catkin_devel_prefix")) {
+    external_lib_prefix = project.property("Tango.catkin_devel_prefix")
+} else {
+    // Building in standalone sample form.
+    external_lib_prefix = "../../TangoReleaseLibs"
+}
+
+dependencies {
+    compile fileTree(dir: external_lib_prefix + '/jar', include: ['**/*.jar'])
+    compile 'org.rajawali3d:rajawali:1.0.294-SNAPSHOT@aar'
+}

@@ -36,7 +36,7 @@
         <activity
             android:name="com.projecttango.experiments.javaarealearning.ALStartActivity"
             android:label="@string/menu_name"
-            android:screenOrientation="landscape" >
+            android:screenOrientation="nosensor" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -46,12 +46,12 @@
        <activity
             android:name="com.projecttango.experiments.javaarealearning.AreaLearningActivity"
             android:label="@string/app_name" 
-            android:screenOrientation="landscape">
+            android:screenOrientation="nosensor">
         </activity>
          <activity
             android:name="com.projecttango.experiments.javaarealearning.ADFUUIDListViewActivity"
             android:label="@string/app_name" 
-            android:screenOrientation="landscape">
+            android:screenOrientation="nosensor">
         </activity>
     </application>
 
