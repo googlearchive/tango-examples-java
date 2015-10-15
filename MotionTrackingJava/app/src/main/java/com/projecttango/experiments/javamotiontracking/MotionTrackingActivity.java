@@ -84,6 +84,7 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
 
     private static final String FIREBASE_URL = "https://flickering-torch-1816.firebaseio.com/users";
     private Firebase mFirebaseRef;
+    private Firebase mOtherRef;
     private ValueEventListener mConnectedListener;
     private UserPose mUserPose;
 
@@ -171,6 +172,31 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
         }
 
         mFirebaseRef = new Firebase(FIREBASE_URL).child(userId);
+        if(userId.equals("733")) {
+            mOtherRef = new Firebase(FIREBASE_URL).child("57888");
+        }else {
+            mOtherRef = new Firebase(FIREBASE_URL).child("733");
+        }
+
+        mOtherRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                int count = 0;
+                float[] translation = new float[3];
+                for (DataSnapshot tempSnapshot: snapshot.getChildren()) {
+                    double data = (Double) tempSnapshot.getValue();
+                    translation[count] = (float) data;
+                    count++;
+                }
+                if(mRenderer!=null){
+                    mRenderer.updateOtherPosition(translation);
+                }
+            }
+            @Override
+            public void onCancelled(FirebaseError firebaseError) {
+                System.out.println("The read failed: " + firebaseError.getMessage());
+            }
+        });
 
         mConnectedListener = mFirebaseRef.getRoot().child(".info/connected").addValueEventListener(new ValueEventListener() {
             @Override
@@ -249,7 +275,7 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
                     mCount++;
                     mPreviousPoseStatus = pose.statusCode;
 
-                    if (pose.timestamp - mPreviousSyncedTimestamp > 0.5) {
+                    if (pose.timestamp - mPreviousSyncedTimestamp > 0.1) {
                         mUserPose.setTranslation(pose.getTranslationAsFloats());
                         mFirebaseRef.setValue(mUserPose);
                         mPreviousSyncedTimestamp = pose.timestamp;
