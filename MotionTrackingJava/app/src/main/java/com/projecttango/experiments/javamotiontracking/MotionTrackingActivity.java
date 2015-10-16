@@ -182,21 +182,21 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
                     String key = tempSnapshot.getKey();
                     if(key!=null && !key.equals(mUserId)){
                         float[] translation = {0, 0, 0};
-                        float[] orientation = {1.f, 0, 0, 0};
+//                        float[] orientation = {1.f, 0, 0, 0};
                         for(DataSnapshot s: tempSnapshot.getChildren()){
-                            if(s.getKey().equals("poseString")) {
+                            //if(s.getKey().equals("poseString")) {
                                 String[] floatsString = (s.getValue()+"").split(",");
                                 translation[0] = Float.parseFloat(floatsString[0]);
                                 translation[1] = Float.parseFloat(floatsString[1]);
                                 translation[2] = Float.parseFloat(floatsString[2]);
-                                orientation[0] = Float.parseFloat(floatsString[3]);
-                                orientation[1] = Float.parseFloat(floatsString[4]);
-                                orientation[2] = Float.parseFloat(floatsString[5]);
-                                orientation[3] = Float.parseFloat(floatsString[6]);
-                            }
+//                                orientation[0] = Float.parseFloat(floatsString[3]);
+//                                orientation[1] = Float.parseFloat(floatsString[4]);
+//                                orientation[2] = Float.parseFloat(floatsString[5]);
+//                                orientation[3] = Float.parseFloat(floatsString[6]);
+                            //}
                         }
                         if(mRenderer!=null){
-                            mRenderer.updateOtherPose(translation, orientation);
+                            mRenderer.updateOtherPosition(translation);
                         }
                     }
                 }

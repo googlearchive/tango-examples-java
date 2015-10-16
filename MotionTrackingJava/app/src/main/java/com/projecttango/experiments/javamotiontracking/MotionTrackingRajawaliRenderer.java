@@ -113,6 +113,10 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
         mPoseUpdated = true;
     }
 
+    public void updateOtherPosition(float[] translation) {
+        mOther.setPosition(translation[0], translation[2], -translation[1]);
+    }
+
     public void updateOtherPose(float[] translation, float[] orientation) {
         TangoPoseData pose = new TangoPoseData();
         pose.translation[0] = translation[0];
