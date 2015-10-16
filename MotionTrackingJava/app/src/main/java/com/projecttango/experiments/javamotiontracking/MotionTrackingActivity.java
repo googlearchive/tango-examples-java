@@ -43,12 +43,14 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.os.SystemClock;
 
 import org.rajawali3d.surface.IRajawaliSurface;
 import org.rajawali3d.surface.RajawaliSurfaceView;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 /**
@@ -77,6 +79,7 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
     private int mPreviousPoseStatus;
     private int mCount;
     private float mDeltaTime;
+    private long mSystemTime=0;
     private boolean mIsAutoRecovery;
     private MotionTrackingRajawaliRenderer mRenderer;
     private TangoPoseData mPose;
@@ -86,7 +89,6 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
     private Firebase mFirebaseRef;
     private Firebase mOtherRef;
     private ValueEventListener mConnectedListener;
-    private UserPose mUserPose;
     private String mUserId;
 
     @Override
@@ -162,43 +164,32 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
     }
 
     private void firebaseSetup() {
-        mUserPose = new UserPose();
         SharedPreferences prefs = getApplication().getSharedPreferences("DataPrefs", 0);
         mUserId = prefs.getString("userId", null);
         if (mUserId == null) {
             Random r = new Random();
             mUserId = Integer.toString(r.nextInt(100000));
-            mUserPose.setUserId(mUserId);
             prefs.edit().putString("userId", mUserId).commit();
         }
 
         mFirebaseRef = new Firebase(FIREBASE_URL).child(mUserId);
-
-        mOtherRef = new Firebase(FIREBASE_URL);
+        if(mUserId.equals("42641")) {
+            mOtherRef = new Firebase(FIREBASE_URL).child("57770");
+        } else {
+            mOtherRef = new Firebase(FIREBASE_URL).child("42641");
+        }
         mOtherRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
-                for (DataSnapshot tempSnapshot: snapshot.getChildren()) {
-                    String key = tempSnapshot.getKey();
-                    if(key!=null && !key.equals(mUserId)){
-                        float[] translation = {0, 0, 0};
-//                        float[] orientation = {1.f, 0, 0, 0};
-                        for(DataSnapshot s: tempSnapshot.getChildren()){
-                            //if(s.getKey().equals("poseString")) {
-                                String[] floatsString = (s.getValue()+"").split(",");
-                                translation[0] = Float.parseFloat(floatsString[0]);
-                                translation[1] = Float.parseFloat(floatsString[1]);
-                                translation[2] = Float.parseFloat(floatsString[2]);
-//                                orientation[0] = Float.parseFloat(floatsString[3]);
-//                                orientation[1] = Float.parseFloat(floatsString[4]);
-//                                orientation[2] = Float.parseFloat(floatsString[5]);
-//                                orientation[3] = Float.parseFloat(floatsString[6]);
-                            //}
-                        }
-                        if(mRenderer!=null){
-                            mRenderer.updateOtherPosition(translation);
-                        }
-                    }
+                List data = (List)snapshot.getValue();
+                float[] translation = {0, 0, 0};
+                translation[0] = ((Long)data.get(0)).floatValue()* 0.001f;
+                translation[1] = ((Long)data.get(1)).floatValue()* 0.001f;
+                translation[2] = ((Long)data.get(2)).floatValue()* 0.001f;
+                Log.i(TAG, (SystemClock.elapsedRealtime()-mSystemTime)+"");
+                mSystemTime = SystemClock.elapsedRealtime();
+                if(mRenderer!=null) {
+                    mRenderer.updateOtherPosition(translation);
                 }
             }
             @Override
@@ -285,8 +276,12 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
                     mPreviousPoseStatus = pose.statusCode;
 
                     if (pose.timestamp - mPreviousSyncedTimestamp > 0.05) {
-                        mUserPose.setPose(pose.getTranslationAsFloats(), pose.getRotationAsFloats());
-                        mFirebaseRef.setValue(mUserPose);
+                        float[] data = pose.getTranslationAsFloats();
+                        int[] dataSend= {0, 0, 0};
+                        dataSend[0] = (int) (data[0]*1000.f);
+                        dataSend[1] = (int) (data[1]*1000.f);
+                        dataSend[2] = (int) (data[2]*1000.f);
+                        mFirebaseRef.setValue(dataSend);
                         mPreviousSyncedTimestamp = pose.timestamp;
                     }
                 }
