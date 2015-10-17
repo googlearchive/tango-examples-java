@@ -63,6 +63,7 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
     private static final String TAG = MotionTrackingActivity.class.getSimpleName();
     private static final int SECS_TO_MILLISECS = 1000;
     private static final int UPDATE_INTERVAL_MS = 100;
+
     private Tango mTango;
     private TangoConfig mConfig;
     private TextView mDeltaTextView;
@@ -80,6 +81,7 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
     private int mCount;
     private float mDeltaTime;
     private long mSystemTime=0;
+    private float[] mOtherPosition = {0,0,0};
     private boolean mIsAutoRecovery;
     private MotionTrackingRajawaliRenderer mRenderer;
     private TangoPoseData mPose;
@@ -181,15 +183,11 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
         mOtherRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
-                List data = (List)snapshot.getValue();
-                float[] translation = {0, 0, 0};
-                translation[0] = ((Long)data.get(0)).floatValue()* 0.001f;
-                translation[1] = ((Long)data.get(1)).floatValue()* 0.001f;
-                translation[2] = ((Long)data.get(2)).floatValue()* 0.001f;
+                String[] data = ((String)snapshot.getValue()).split(",");
                 Log.i(TAG, (SystemClock.elapsedRealtime()-mSystemTime)+"");
                 mSystemTime = SystemClock.elapsedRealtime();
                 if(mRenderer!=null) {
-                    mRenderer.updateOtherPosition(translation);
+                    mRenderer.updateOtherPosition(Float.parseFloat(data[0]),Float.parseFloat(data[1]), Float.parseFloat(data[2]));
                 }
             }
             @Override
@@ -277,11 +275,10 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
 
                     if (pose.timestamp - mPreviousSyncedTimestamp > 0.05) {
                         float[] data = pose.getTranslationAsFloats();
-                        int[] dataSend= {0, 0, 0};
-                        dataSend[0] = (int) (data[0]*1000.f);
-                        dataSend[1] = (int) (data[1]*1000.f);
-                        dataSend[2] = (int) (data[2]*1000.f);
-                        mFirebaseRef.setValue(dataSend);
+                        String send = String.format("%.3f", data[0]) + "," +
+                                String.format("%.3f", data[1]) + "," +
+                                String.format("%.3f", data[2]);
+                        mFirebaseRef.setValue(send);
                         mPreviousSyncedTimestamp = pose.timestamp;
                     }
                 }

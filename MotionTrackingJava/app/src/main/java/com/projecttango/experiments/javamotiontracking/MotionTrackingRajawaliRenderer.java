@@ -44,6 +44,10 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
 
     private static final float CAMERA_NEAR = 0.01f;
     private static final float CAMERA_FAR = 200f;
+    private static final float BUFFER = 0.8f;
+    private float mX=0;
+    private float mY=0;
+    private float mZ=0;
 
     private FrustumAxes mFrustumAxes;
     private FrustumAxes mOther;
@@ -67,6 +71,7 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
         getCurrentScene().addChild(grid);
 
         mFrustumAxes = new FrustumAxes(3);
+
 
         mOther = new FrustumAxes(1);
         mOther.setPosition(0, 0, 0);
@@ -97,7 +102,9 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
                 if (mTrajectory.getLastPoint().distanceTo2(mDevicePose.getPosition()) > THRESHOLD) {
                     mTrajectory.addSegmentTo(mDevicePose.getPosition());
                 }
+                Vector3 pos = mOther.getPosition();
 
+                mOther.setPosition(pos.x*BUFFER + mX*(1.f-BUFFER), pos.y*BUFFER + mY*(1.f-BUFFER), pos.z*BUFFER + mZ*(1.f-BUFFER));
                 touchViewHandler.updateCamera(mDevicePose.getPosition(), mDevicePose.getOrientation());
             }
         }
@@ -113,8 +120,11 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
         mPoseUpdated = true;
     }
 
-    public void updateOtherPosition(float[] translation) {
-        mOther.setPosition(translation[0], translation[2], -translation[1]);
+    public void updateOtherPosition(float x, float y, float z) {
+
+        mX = x;
+        mY = z;
+        mZ = -y;
     }
 
     public void updateOtherPose(float[] translation, float[] orientation) {
