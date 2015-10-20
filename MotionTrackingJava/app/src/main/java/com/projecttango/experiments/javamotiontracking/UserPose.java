@@ -1,34 +1,29 @@
 package com.projecttango.experiments.javamotiontracking;
 
+import org.rajawali3d.math.vector.Vector3;
+
 public class UserPose {
-    private String mUserId;
-    private String mPose;
-    static private String FORMAT = "%.2f";
+    private long mTimestamp;
+    private Vector3 mPosition;
 
     public UserPose(){}
-    public UserPose(String userId, float[] translation, float[] orientation) {
-        mUserId = userId;
-        setPose(translation, orientation);
+    public UserPose(long timestamp, Vector3 position) {
+        mTimestamp = timestamp;
+        mPosition = position;
     }
-    public void setUserId(String userId){
-        mUserId = userId;
-    }
-
-    public void setPose(float[] translation, float[] orientation) {
-        mPose = String.format(FORMAT, translation[0]) + "," +
-                String.format(FORMAT, translation[1]) + "," +
-                String.format(FORMAT, translation[2]);
-//                String.format(FORMAT, orientation[0]) + "," +
-//                String.format(FORMAT, orientation[1]) + "," +
-//                String.format(FORMAT, orientation[2]) + "," +
-//                String.format(FORMAT, orientation[3]);
+    public void setTimestamp(long timestamp){
+        mTimestamp = timestamp;
     }
 
-    public String getUserId() {
-        return mUserId;
+    public void setPosition(Vector3 position) {
+        mPosition = position;
     }
 
-    public String getPoseString() {
-        return mPose;
+    public long getTimestamp() {
+        return mTimestamp;
+    }
+
+    public Vector3 getPosition() {
+        return mPosition;
     }
 }

@@ -81,7 +81,9 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
     private int mCount;
     private float mDeltaTime;
     private long mSystemTime=0;
+    private long mSystemTimePre=0;
     private float[] mOtherPosition = {0,0,0};
+    private boolean mIsFirstUpdate = true;
     private boolean mIsAutoRecovery;
     private MotionTrackingRajawaliRenderer mRenderer;
     private TangoPoseData mPose;
@@ -183,11 +185,19 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
         mOtherRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
-                String[] data = ((String)snapshot.getValue()).split(",");
-                Log.i(TAG, (SystemClock.elapsedRealtime()-mSystemTime)+"");
-                mSystemTime = SystemClock.elapsedRealtime();
-                if(mRenderer!=null) {
-                    mRenderer.updateOtherPosition(Float.parseFloat(data[0]),Float.parseFloat(data[1]), Float.parseFloat(data[2]));
+                if(snapshot.getValue()==null) return;
+                if(mIsFirstUpdate) {
+                    if(SystemClock.elapsedRealtime()-mSystemTimePre<100) {
+                        mSystemTime = SystemClock.elapsedRealtime();
+                        mIsFirstUpdate = false;
+                    }
+                    mSystemTimePre = SystemClock.elapsedRealtime();
+                }
+                if(!mIsFirstUpdate){
+                    String[] data = ((String) snapshot.getValue()).split(",");
+                    if (mRenderer != null) {
+                        mRenderer.updateOtherPosition(SystemClock.elapsedRealtime() - mSystemTime, Float.parseFloat(data[0]), Float.parseFloat(data[1]), Float.parseFloat(data[2]));
+                    }
                 }
             }
             @Override

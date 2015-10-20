@@ -19,6 +19,7 @@ package com.projecttango.experiments.javamotiontracking;
 import android.content.Context;
 import android.graphics.Color;
 import android.view.MotionEvent;
+import android.util.Log;
 
 import com.google.atap.tangoservice.TangoPoseData;
 import com.projecttango.rajawali.Pose;
@@ -31,6 +32,10 @@ import com.projecttango.rajawali.renderables.Trajectory;
 import org.rajawali3d.math.Quaternion;
 import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.renderer.RajawaliRenderer;
+
+import java.util.LinkedList;
+import java.util.concurrent.TimeUnit;
+import java.util.Map;
 
 /**
  * This class implements the rendering logic for the Motion Tracking application using Rajawali.
@@ -48,6 +53,11 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
     private float mX=0;
     private float mY=0;
     private float mZ=0;
+    private LinkedList<UserPose> buffer;
+    private long mStartTime = 0;
+    private boolean mIsFirstUpdate = true;
+    private double x;
+    private float xPre;
 
     private FrustumAxes mFrustumAxes;
     private FrustumAxes mOther;
@@ -85,12 +95,13 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
 
         getCurrentCamera().setNearPlane(CAMERA_NEAR);
         getCurrentCamera().setFarPlane(CAMERA_FAR);
+        buffer = new LinkedList<UserPose>();
     }
 
     @Override
     protected void onRender(long ellapsedRealtime, double deltaTime) {
         super.onRender(ellapsedRealtime, deltaTime);
-
+        //Log.i("Orange", TimeUnit.NANOSECONDS.toMillis(ellapsedRealtime)+"");
         // Update the scene objects with the latest device position and orientation information.
         // Synchronize to avoid concurrent access from the Tango callback thread below.
         synchronized (this) {
@@ -102,15 +113,37 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
                 if (mTrajectory.getLastPoint().distanceTo2(mDevicePose.getPosition()) > THRESHOLD) {
                     mTrajectory.addSegmentTo(mDevicePose.getPosition());
                 }
-                Vector3 pos = mOther.getPosition();
-
-                mOther.setPosition(pos.x*BUFFER + mX*(1.f-BUFFER), pos.y*BUFFER + mY*(1.f-BUFFER), pos.z*BUFFER + mZ*(1.f-BUFFER));
                 touchViewHandler.updateCamera(mDevicePose.getPosition(), mDevicePose.getOrientation());
+
+//                Vector3 pos = mOther.getPosition();
+//                mOther.setPosition(pos.x*BUFFER + mX*(1.f-BUFFER), pos.y*BUFFER + mY*(1.f-BUFFER), pos.z*BUFFER + mZ*(1.f-BUFFER));
+
+                // Start updating other user after 1000ms
             }
+        }
+        if(buffer.size()>2 && buffer.getLast().getTimestamp()>= 500){
+            // First time set start to zero.
+            if(mIsFirstUpdate){
+                mStartTime = TimeUnit.NANOSECONDS.toMillis(ellapsedRealtime);
+                mIsFirstUpdate = false;
+            }
+            long ellapsedTime = TimeUnit.NANOSECONDS.toMillis(ellapsedRealtime) - mStartTime;
+
+            while( buffer.size()>2 && ellapsedTime > buffer.get(1).getTimestamp()) {
+                buffer.removeFirst();
+            }
+            UserPose a = buffer.get(0);
+            UserPose b = buffer.get(1);
+            double percent = Math.min(1.0, (double) (ellapsedTime - a.getTimestamp()) / (double) (b.getTimestamp() - a.getTimestamp()));
+            Vector3 position = Vector3.lerpAndCreate(a.getPosition(), b.getPosition(), percent);
+            mOther.setPosition(position);
+            Log.i("Orange", "             " + ellapsedTime + "  " + buffer.size() + " " + String.format("%.3f", percent) + "  " + String.format("%.3f", position.x - x));
+            x = position.x;
         }
     }
 
     /**
+     *
      * Updates our information about the current device pose.
      * This is called from the Tango service thread through the callback API. Synchronize to avoid
      * concurrent access from the OpenGL thread above.
@@ -120,11 +153,14 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
         mPoseUpdated = true;
     }
 
-    public void updateOtherPosition(float x, float y, float z) {
-
-        mX = x;
-        mY = z;
-        mZ = -y;
+    public void updateOtherPosition(long timeLapsed, float x, float y, float z) {
+        // Make sure there is no data with same timestamp update
+        if(buffer.size()==0 || timeLapsed - buffer.getLast().getTimestamp()>0) {
+            Log.i("Orange", timeLapsed + " "+ String.format("%.3f", (x-xPre)));
+            UserPose temp = new UserPose(timeLapsed, new Vector3(x, z, -y));
+            buffer.add(temp);
+            xPre = x;
+        }
     }
 
     public void updateOtherPose(float[] translation, float[] orientation) {
