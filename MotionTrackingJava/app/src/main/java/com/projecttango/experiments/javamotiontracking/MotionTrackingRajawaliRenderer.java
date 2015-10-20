@@ -95,7 +95,6 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
     @Override
     protected void onRender(long ellapsedRealtime, double deltaTime) {
         super.onRender(ellapsedRealtime, deltaTime);
-        //Log.i("Orange", TimeUnit.NANOSECONDS.toMillis(ellapsedRealtime)+"");
         // Update the scene objects with the latest device position and orientation information.
         // Synchronize to avoid concurrent access from the Tango callback thread below.
         synchronized (this) {
