@@ -188,7 +188,8 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
                 if(snapshot.getValue()==null) return;
                 if(mIsFirstUpdate) {
                     if(SystemClock.elapsedRealtime()-mSystemTimePre<100) {
-                        mSystemTime = SystemClock.elapsedRealtime();
+                        String[] data = ((String) snapshot.getValue()).split(",");
+                        mSystemTime = (long)(Float.parseFloat(data[0]) * 1000.f);
                         mIsFirstUpdate = false;
                     }
                     mSystemTimePre = SystemClock.elapsedRealtime();
@@ -196,7 +197,11 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
                 if(!mIsFirstUpdate){
                     String[] data = ((String) snapshot.getValue()).split(",");
                     if (mRenderer != null) {
-                        mRenderer.updateOtherPosition(SystemClock.elapsedRealtime() - mSystemTime, Float.parseFloat(data[0]), Float.parseFloat(data[1]), Float.parseFloat(data[2]));
+                        mRenderer.updateOtherPosition(
+                                (long)(Float.parseFloat(data[0]) * 1000.f) - mSystemTime,
+                                Float.parseFloat(data[1]),
+                                Float.parseFloat(data[2]),
+                                Float.parseFloat(data[3]));
                     }
                 }
             }
@@ -285,7 +290,9 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
 
                     if (pose.timestamp - mPreviousSyncedTimestamp > 0.05) {
                         float[] data = pose.getTranslationAsFloats();
-                        String send = String.format("%.3f", data[0]) + "," +
+                        String send =
+                                String.format("%.3f", pose.timestamp) + "," +
+                                String.format("%.3f", data[0]) + "," +
                                 String.format("%.3f", data[1]) + "," +
                                 String.format("%.3f", data[2]);
                         mFirebaseRef.setValue(send);

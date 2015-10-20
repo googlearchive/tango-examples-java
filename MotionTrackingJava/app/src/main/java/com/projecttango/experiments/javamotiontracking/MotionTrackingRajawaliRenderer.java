@@ -156,7 +156,7 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
     public void updateOtherPosition(long timeLapsed, float x, float y, float z) {
         // Make sure there is no data with same timestamp update
         if(buffer.size()==0 || timeLapsed - buffer.getLast().getTimestamp()>0) {
-            Log.i("Orange", timeLapsed + " "+ String.format("%.3f", (x-xPre)));
+            Log.i("Orange", timeLapsed + " ");
             UserPose temp = new UserPose(timeLapsed, new Vector3(x, z, -y));
             buffer.add(temp);
             xPre = x;
