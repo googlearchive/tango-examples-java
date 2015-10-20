@@ -49,15 +49,9 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
 
     private static final float CAMERA_NEAR = 0.01f;
     private static final float CAMERA_FAR = 200f;
-    private static final float BUFFER = 0.8f;
-    private float mX=0;
-    private float mY=0;
-    private float mZ=0;
     private LinkedList<UserPose> buffer;
     private long mStartTime = 0;
     private boolean mIsFirstUpdate = true;
-    private double x;
-    private float xPre;
 
     private FrustumAxes mFrustumAxes;
     private FrustumAxes mOther;
@@ -128,7 +122,6 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
                 mIsFirstUpdate = false;
             }
             long ellapsedTime = TimeUnit.NANOSECONDS.toMillis(ellapsedRealtime) - mStartTime;
-
             while( buffer.size()>2 && ellapsedTime > buffer.get(1).getTimestamp()) {
                 buffer.removeFirst();
             }
@@ -137,8 +130,7 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
             double percent = Math.min(1.0, (double) (ellapsedTime - a.getTimestamp()) / (double) (b.getTimestamp() - a.getTimestamp()));
             Vector3 position = Vector3.lerpAndCreate(a.getPosition(), b.getPosition(), percent);
             mOther.setPosition(position);
-            Log.i("Orange", "             " + ellapsedTime + "  " + buffer.size() + " " + String.format("%.3f", percent) + "  " + String.format("%.3f", position.x - x));
-            x = position.x;
+            Log.i(TAG, "             " + ellapsedTime + "  " + buffer.size() + " " + String.format("%.3f", percent));
         }
     }
 
@@ -156,10 +148,9 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
     public void updateOtherPosition(long timeLapsed, float x, float y, float z) {
         // Make sure there is no data with same timestamp update
         if(buffer.size()==0 || timeLapsed - buffer.getLast().getTimestamp()>0) {
-            Log.i("Orange", timeLapsed + " ");
+            Log.i(TAG, timeLapsed + " ");
             UserPose temp = new UserPose(timeLapsed, new Vector3(x, z, -y));
             buffer.add(temp);
-            xPre = x;
         }
     }
 
