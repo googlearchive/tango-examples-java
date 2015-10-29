@@ -37,4 +37,8 @@ public class Pose {
     public Vector3 getPosition() {
         return mPosition;
     }
+
+    public String toString() {
+        return "p:" + mPosition + ",q:" + mOrientation;
+    }
 }
