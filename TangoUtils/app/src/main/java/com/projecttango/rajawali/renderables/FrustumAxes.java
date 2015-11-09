@@ -17,7 +17,6 @@ package com.projecttango.rajawali.renderables;
 
 import android.graphics.Color;
 
-import org.rajawali3d.Object3D;
 import org.rajawali3d.materials.Material;
 import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.primitives.Line3D;
@@ -53,7 +52,7 @@ public class FrustumAxes extends Line3D {
         Vector3 z = new Vector3(0, 0, 1);
 
         Stack<Vector3> points = new Stack<Vector3>();
-        Collections.addAll(points, new Vector3[]{o, x, o, y, o, z, o, a, b, o, b, c, o, c, d, o, d, a});
+        Collections.addAll(points, o, x, o, y, o, z, o, a, b, o, b, c, o, c, d, o, d, a);
 
         return points;
     }

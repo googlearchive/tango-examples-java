@@ -29,11 +29,11 @@ import java.nio.FloatBuffer;
  * Intended to be contributed and PR'ed to Rajawali.
  */
 public class Points extends Object3D {
-    private int mMaxNumberofVertices;
+    private int mMaxNumberOfVertices;
 
     public Points(int numberOfPoints) {
         super();
-        mMaxNumberofVertices = numberOfPoints;
+        mMaxNumberOfVertices = numberOfPoints;
         init(true);
         Material m = new Material();
         m.setColor(Color.GREEN);
@@ -41,10 +41,10 @@ public class Points extends Object3D {
     }
 
     // Initialize the buffers for Points primitive.
-    // Since only vertex and Index buffers are used, we only initialize them using setdata call.
+    // Since only vertex and index buffers are used, we only initialize them using setData call.
     protected void init(boolean createVBOs) {
-        float[] vertices = new float[mMaxNumberofVertices*3];
-        int[] indices = new int[mMaxNumberofVertices];
+        float[] vertices = new float[mMaxNumberOfVertices * 3];
+        int[] indices = new int[mMaxNumberOfVertices];
         for(int i = 0; i < indices.length; ++i){
             indices[i] = i;
         }

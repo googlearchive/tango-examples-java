@@ -83,24 +83,6 @@ public class MainActivity extends Activity {
         // is brought to the foreground.
         super.onResume();
         if (!mIsTangoServiceConnected) {
-            startActivityForResult(
-                    Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_MOTION_TRACKING),
-                    Tango.TANGO_INTENT_ACTIVITYCODE);
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        // Check which request we're responding to
-        if (requestCode == Tango.TANGO_INTENT_ACTIVITYCODE) {
-            // Make sure the request was successful
-            if (resultCode == RESULT_CANCELED) {
-                Toast.makeText(this,
-                        "This app requires Motion Tracking permission!",
-                        Toast.LENGTH_LONG).show();
-                finish();
-                return;
-            }
             try {
                 setTangoListeners();
             } catch (TangoErrorException e) {

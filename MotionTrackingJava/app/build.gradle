@@ -17,15 +17,9 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
-
     lintOptions {
         abortOnError false
     }
-}
-
-if (project.hasProperty("Tango.signing")
-        && new File(project.property("Tango.signing") + "/tango.gradle").exists()) {
-    apply from: project.property("Tango.signing") + "/tango.gradle";
 }
 
 def external_lib_prefix = null
@@ -36,14 +30,11 @@ if (project.hasProperty("Tango.catkin_devel_prefix")) {
     external_lib_prefix = "../../TangoReleaseLibs"
 }
 
+
 dependencies {
     compile fileTree(dir: external_lib_prefix + '/jar', include: ['**/*.jar'])
-    compile (name: 'TangoUtils', ext: 'aar')
     compile 'org.rajawali3d:rajawali:1.0.294-SNAPSHOT@aar'
+    compile project(':TangoUtils')
 }
 
-repositories{
-    flatDir{
-        dirs external_lib_prefix + '/aar'
-    }
-}
+

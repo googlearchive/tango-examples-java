@@ -24,14 +24,13 @@ import java.text.DecimalFormat;
  * sample applications
  */
 public class TangoPoseUtilities {
-
     /**
      * Get translation string from a pose.
-     * @param pose: Pose from which translation string is constructed.
-     * @param decimalFormat: Number of decimals for each component of translation.
+     * @param pose           Pose from which translation string is constructed.
+     * @param decimalFormat  Number of decimals for each component of translation.
      * @return
      */
-    public static String getTranslationString(TangoPoseData pose, DecimalFormat decimalFormat){
+    public static String getTranslationString(TangoPoseData pose, DecimalFormat decimalFormat) {
         String translationString = "["
                 + decimalFormat.format(pose.translation[0]) + ", "
                 + decimalFormat.format(pose.translation[1]) + ", "
@@ -41,11 +40,11 @@ public class TangoPoseUtilities {
 
     /**
      * Get quaternion string from a pose.
-     * @param pose: Pose from which quaternion string is constructed.
-     * @param decimalFormat: Number of decimals for each component of translation.
+     * @param pose           Pose from which quaternion string is constructed.
+     * @param decimalFormat  Number of decimals for each component of translation.
      * @return
      */
-    public static String getQuaternionString(TangoPoseData pose, DecimalFormat decimalFormat){
+    public static String getQuaternionString(TangoPoseData pose, DecimalFormat decimalFormat) {
         String quaternionString ="["
                 + decimalFormat.format(pose.rotation[0]) + ", "
                 + decimalFormat.format(pose.rotation[1]) + ", "
@@ -56,11 +55,11 @@ public class TangoPoseUtilities {
 
     /**
      * Get the status of the Pose as a string.
-     * @param pose: Pose from which status string is constructed.
+     * @param pose  Pose from which status string is constructed.
      * @return
      */
-    public static String getStatusString(TangoPoseData pose){
-        String poseStatus = "unknown";
+    public static String getStatusString(TangoPoseData pose) {
+        String poseStatus;
         switch (pose.statusCode){
             case TangoPoseData.POSE_UNKNOWN:
                 poseStatus = "unknown";
@@ -77,6 +76,6 @@ public class TangoPoseUtilities {
             default:
                 poseStatus = "unknown";
         }
-        return  poseStatus;
+        return poseStatus;
     }
 }
