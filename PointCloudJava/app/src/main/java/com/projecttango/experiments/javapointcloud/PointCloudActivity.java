@@ -148,6 +148,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         try {
             mTango.connect(mConfig);
             mIsTangoServiceConnected = true;
+            setupExtrinsics();
         } catch (TangoOutOfDateException outDateEx) {
             if (mTangoUx != null) {
                 mTangoUx.showTangoOutOfDate();
@@ -156,7 +157,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
             Toast.makeText(getApplicationContext(), R.string.TangoError, Toast.LENGTH_SHORT)
                     .show();
         }
-        setupExtrinsics();
         Log.i(TAG, "onResumed");
     }
 

@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.projecttango.videooverlaysample"
+    package="com.projecttango.experiments.videooverlaysample"
     android:versionCode="0"
     android:versionName="0" >
 
     <uses-sdk
         android:minSdkVersion="17"
         android:targetSdkVersion="19" />
-     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <application
         android:allowBackup="true"
