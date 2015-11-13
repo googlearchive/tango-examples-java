@@ -25,12 +25,11 @@ import org.rajawali3d.math.Quaternion;
 import org.rajawali3d.math.vector.Vector3;
 
 /**
- * This is a helper class that adds Top-down and Third-person views in a VR setting, including
+ * This is a helper class that adds top-down and third-person views in a VR setting, including
  * handling of standard pan and zoom touch interactions.
  */
 public class TouchViewHandler {
-
-    // Touch interaction tuning constants
+    // Touch interaction tuning constants.
     private static final int TOUCH_THIRD_PITCH_LIMIT = 60;
     private static final int TOUCH_THIRD_PITCH_DEFAULT = 45;
     private static final int TOUCH_THIRD_YAW_DEFAULT = -45;
@@ -38,20 +37,20 @@ public class TouchViewHandler {
     private static final int TOUCH_THIRD_DISTANCE = 10;
     private static final int TOUCH_TOP_DISTANCE = 10;
 
-    // Virtual Reality view parameters
+    // Virtual reality view parameters.
     private static final float FIRST_PERSON_FOV = 37.8f;
     private static final int THIRD_PERSON_FOV = 65;
     private static final int TOP_DOWN_FOV = 65;
 
     private enum ViewMode {
         FIRST_PERSON, TOP_DOWN, THIRD_PERSON
-    };
+    }
     private ViewMode viewMode = ViewMode.THIRD_PERSON;
 
     private GestureDetector gestureDetector;
     private ScaleGestureDetector scaleGestureDetector;
 
-    private Vector3 topdownCameraDelta = new Vector3();
+    private Vector3 topDownCameraDelta = new Vector3();
     private float thirdPersonPitch = TOUCH_THIRD_PITCH_DEFAULT;
     private float thirdPersonYaw = TOUCH_THIRD_YAW_DEFAULT;
 
@@ -76,8 +75,8 @@ public class TouchViewHandler {
             camera.setPosition(position);
             camera.setOrientation(orientation);
         } else if (viewMode == ViewMode.TOP_DOWN) {
-            camera.setPosition(position.x + topdownCameraDelta.x, TOUCH_TOP_DISTANCE,
-                    position.z + topdownCameraDelta.z);
+            camera.setPosition(position.x + topDownCameraDelta.x, TOUCH_TOP_DISTANCE,
+                    position.z + topDownCameraDelta.z);
             camera.setRotation(Vector3.Axis.X, 90);
         } else if (viewMode == ViewMode.THIRD_PERSON) {
             camera.setPosition(position.x, position.y, position.z);
@@ -99,7 +98,7 @@ public class TouchViewHandler {
 
     public void setTopDownView() {
         viewMode = ViewMode.TOP_DOWN;
-        topdownCameraDelta = new Vector3();
+        topDownCameraDelta = new Vector3();
         camera.setFieldOfView(TOP_DOWN_FOV);
     }
 
@@ -131,7 +130,7 @@ public class TouchViewHandler {
 
             if (viewMode == ViewMode.TOP_DOWN) {
                 double factor = camera.getFieldOfView() / 45;
-                topdownCameraDelta.add(new Vector3(distanceX / 100 * factor, 0, distanceY / 100 * factor));
+                topDownCameraDelta.add(new Vector3(distanceX / 100 * factor, 0, distanceY / 100 * factor));
             } else if (viewMode == ViewMode.THIRD_PERSON) {
                 thirdPersonPitch -= distanceY / 10;
                 thirdPersonPitch =

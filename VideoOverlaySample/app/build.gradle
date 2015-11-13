@@ -23,10 +23,6 @@ android {
     }
 }
 
-if (project.hasProperty("Tango.signing")
-        && new File(project.property("Tango.signing") + "/tango.gradle").exists()) {
-    apply from: project.property("Tango.signing") + "/tango.gradle";
-}
 
 def external_lib_prefix = null
 if (project.hasProperty("Tango.catkin_devel_prefix")) {

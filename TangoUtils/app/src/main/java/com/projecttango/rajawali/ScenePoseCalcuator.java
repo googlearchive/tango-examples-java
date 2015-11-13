@@ -15,10 +15,6 @@
  */
 package com.projecttango.rajawali;
 
-import android.util.Log;
-
-import com.google.atap.tangoservice.Tango;
-import com.google.atap.tangoservice.TangoCoordinateFramePair;
 import com.google.atap.tangoservice.TangoPoseData;
 
 import org.rajawali3d.math.Matrix;
@@ -37,15 +33,15 @@ public class ScenePoseCalcuator {
     private static final String TAG = ScenePoseCalcuator.class.getSimpleName();
 
     // Transformation from the Tango Area Description or Start of Service coordinate frames
-    // to the OpenGL coordinate frame
-    // NOTE: Rajawali uses column-major for matrices
+    // to the OpenGL coordinate frame.
+    // NOTE: Rajawali uses column-major for matrices.
     public static final Matrix4 OPENGL_T_TANGO_WORLD = new Matrix4(new double[]{
             1, 0, 0, 0,
             0, 0,-1, 0,
             0, 1, 0, 0,
             0, 0, 0, 1
     });
-    // Transformation from the Tango RGB camera coordinate frame to the OpenGL camera frame
+    // Transformation from the Tango RGB camera coordinate frame to the OpenGL camera frame.
     public static final Matrix4 COLOR_CAMERA_T_OPENGL_CAMERA = new Matrix4(new double[] {
             1, 0, 0, 0,
             0,-1, 0, 0,
@@ -60,13 +56,13 @@ public class ScenePoseCalcuator {
             0, 0, 0, 1
     });
 
-    // Up vector in the Tango Start of Service and Area Description frame
+    // Up vector in the Tango start of Service and Area Description frame.
     public static final Vector3 TANGO_WORLD_UP = new Vector3(0, 0, 1);
 
-    // Transformation from the position of the Depth camera to the Device frame
+    // Transformation from the position of the depth camera to the device frame.
     private Matrix4 mDeviceTDepthCamera;
 
-    // Transformation from the position of the Color Camera to the Device frame
+    // Transformation from the position of the color Camera to the device frame.
     private Matrix4 mDeviceTColorCamera;
 
     /**
@@ -77,7 +73,7 @@ public class ScenePoseCalcuator {
                 tangoPose.translation[1], tangoPose.translation[2]);
         Quaternion q = new Quaternion(tangoPose.rotation[3], tangoPose.rotation[0],
                 tangoPose.rotation[1], tangoPose.rotation[2]);
-        // NOTE: Rajawali Quaternions use a left-hand rotation around the axis convention
+        // NOTE: Rajawali quaternions use a left-hand rotation around the axis convention.
         q.conjugate();
         Matrix4 m = new Matrix4();
         m.setAll(v, new Vector3(1, 1, 1), q);
@@ -88,11 +84,11 @@ public class ScenePoseCalcuator {
      * Converts a transform in Matrix4 format to TangoPoseData.
      */
     public static TangoPoseData matrixToTangoPose(Matrix4 transform) {
-        // Get translation and rotation components from the transformation matrix
+        // Get translation and rotation components from the transformation matrix.
         Vector3 p = transform.getTranslation();
         Quaternion q = new Quaternion();
         q.fromMatrix(transform);
-        // NOTE: Rajawali Quaternions use a left-hand rotation around the axis convention
+        // NOTE: Rajawali quaternions use a left-hand rotation around the axis convention.
         q.conjugate();
 
         TangoPoseData tangoPose = new TangoPoseData();
@@ -114,12 +110,12 @@ public class ScenePoseCalcuator {
      * Rajawali conventions.
      */
     public static Pose matrixToPose(Matrix4 m) {
-        // Get translation and rotation components from the transformation matrix
+        // Get translation and rotation components from the transformation matrix.
         Vector3 p = m.getTranslation();
         Quaternion q = new Quaternion();
         q.fromMatrix(m);
 
-        // NOTE: Rajawali Quaternions use a left-hand rotation around the axis convention
+        // NOTE: Rajawali quaternions use a left-hand rotation around the axis convention.
         q.conjugate();
 
         return new Pose(p, q);
@@ -130,17 +126,17 @@ public class ScenePoseCalcuator {
      * position and orientation for a OpenGL Scene Camera in the Rajawali world.
      */
     public Pose toOpenGLCameraPose(TangoPoseData tangoPose) {
-        // We can't do this calculation until Extrinsics are set-up
+        // We can't do this calculation until extrinsics are set-up.
         if (mDeviceTColorCamera == null) {
             throw new RuntimeException("You must call setupExtrinsics first.");
         }
 
         Matrix4 startServiceTdevice = tangoPoseToMatrix(tangoPose);
 
-        // Get device pose in OpenGL world frame
+        // Get device pose in OpenGL world frame.
         Matrix4 openglTDevice = OPENGL_T_TANGO_WORLD.clone().multiply(startServiceTdevice);
 
-        // Get OpenGL camera pose in OpenGL world frame
+        // Get OpenGL camera pose in OpenGL world frame.
         Matrix4 openglWorldTOpenglCamera = openglTDevice.multiply(mDeviceTColorCamera).
                 multiply(COLOR_CAMERA_T_OPENGL_CAMERA);
 
@@ -152,13 +148,12 @@ public class ScenePoseCalcuator {
      * PointCloud in Depth camera coordinate system to the Rajawali world.
      */
     public Pose toOpenGLPointCloudPose(TangoPoseData tangoPose) {
-
-        // We can't do this calculation until Extrinsics are set-up
+        // We can't do this calculation until extrinsics are set-up.
         if (mDeviceTDepthCamera == null) {
             throw new RuntimeException("You must call setupExtrinsics first.");
         }
 
-        //conversion matrix to put point cloud data in Rajwali/Opengl Coordinate system.
+        //conversion matrix to put point cloud data in Rajawali/OpenGL coordinate system.
         Matrix4 invertYandZMatrix = new Matrix4(new double[]{1.0f, 0.0f, 0.0f, 0.0f,
                 0.0f, -1.0f, 0.0f, 0.0f,
                 0.0f, 0.0f, -1.0f, 0.0f,
@@ -166,10 +161,10 @@ public class ScenePoseCalcuator {
 
         Matrix4 startServiceTdevice = tangoPoseToMatrix(tangoPose);
 
-        // Get device pose in OpenGL world frame
+        // Get device pose in OpenGL world frame.
         Matrix4 openglTDevice = OPENGL_T_TANGO_WORLD.clone().multiply(startServiceTdevice);
 
-        // Get OpenGL camera pose in OpenGL world frame
+        // Get OpenGL camera pose in OpenGL world frame.
         Matrix4 openglWorldTOpenglCamera = openglTDevice.multiply(mDeviceTDepthCamera).
                 multiply(DEPTH_CAMERA_T_OPENGL_CAMERA).multiply(invertYandZMatrix);
 
@@ -183,7 +178,7 @@ public class ScenePoseCalcuator {
     static public Pose toOpenGLPose(TangoPoseData tangoPose) {
         Matrix4 start_service_T_device = tangoPoseToMatrix(tangoPose);
 
-        // Get device pose in OpenGL world frame
+        // Get device pose in OpenGL world frame.
         Matrix4 opengl_world_T_device = OPENGL_T_TANGO_WORLD.clone().multiply(start_service_T_device);
 
         return matrixToPose(opengl_world_T_device);
@@ -195,9 +190,9 @@ public class ScenePoseCalcuator {
      * Tango start of service frame.
      *
      * @param point      Point in depth frame where the plane has been detected.
-     * @param normal     Normal of the detected plane
+     * @param normal     Normal of the detected plane.
      * @param tangoPose  Device pose with respect to start of service at the time the plane was
-     *                   fitted
+     *                   fitted.
      */
     public Pose planeFitToOpenGLPose(double[] point, double[] normal, TangoPoseData tangoPose) {
         if (mDeviceTDepthCamera == null) {
@@ -206,14 +201,14 @@ public class ScenePoseCalcuator {
 
         Matrix4 startServiceTdevice = tangoPoseToMatrix(tangoPose);
 
-        // Calculate the UP vector in the Depth frame at the provided measurement pose
+        // Calculate the UP vector in the depth frame at the provided measurement pose.
         Vector3 depthUp = TANGO_WORLD_UP.clone();
         startServiceTdevice.clone().multiply(mDeviceTDepthCamera).inverse().rotateVector(depthUp);
 
-        // Calculate the transform in depth frame corresponding to the plane fitting information
+        // Calculate the transform in depth frame corresponding to the plane fitting information.
         Matrix4 depthTplane = matrixFromPointNormalUp(point, normal, depthUp);
 
-        // Convert to OpenGL frame
+        // Convert to OpenGL frame.
         Matrix4 openglWorldTplane = OPENGL_T_TANGO_WORLD.clone().multiply(startServiceTdevice)
                 .multiply(mDeviceTDepthCamera).multiply(depthTplane);
 
@@ -229,14 +224,10 @@ public class ScenePoseCalcuator {
     public void setupExtrinsics(TangoPoseData imuTDevicePose, TangoPoseData imuTColorCameraPose,
                                 TangoPoseData imuTDepthCameraPose) {
         Matrix4 deviceTImu = ScenePoseCalcuator.tangoPoseToMatrix(imuTDevicePose).inverse();
-        Matrix4 imutColorCamera = ScenePoseCalcuator.tangoPoseToMatrix(imuTColorCameraPose);
+        Matrix4 imuTColorCamera = ScenePoseCalcuator.tangoPoseToMatrix(imuTColorCameraPose);
         Matrix4 imuTDepthCamera = ScenePoseCalcuator.tangoPoseToMatrix(imuTDepthCameraPose);
         mDeviceTDepthCamera = deviceTImu.clone().multiply(imuTDepthCamera);
-        mDeviceTColorCamera = deviceTImu.multiply(imutColorCamera);
-    }
-
-    private void throwExceptionIfNoExtrinsics() {
-
+        mDeviceTColorCamera = deviceTImu.multiply(imuTColorCamera);
     }
 
     /**
@@ -244,7 +235,7 @@ public class ScenePoseCalcuator {
      */
     public static Matrix4 calculateProjectionMatrix(int width, int height, double fx, double fy,
                                                     double cx, double cy) {
-        // Uses frustumM to create a projection matrix taking into account Calibrated camera
+        // Uses frustumM to create a projection matrix taking into account calibrated camera
         // intrinsic parameter.
         // Reference: http://ksimek.github.io/2013/06/03/calibrated_cameras_in_opengl/
         double near = 0.1;
@@ -301,27 +292,5 @@ public class ScenePoseCalcuator {
         m.setTranslation(point[0], point[1], point[2]);
 
         return m;
-    }
-
-    /**
-     *  Calculates the transform between the color camera at a time t0 and the depth camera at a
-     *  time t1, given the device poses at t0 and t1.
-     */
-    public TangoPoseData calculateColorCameraTDepthWithTime(TangoPoseData ssTdeviceT0pose,
-                                                            TangoPoseData ssTdeviceT1pose) {
-        if (mDeviceTDepthCamera == null) {
-            throw new RuntimeException("You must call setupExtrinsics first");
-        }
-
-        // Operation at hand:
-        //   rgb_t0_T_depth_t1 = rgb_T_dev * dev_t0_T_ss * ss_T_dev_t1 * dev_T_depth
-
-        Matrix4 ssTdeviceT0 = tangoPoseToMatrix(ssTdeviceT0pose);
-        Matrix4 ssTdeviceT1 = tangoPoseToMatrix(ssTdeviceT1pose);
-
-        Matrix4 rgbt0Tdeptht1 = mDeviceTColorCamera.clone().inverse().
-                multiply(ssTdeviceT0.inverse()).multiply(ssTdeviceT1).multiply(mDeviceTDepthCamera);
-
-        return matrixToTangoPose(rgbt0Tdeptht1);
     }
 }

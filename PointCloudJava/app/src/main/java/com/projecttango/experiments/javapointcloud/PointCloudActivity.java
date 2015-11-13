@@ -49,6 +49,7 @@ import android.widget.Toast;
 
 import org.rajawali3d.surface.RajawaliSurfaceView;
 
+import java.lang.Override;
 import java.nio.FloatBuffer;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -136,46 +137,27 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         super.onResume();
         StartParams params = new StartParams();
         mTangoUx.start(params);
-        if (!mIsTangoServiceConnected) {
-            startActivityForResult(
-                    Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_MOTION_TRACKING),
-                    Tango.TANGO_INTENT_ACTIVITYCODE);
+        try {
+            setTangoListeners();
+        } catch (TangoErrorException e) {
+            Toast.makeText(this, R.string.TangoError, Toast.LENGTH_SHORT).show();
+        } catch (SecurityException e) {
+            Toast.makeText(getApplicationContext(), R.string.motiontrackingpermission,
+                    Toast.LENGTH_SHORT).show();
+        }
+        try {
+            mTango.connect(mConfig);
+            mIsTangoServiceConnected = true;
+            setupExtrinsics();
+        } catch (TangoOutOfDateException outDateEx) {
+            if (mTangoUx != null) {
+                mTangoUx.showTangoOutOfDate();
+            }
+        } catch (TangoErrorException e) {
+            Toast.makeText(getApplicationContext(), R.string.TangoError, Toast.LENGTH_SHORT)
+                    .show();
         }
         Log.i(TAG, "onResumed");
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        // Check which request we're responding to
-        if (requestCode == Tango.TANGO_INTENT_ACTIVITYCODE) {
-            Log.i(TAG, "Triggered");
-            // Make sure the request was successful
-            if (resultCode == RESULT_CANCELED) {
-                Toast.makeText(this, R.string.motiontrackingpermission, Toast.LENGTH_LONG).show();
-                finish();
-                return;
-            }
-            try {
-                setTangoListeners();
-            } catch (TangoErrorException e) {
-                Toast.makeText(this, R.string.TangoError, Toast.LENGTH_SHORT).show();
-            } catch (SecurityException e) {
-                Toast.makeText(getApplicationContext(), R.string.motiontrackingpermission,
-                        Toast.LENGTH_SHORT).show();
-            }
-            try {
-                mTango.connect(mConfig);
-                mIsTangoServiceConnected = true;
-            } catch (TangoOutOfDateException outDateEx) {
-                if (mTangoUx != null) {
-                    mTangoUx.showTangoOutOfDate();
-                }
-            } catch (TangoErrorException e) {
-                Toast.makeText(getApplicationContext(), R.string.TangoError, Toast.LENGTH_SHORT)
-                        .show();
-            }
-            setupExtrinsics();
-        }
     }
 
     @Override

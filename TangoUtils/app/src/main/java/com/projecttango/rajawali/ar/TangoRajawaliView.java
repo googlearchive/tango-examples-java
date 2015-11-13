@@ -30,7 +30,6 @@ import org.rajawali3d.surface.RajawaliSurfaceView;
  *
  */
 public class TangoRajawaliView extends RajawaliSurfaceView {
-
     private static final String TAG = "TangoRajawaliView";
     TangoRajawaliRenderer mRenderer;
 
@@ -38,7 +37,7 @@ public class TangoRajawaliView extends RajawaliSurfaceView {
         super(context);
         // It is important to set render mode to manual to force rendering only when there is a
         // Tango Camera image available and get correct synchronization between the camera and the
-        // rest of the scene
+        // rest of the scene.
         setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
     }
 
@@ -46,7 +45,7 @@ public class TangoRajawaliView extends RajawaliSurfaceView {
         super(context, attrs);
         // It is important to set render mode to manual to force rendering only when there is a
         // Tango Camera image available and get correct synchronization between the camera and the
-        // rest of the scene
+        // rest of the scene.
         setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
     }
 
@@ -61,7 +60,7 @@ public class TangoRajawaliView extends RajawaliSurfaceView {
     }
 
     /**
-     * Get the latest camera data's timestamp.  This value will be updated when
+     * Get the latest camera data's timestamp. This value will be updated when
      * the updateTexture() is called.
      *
      * @return The timestamp. This can be used to associate camera data with a

@@ -18,7 +18,6 @@ package com.projecttango.experiments.augmentedrealitysample;
 import com.google.atap.tangoservice.TangoCameraIntrinsics;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
-import com.projecttango.rajawali.ScenePoseCalcuator;
 import com.projecttango.tangosupport.TangoSupport;
 
 import java.nio.ByteBuffer;
@@ -35,7 +34,6 @@ public class PointCloudManager {
 
     private final TangoCameraIntrinsics mTangoCameraIntrinsics;
     private final TangoXyzIjData mXyzIjData;
-    private TangoPoseData mDevicePoseAtCloudTime;
 
     public PointCloudManager(TangoCameraIntrinsics intrinsics) {
         mXyzIjData = new TangoXyzIjData();
@@ -46,12 +44,8 @@ public class PointCloudManager {
      * Update the current cloud data with the provided xyzIjData from a Tango callback.
      *
      * @param from          The point cloud data
-     * @param xyzIjPose     The device pose with respect to start of service at the time
-     *                      the point cloud was acquired
      */
-    public synchronized void updateXyzIjData(TangoXyzIjData from, TangoPoseData xyzIjPose) {
-        mDevicePoseAtCloudTime = xyzIjPose;
-
+    public synchronized void updateXyzIjData(TangoXyzIjData from) {
         if (mXyzIjData.xyz == null || mXyzIjData.xyz.capacity() < from.xyzCount * 3) {
             mXyzIjData.xyz = ByteBuffer.allocateDirect(from.xyzCount * 3 * 4)
                     .order(ByteOrder.nativeOrder()).asFloatBuffer();
@@ -74,21 +68,37 @@ public class PointCloudManager {
      *
      * @param u                     u (horizontal) component of the click location
      * @param v                     v (vertical) component of the click location
-     * @param devicePoseAtClickTime Device pose at the time this operation is requested
-     * @param poseCalcuator         ScenePoseCalculator helper instance to calculate transforms
-     * @return                      The point and plane model, in depth sensor frame
+     * @param timestampAtClickTime  Timestamp at the time this operation is requested
+     * @return                      The point and plane model, in depth sensor frame at the time
+     *                              the point cloud data was acquired and the timestamp when the
+     *                              the point cloud data was acquired.
      */
-    public synchronized TangoSupport.IntersectionPointPlaneModelPair fitPlane(float u, float v,
-            TangoPoseData devicePoseAtClickTime, ScenePoseCalcuator poseCalcuator) {
+    public synchronized FitPlaneResult fitPlane(float u, float v,
+            double timestampAtClickTime) {
 
         // We need to calculate the transform between the color camera at the time the user clicked
         // and the depth camera at the time the depth cloud was acquired.
-        // This operation is currently implemented in the provided ScenePoseCalculator helper
-        // class. In the future, the support library will provide a method for this calculation.
         TangoPoseData colorCameraTDepthCameraWithTime
-                = poseCalcuator.calculateColorCameraTDepthWithTime(devicePoseAtClickTime, mDevicePoseAtCloudTime);
+                = TangoSupport.calculateRelativePose(timestampAtClickTime,
+                TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
+                mXyzIjData.timestamp,
+                TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH);
 
-        return TangoSupport.fitPlaneModelNearClick(mXyzIjData, mTangoCameraIntrinsics,
-                colorCameraTDepthCameraWithTime, u, v);
+        return new FitPlaneResult(TangoSupport.fitPlaneModelNearClick(mXyzIjData, mTangoCameraIntrinsics,
+                colorCameraTDepthCameraWithTime, u, v), mXyzIjData.timestamp);
+    }
+
+    /**
+     * Internal class used to return the information about a plane fitting call.
+     */
+    public class FitPlaneResult {
+        public final TangoSupport.IntersectionPointPlaneModelPair planeModelPair;
+        public final double cloudTimestamp;
+
+        public FitPlaneResult(TangoSupport.IntersectionPointPlaneModelPair planeModelPair,
+                              double cloudTimestamp) {
+            this.planeModelPair = planeModelPair;
+            this.cloudTimestamp = cloudTimestamp;
+        }
     }
 }

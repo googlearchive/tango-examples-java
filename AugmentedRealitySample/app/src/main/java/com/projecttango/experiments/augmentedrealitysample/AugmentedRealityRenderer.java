@@ -20,7 +20,6 @@ import android.view.MotionEvent;
 
 import com.google.atap.tangoservice.TangoPoseData;
 import com.projecttango.rajawali.Pose;
-import com.projecttango.rajawali.ScenePoseCalcuator;
 import com.projecttango.rajawali.ar.TangoRajawaliRenderer;
 
 import org.rajawali3d.Object3D;
@@ -43,7 +42,6 @@ import org.rajawali3d.primitives.Cube;
  * - It doesn't do anything with the camera, since that is handled automatically by Tango
  */
 public class AugmentedRealityRenderer extends TangoRajawaliRenderer {
-
     private static final float CUBE_SIDE_LENGTH = 0.5f;
 
     private Pose mPlanePose;
@@ -57,17 +55,17 @@ public class AugmentedRealityRenderer extends TangoRajawaliRenderer {
 
     @Override
     protected void initScene() {
-        // Remember to call super.initScene() to allow TangoRajawaliArRenderer to set-up
+        // Remember to call super.initScene() to allow TangoRajawaliArRenderer to be set-up.
         super.initScene();
 
-        // Add a directional light in an arbitrary direction
+        // Add a directional light in an arbitrary direction.
         DirectionalLight light = new DirectionalLight(1, 0.2, -1);
         light.setColor(1, 1, 1);
         light.setPower(0.8f);
         light.setPosition(3, 2, 4);
         getCurrentScene().addLight(light);
 
-        // Set-up a material: green with application of the light and instructions
+        // Set-up a material: green with application of the light and instructions.
         Material material = new Material();
         material.setColor(0xff009900);
         try {
@@ -80,7 +78,7 @@ public class AugmentedRealityRenderer extends TangoRajawaliRenderer {
         material.enableLighting(true);
         material.setDiffuseMethod(new DiffuseMethod.Lambert());
 
-        // Build a Cube and place it initially in the origin
+        // Build a Cube and place it initially in the origin.
         mObject = new Cube(CUBE_SIDE_LENGTH);
         mObject.setMaterial(material);
         mObject.setPosition(0, 0, -3);
@@ -89,17 +87,17 @@ public class AugmentedRealityRenderer extends TangoRajawaliRenderer {
     }
 
     @Override
-    protected void onRender(long ellapsedRealtime, double deltaTime) {
-        super.onRender(ellapsedRealtime, deltaTime);
+    protected void onRender(long elapsedRealTime, double deltaTime) {
+        super.onRender(elapsedRealTime, deltaTime);
 
         synchronized (this) {
-            if (mPlanePoseUpdated == true) {
+            if (mPlanePoseUpdated) {
                 mPlanePoseUpdated = false;
-                // Place the 3D object in the location of the detected plane
+                // Place the 3D object in the location of the detected plane.
                 mObject.setPosition(mPlanePose.getPosition());
                 mObject.setOrientation(mPlanePose.getOrientation());
                 // Move it forward by half of the size of the cube to make it flush with the plane
-                // surface
+                // surface.
                 mObject.moveForward(CUBE_SIDE_LENGTH / 2.0f);
             }
         }
@@ -107,21 +105,12 @@ public class AugmentedRealityRenderer extends TangoRajawaliRenderer {
 
     /**
      * Update the 3D object based on the provided measurement point, normal (in depth frame) and
-     * device pose at the time of measurement.
+     * device pose at the time the point and normal were acquired.
      */
     public synchronized void updateObjectPose(double[] point, double[] normal,
                                               TangoPoseData devicePose) {
         mPlanePose = mScenePoseCalcuator.planeFitToOpenGLPose(point, normal, devicePose);
         mPlanePoseUpdated = true;
-    }
-
-    /**
-     * Provide access to scene calculator helper class to perform necessary transformations.
-     * NOTE: This won't be necessary once transformation functions are available through the
-     * support library
-     */
-    public ScenePoseCalcuator getPoseCalculator() {
-        return mScenePoseCalcuator;
     }
 
     @Override

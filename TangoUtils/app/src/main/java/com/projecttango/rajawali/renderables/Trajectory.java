@@ -32,10 +32,11 @@ import java.nio.FloatBuffer;
  * passing translation data obtained from Tango Pose Data.
  */
 public class Trajectory extends Object3D {
-    private int mMaxNumberOfVertices = 9000;
+    private static final int MAX_NUMBER_OF_VERTICES = 9000;
     private Vector3 mLastPoint = new Vector3();
     private FloatBuffer mVertexBuffer;
     private int mTrajectoryCount;
+
     public Trajectory(int color, float thickness) {
         super();
         init(true);
@@ -43,16 +44,16 @@ public class Trajectory extends Object3D {
         m.setColor(color);
         setMaterial(m);
         mVertexBuffer = ByteBuffer
-                .allocateDirect(mMaxNumberOfVertices * Geometry3D.FLOAT_SIZE_BYTES)
+                .allocateDirect(MAX_NUMBER_OF_VERTICES * Geometry3D.FLOAT_SIZE_BYTES)
                 .order(ByteOrder.nativeOrder()).asFloatBuffer();
 
     }
 
     // Initialize the buffers for Trajectory primitive.
-    // Since only vertex and Index buffers are used, we only initialize them using setdata call.
+    // Since only vertex and Index buffers are used, we only initialize them using setData call.
     protected void init(boolean createVBOs) {
-        float[] vertices = new float[mMaxNumberOfVertices*3];
-        int[] indices = new int[mMaxNumberOfVertices];
+        float[] vertices = new float[MAX_NUMBER_OF_VERTICES * 3];
+        int[] indices = new int[MAX_NUMBER_OF_VERTICES];
         for(int i = 0; i < indices.length; ++i){
             indices[i] = i;
         }

@@ -4,5 +4,9 @@
     <string name="app_name">VideoOverlaySample</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+    <string name="TangoError">"Tango exception! Try again!"</string>
+    <string name="TangoOutOfDateException">"Tango service outdated!"</string>
+    <string name="resetmotiontracking">"Reset motion tracking"</string>
+    <string name="motiontrackingpermission">"Motion Tracking permission needed!"</string>
 
 </resources>

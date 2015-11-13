@@ -28,7 +28,9 @@ import com.google.atap.tangoservice.TangoCameraIntrinsics;
 import com.google.atap.tangoservice.TangoCameraPreview;
 import com.google.atap.tangoservice.TangoConfig;
 import com.google.atap.tangoservice.TangoCoordinateFramePair;
+import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
+import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
@@ -48,7 +50,6 @@ public class MainActivity extends Activity {
 	private TangoCameraPreview tangoCameraPreview;
 	private Tango mTango;
 	private boolean mIsConnected;
-	private boolean mIsPermissionGranted;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -61,33 +62,17 @@ public class MainActivity extends Activity {
 		setContentView(tangoCameraPreview);
 	}
 
-	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		// Check which request we're responding to
-		if (requestCode == Tango.TANGO_INTENT_ACTIVITYCODE) {
-			// Make sure the request was successful
-			if (resultCode == RESULT_CANCELED) {
-				Toast.makeText(this, "Motion Tracking Permissions Required!",
-						Toast.LENGTH_SHORT).show();
-				finish();
-			} else {
-				startCameraPreview();
-				mIsPermissionGranted = true;
-			}
-		}
-	}
-
 	// Camera Preview
 	private void startCameraPreview() {
-	    // Connect to color camera
+		// Connect to color camera
 		tangoCameraPreview.connectToTangoCamera(mTango,
 				TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
 		// Use default configuration for Tango Service.
 		TangoConfig config = mTango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
 		mTango.connect(config);
 		mIsConnected = true;
-		
-		// No need to add any coordinate frame pairs since we are not using 
+
+		// No need to add any coordinate frame pairs since we are not using
 		// pose data. So just initialize.
 		ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
 		mTango.connectListener(framePairs, new OnTangoUpdateListener() {
@@ -98,9 +83,9 @@ public class MainActivity extends Activity {
 
 			@Override
 			public void onFrameAvailable(int cameraId) {
-			    
-			    // Check if the frame available is for the camera we want and
-			    // update its frame on the camera preview.
+
+				// Check if the frame available is for the camera we want and
+				// update its frame on the camera preview.
 				if (cameraId == TangoCameraIntrinsics.TANGO_CAMERA_COLOR) {
 					tangoCameraPreview.onFrameAvailable();
 				}
@@ -131,8 +116,15 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onResume() {
 		super.onResume();
-		if (!mIsConnected && mIsPermissionGranted) {
-			startCameraPreview();
+		try {
+			if (!mIsConnected) {
+				startCameraPreview();
+			}
+		} catch (TangoOutOfDateException e) {
+			Toast.makeText(getApplicationContext(), R.string.TangoOutOfDateException,
+					Toast.LENGTH_SHORT).show();
+		} catch (TangoErrorException e) {
+			Toast.makeText(getApplicationContext(), R.string.TangoError, Toast.LENGTH_SHORT).show();
 		}
 	}
 }

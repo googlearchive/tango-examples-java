@@ -54,10 +54,7 @@ public class ALStartActivity extends Activity implements View.OnClickListener {
         mLoadADFToggleButton.setOnClickListener(this);
         mStartButton.setOnClickListener(this);
         startActivityForResult(
-                Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_MOTION_TRACKING), 0);
-        startActivityForResult(
-                Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_ADF_LOAD_SAVE), 1);
-
+                Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_ADF_LOAD_SAVE), 0);
     }
 
     @Override
@@ -96,12 +93,6 @@ public class ALStartActivity extends Activity implements View.OnClickListener {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         // Check which request we're responding to
         if (requestCode == 0) {
-            // Make sure the request was successful
-            if (resultCode == RESULT_CANCELED) {
-                Toast.makeText(this, R.string.motiontracking_permission, Toast.LENGTH_SHORT).show();
-                finish();
-            }
-        } else if (requestCode == 1) {
             // Make sure the request was successful
             if (resultCode == RESULT_CANCELED) {
                 Toast.makeText(this, R.string.arealearning_permission, Toast.LENGTH_SHORT).show();
