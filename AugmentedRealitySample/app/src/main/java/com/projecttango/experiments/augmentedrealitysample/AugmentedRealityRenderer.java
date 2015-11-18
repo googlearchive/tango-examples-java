@@ -16,6 +16,7 @@
 package com.projecttango.experiments.augmentedrealitysample;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.MotionEvent;
 
 import com.google.atap.tangoservice.TangoPoseData;
@@ -42,9 +43,10 @@ import org.rajawali3d.primitives.Cube;
  * - It doesn't do anything with the camera, since that is handled automatically by Tango
  */
 public class AugmentedRealityRenderer extends TangoRajawaliRenderer {
-    private static final float CUBE_SIDE_LENGTH = 0.5f;
+    private static final float CUBE_SIDE_LENGTH = 0.05f;
 
     private Pose mPlanePose;
+    private Pose mLastPlanePose;
     private boolean mPlanePoseUpdated = false;
 
     private Object3D mObject;
@@ -110,6 +112,14 @@ public class AugmentedRealityRenderer extends TangoRajawaliRenderer {
     public synchronized void updateObjectPose(double[] point, double[] normal,
                                               TangoPoseData devicePose) {
         mPlanePose = mScenePoseCalcuator.planeFitToOpenGLPose(point, normal, devicePose);
+        if (mLastPlanePose != null) {
+          double dist = Math.sqrt(
+              Math.pow(mLastPlanePose.getPosition().x - mPlanePose.getPosition().x, 2)
+              + Math.pow(mLastPlanePose.getPosition().y - mPlanePose.getPosition().y, 2)
+              + Math.pow(mLastPlanePose.getPosition().z - mPlanePose.getPosition().z, 2));
+          Log.i("PlaneFitting", "point distance: " + dist);
+        }
+        mLastPlanePose = mPlanePose;
         mPlanePoseUpdated = true;
     }
 
