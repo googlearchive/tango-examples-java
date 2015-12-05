@@ -216,6 +216,12 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
                     updateUI = true;
                 }
 
+                // If the pose is not valid, we may not get another callback so make sure to update
+                // the UI during this call
+                if (pose.statusCode != TangoPoseData.POSE_VALID) {
+                    updateUI = true;
+                }
+
                 if(updateUI) {
                     final String translationString =
                         TangoPoseUtilities.getTranslationString(pose, FORMAT_THREE_DECIMAL);

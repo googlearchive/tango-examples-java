@@ -202,7 +202,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
 
                 mPose = pose;
                 // Calculate the delta time from previous pose.
-                final double deltaTime = pose.timestamp - mPosePreviousTimeStamp
+                final double deltaTime = (pose.timestamp - mPosePreviousTimeStamp)
                         * SECS_TO_MILLISECS;
                 mPosePreviousTimeStamp = pose.timestamp;
                 if (mPreviousPoseStatus != pose.statusCode) {
