@@ -36,6 +36,7 @@ import com.google.atap.tangoservice.TangoXyzIjData;
 
 import java.util.ArrayList;
 
+import com.projecttango.rajawali.ScenePoseCalcuator;
 import com.projecttango.rajawali.ar.TangoRajawaliView;
 import com.projecttango.tangosupport.TangoPointCloudManager;
 import com.projecttango.tangosupport.TangoSupport;
@@ -215,6 +216,7 @@ public class AugmentedRealityActivity extends Activity implements View.OnTouchLi
                 Log.e(TAG, getString(R.string.failed_permissions), t);
             }
         }
+        ScenePoseCalcuator.TransformTest();
         return true;
     }
 

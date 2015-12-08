@@ -15,12 +15,16 @@
  */
 package com.projecttango.rajawali;
 
+import android.util.Log;
+
 import com.google.atap.tangoservice.TangoPoseData;
 
 import org.rajawali3d.math.Matrix;
 import org.rajawali3d.math.Matrix4;
 import org.rajawali3d.math.Quaternion;
 import org.rajawali3d.math.vector.Vector3;
+
+import java.util.Arrays;
 
 /**
  * Convenient class for calculating transformations from the Tango world to the OpenGL world, using
@@ -264,7 +268,7 @@ public class ScenePoseCalcuator {
      */
     private static Matrix4 matrixFromPointNormalUp(double[] point, double[] normal, Vector3 up) {
         Vector3 zAxis = new Vector3(normal);
-        zAxis.normalize();
+        //zAxis.normalize();
         Vector3 xAxis = new Vector3();
         xAxis.crossAndSet(up, zAxis);
         xAxis.normalize();
@@ -294,7 +298,7 @@ public class ScenePoseCalcuator {
         return m;
     }
 
-    public Matrix4 GetModelTWorldFromCorrespondence(double[] p0Model2D, double[] p1Model2D,
+    public static Matrix4 GetModelTWorldFromCorrespondence(double[] p0Model2D, double[] p1Model2D,
                                                     double[] p0World, double[] p1World)
     {
         // We need to define the transform to a common coordinate frame given our point
@@ -330,19 +334,28 @@ public class ScenePoseCalcuator {
         return modelTDefined.clone().multiply(worldTDefined.inverse());
     }
 
-    public double[] worldFromModel2D(double[] pModel2D, Matrix4 modelTWorld)
+    public static double[] worldFromModel2D(double[] pModel2D, Matrix4 modelTWorld)
     {
         Vector3 pModel = new Vector3(pModel2D[0], pModel2D[1], 0);
         Vector3 pWorld = modelTWorld.projectAndCreateVector(pModel);
         return pWorld.toArray();
     }
 
-    public double[] model2DFromWorld(double[] pWorld, Matrix4 modelTWorld)
+    public static double[] model2DFromWorld(double[] pWorld, Matrix4 modelTWorld)
     {
         Vector3 pModel = modelTWorld.inverse().projectAndCreateVector(new Vector3(pWorld));
         double[] ret = new double[2];
         ret[0] = pModel.x;
         ret[1] = pModel.y;
         return ret;
+    }
+
+    public static void TransformTest()
+    {
+        Matrix4 modelTWorld = GetModelTWorldFromCorrespondence(
+                new double[]{0.0, 0.0}, new double[]{2.0, 4.0},
+                new double[]{2.0, 2.0, 0.0}, new double[]{-2.0, 10.0, 0.0});
+        double[] midPointModel = new double[]{1.0, 2.0};
+        Log.e("TEST", Arrays.toString(worldFromModel2D(midPointModel, modelTWorld)));
     }
 }
