@@ -210,7 +210,7 @@ public class ScenePoseCalcuator {
         startServiceTdevice.clone().multiply(mDeviceTDepthCamera).inverse().rotateVector(depthUp);
 
         // Calculate the transform in depth frame corresponding to the plane fitting information.
-        Matrix4 depthTplane = matrixFromPointNormalUp(point, normal, depthUp);
+        Matrix4 depthTplane = orthonormalMatrixFromPointNormalUp(point, normal, depthUp);
 
         // Convert to OpenGL frame.
         Matrix4 openglWorldTplane = OPENGL_T_TANGO_WORLD.clone().multiply(startServiceTdevice)
@@ -266,15 +266,48 @@ public class ScenePoseCalcuator {
      * Calculates a transformation matrix based on a point, a normal and the up gravity vector.
      * The coordinate frame of the target transformation will be Z forward, X left, Y up.
      */
-    private static Matrix4 matrixFromPointNormalUp(double[] point, double[] normal, Vector3 up) {
+    private static Matrix4 orthonormalMatrixFromPointNormalUp(double[] point, double[] normal, Vector3 up) {
         Vector3 zAxis = new Vector3(normal);
-        //zAxis.normalize();
+        zAxis.normalize();
         Vector3 xAxis = new Vector3();
         xAxis.crossAndSet(up, zAxis);
         xAxis.normalize();
         Vector3 yAxis = new Vector3();
         yAxis.crossAndSet(xAxis, zAxis);
         yAxis.normalize();
+
+        double[] rot = new double[16];
+
+        rot[Matrix4.M00] = xAxis.x;
+        rot[Matrix4.M10] = xAxis.y;
+        rot[Matrix4.M20] = xAxis.z;
+
+        rot[Matrix4.M01] = yAxis.x;
+        rot[Matrix4.M11] = yAxis.y;
+        rot[Matrix4.M21] = yAxis.z;
+
+        rot[Matrix4.M02] = zAxis.x;
+        rot[Matrix4.M12] = zAxis.y;
+        rot[Matrix4.M22] = zAxis.z;
+
+        rot[Matrix4.M33] = 1;
+
+        Matrix4 m = new Matrix4(rot);
+        m.setTranslation(point[0], point[1], point[2]);
+
+        return m;
+    }
+
+    /**
+     * Calculates a transformation matrix based on a point, a normal and the up gravity vector.
+     * The coordinate frame of the target transformation will be Z forward, X left, Y up.
+     */
+    private static Matrix4 matrixFromPointAndVectors(double[] point, double[] normal, Vector3 up) {
+        Vector3 zAxis = new Vector3(normal);
+        Vector3 xAxis = new Vector3();
+        xAxis.crossAndSet(up, zAxis);
+        Vector3 yAxis = new Vector3(up);
+
 
         double[] rot = new double[16];
 
@@ -318,7 +351,7 @@ public class ScenePoseCalcuator {
         modelOrigin[1] = p0Model2D[1];
         modelOrigin[2] = 0.0;
 
-        Matrix4 modelTDefined = matrixFromPointNormalUp(modelOrigin, modelNormal, modelUp);
+        Matrix4 modelTDefined = matrixFromPointAndVectors(modelOrigin, modelNormal, modelUp);
 
         // Next we need to define the transform from a point in the defined frame to the world.
         double[] worldNormal = new double[3];
@@ -329,7 +362,7 @@ public class ScenePoseCalcuator {
         // TODO(@eitanm): Should this be passed in? We're assuming up is aligned with gravity.
         Vector3 worldUp = TANGO_WORLD_UP.clone();
 
-        Matrix4 worldTDefined = matrixFromPointNormalUp(p0World, worldNormal, worldUp);
+        Matrix4 worldTDefined = matrixFromPointAndVectors(p0World, worldNormal, worldUp);
 
         return modelTDefined.clone().multiply(worldTDefined.inverse());
     }
@@ -337,25 +370,50 @@ public class ScenePoseCalcuator {
     public static double[] worldFromModel2D(double[] pModel2D, Matrix4 modelTWorld)
     {
         Vector3 pModel = new Vector3(pModel2D[0], pModel2D[1], 0);
-        Vector3 pWorld = modelTWorld.projectAndCreateVector(pModel);
+        Vector3 pWorld = projectAndCreateVectorLocal(pModel, modelTWorld.clone().inverse());
         return pWorld.toArray();
+    }
+
+
+    public static Vector3 projectAndCreateVectorLocal(final Vector3 vec, Matrix4 m) {
+        Vector3 r = new Vector3();
+        double[] ma = m.getDoubleValues();
+        double inv = 1.0 / (ma[m.M30] * vec.x + ma[m.M31] * vec.y + ma[m.M32] * vec.z + ma[m.M33]);
+        Log.e("TEST", "inv: " + inv);
+        r.x = (ma[m.M00] * vec.x + ma[m.M01] * vec.y + ma[m.M02] * vec.z + ma[m.M03]) * inv;
+        r.y = (ma[m.M10] * vec.x + ma[m.M11] * vec.y + ma[m.M12] * vec.z + ma[m.M13]) * inv;
+        r.z = (ma[m.M20] * vec.x + ma[m.M21] * vec.y + ma[m.M22] * vec.z + ma[m.M23]) * inv;
+        return r;
     }
 
     public static double[] model2DFromWorld(double[] pWorld, Matrix4 modelTWorld)
     {
-        Vector3 pModel = modelTWorld.inverse().projectAndCreateVector(new Vector3(pWorld));
+        Vector3 pModel = projectAndCreateVectorLocal(new Vector3(pWorld), modelTWorld);
         double[] ret = new double[2];
         ret[0] = pModel.x;
         ret[1] = pModel.y;
         return ret;
     }
 
+
     public static void TransformTest()
     {
-        Matrix4 modelTWorld = GetModelTWorldFromCorrespondence(
+        Matrix4 modelTWorldMat = GetModelTWorldFromCorrespondence(
                 new double[]{0.0, 0.0}, new double[]{2.0, 4.0},
                 new double[]{2.0, 2.0, 0.0}, new double[]{-2.0, 10.0, 0.0});
-        double[] midPointModel = new double[]{1.0, 2.0};
-        Log.e("TEST", Arrays.toString(worldFromModel2D(midPointModel, modelTWorld)));
+        double[] modelTWorld = modelTWorldMat.clone().inverse().getDoubleValues();
+        Log.e("TEST", modelTWorld[0] + ", " + modelTWorld[4] + ", " + modelTWorld[8] + ", " + modelTWorld[12]);
+        Log.e("TEST", modelTWorld[1] + ", " + modelTWorld[5] + ", " + modelTWorld[9] + ", " + modelTWorld[13]);
+        Log.e("TEST", modelTWorld[2] + ", " + modelTWorld[6] + ", " + modelTWorld[10] + ", " + modelTWorld[14]);
+        Log.e("TEST", modelTWorld[3] + ", " + modelTWorld[7] + ", " + modelTWorld[11] + ", " + modelTWorld[15]);
+        double [] ret = new double[]{0.0, 0.0, 0.0};
+        double[] midPointModel = new double[]{1.0, 2.0}; /// expect 0, 6
+        double[] perpModel = new double[]{0.0, 4.0}; /// expect ?, ?
+        double[] backwards = new double[]{-2.0, -4.0}; /// expect 6, -6
+        Log.e("TEST", "1: " + Arrays.toString(worldFromModel2D(midPointModel, modelTWorldMat)));
+        Log.e("TEST", "2: " + Arrays.toString(worldFromModel2D(perpModel, modelTWorldMat)));
+        Log.e("TEST", "3: " + Arrays.toString(worldFromModel2D(backwards, modelTWorldMat)));
+        double[] world = new double[]{-4.4, 6.8, 0,0}; /// expect 0, 4
+        Log.e("TEST", "4: " + Arrays.toString(model2DFromWorld(world, modelTWorldMat)));
     }
 }
