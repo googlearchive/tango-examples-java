@@ -16,8 +16,6 @@
 
 package com.projecttango.experiments.quickstartjava;
 
-import java.util.ArrayList;
-
 import com.google.atap.tangoservice.Tango;
 import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
 import com.google.atap.tangoservice.TangoConfig;
@@ -37,6 +35,7 @@ import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
 
 /**
  * Main Activity for the Tango Java Quickstart. Demonstrates establishing a
@@ -49,13 +48,19 @@ public class MainActivity extends Activity {
     private static final String sTranslationFormat = "Translation: %f, %f, %f";
     private static final String sRotationFormat = "Rotation: %f, %f, %f, %f";
 
+    private static final int SECS_TO_MILLISECS = 1000;
+    private static final double UPDATE_INTERVAL_MS = 100.0;
+
+    private double mPreviousTimeStamp;
+    private double mTimeToNextUpdate = UPDATE_INTERVAL_MS;
+
     private TextView mTranslationTextView;
     private TextView mRotationTextView;
 
     private Tango mTango;
     private TangoConfig mConfig;
     private boolean mIsTangoServiceConnected;
-    private boolean mIsProcessing = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -137,12 +142,6 @@ public class MainActivity extends Activity {
             @SuppressLint("DefaultLocale")
             @Override
             public void onPoseAvailable(TangoPoseData pose) {
-                if (mIsProcessing) {
-                    Log.i(TAG, "Processing UI");
-                    return;
-                }
-                mIsProcessing = true;
-                
                 // Format Translation and Rotation data
                 final String translationMsg = String.format(sTranslationFormat,
                         pose.translation[0], pose.translation[1],
@@ -155,19 +154,28 @@ public class MainActivity extends Activity {
                 String logMsg = translationMsg + " | " + rotationMsg;
                 Log.i(TAG, logMsg);
 
-                // Display data in TextViews. This must be done inside a
-                // runOnUiThread call because
-                // it affects the UI, which will cause an error if performed
-                // from the Tango
-                // service thread
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        mTranslationTextView.setText(translationMsg);
-                        mRotationTextView.setText(rotationMsg);
-                        mIsProcessing = false;
-                    }
-                });
+                final double deltaTime = (pose.timestamp - mPreviousTimeStamp)
+                        * SECS_TO_MILLISECS;
+                mPreviousTimeStamp = pose.timestamp;
+                mTimeToNextUpdate -= deltaTime;
+
+                // Throttle updates to the UI based on UPDATE_INTERVAL_MS.
+                if (mTimeToNextUpdate < 0.0) {
+                    mTimeToNextUpdate = UPDATE_INTERVAL_MS;
+
+                    // Display data in TextViews. This must be done inside a
+                    // runOnUiThread call because
+                    // it affects the UI, which will cause an error if performed
+                    // from the Tango
+                    // service thread
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            mRotationTextView.setText(rotationMsg);
+                            mTranslationTextView.setText(translationMsg);
+                        }
+                    });
+                }
             }
 
             @Override

@@ -64,7 +64,7 @@ public class MainActivity extends Activity {
 
 	// Camera Preview
 	private void startCameraPreview() {
-		// Connect to color camera
+	    // Connect to color camera
 		tangoCameraPreview.connectToTangoCamera(mTango,
 				TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
 		// Use default configuration for Tango Service.
@@ -84,8 +84,8 @@ public class MainActivity extends Activity {
 			@Override
 			public void onFrameAvailable(int cameraId) {
 
-				// Check if the frame available is for the camera we want and
-				// update its frame on the camera preview.
+			    // Check if the frame available is for the camera we want and
+			    // update its frame on the camera preview.
 				if (cameraId == TangoCameraIntrinsics.TANGO_CAMERA_COLOR) {
 					tangoCameraPreview.onFrameAvailable();
 				}

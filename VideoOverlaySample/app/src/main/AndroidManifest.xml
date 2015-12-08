@@ -7,7 +7,7 @@
     <uses-sdk
         android:minSdkVersion="17"
         android:targetSdkVersion="19" />
-    <uses-permission android:name="android.permission.CAMERA" />
+     <uses-permission android:name="android.permission.CAMERA" />
 
     <application
         android:allowBackup="true"

@@ -15,6 +15,10 @@
  */
 
 package com.projecttango.experiments.javapointcloud;
+
+import com.google.atap.tango.ux.TangoUx;
+import com.google.atap.tango.ux.TangoUx.StartParams;
+import com.google.atap.tango.ux.TangoUxLayout;
 import com.google.atap.tango.ux.UxExceptionEvent;
 import com.google.atap.tango.ux.UxExceptionEventListener;
 import com.google.atap.tangoservice.Tango;
@@ -28,12 +32,6 @@ import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
-import com.google.atap.tango.ux.TangoUx;
-import com.google.atap.tango.ux.TangoUx.StartParams;
-import com.google.atap.tango.ux.TangoUxLayout;
-import com.projecttango.tangoutils.TangoPoseUtilities;
-
-
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
@@ -46,6 +44,8 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.projecttango.tangoutils.TangoPoseUtilities;
 
 import org.rajawali3d.surface.RajawaliSurfaceView;
 
@@ -85,22 +85,19 @@ public class PointCloudActivity extends Activity implements OnClickListener {
     private Button mTopDownButton;
 
     private int mCount;
-    private int mPreviousPoseStatus;
-    private int mPointCount;
-    private float mDeltaTime;
-    private float mPosePreviousTimeStamp;
-    private float mXyIjPreviousTimeStamp;
-    private float mCurrentTimeStamp;
-    private float mPointCloudFrameDelta;
-    private float mAverageDepth;
+    private int mPreviousPoseStatus = TangoPoseData.POSE_INVALID;
+    private double mPosePreviousTimeStamp;
+    private double mXyIjPreviousTimeStamp;
     private boolean mIsTangoServiceConnected;
     private TangoPoseData mPose;
     private PointCloudManager mPointCloudManager;
     private TangoUx mTangoUx;
 
-    private static final int UPDATE_INTERVAL_MS = 100;
-    private Object mUiPoseLock = new Object();
-    private Object mUiDepthLock = new Object();
+    private static final DecimalFormat FORMAT_THREE_DECIMAL = new DecimalFormat("0.000");
+    private static final double UPDATE_INTERVAL_MS = 100.0;
+
+    private double mPoseTimeToNextUpdate = UPDATE_INTERVAL_MS;
+    private double mXyzIjTimeToNextUpdate = UPDATE_INTERVAL_MS;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -117,7 +114,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         mRenderer = setupGLViewAndRenderer(mPointCloudManager);
         mTangoUx = setupTangoUxAndLayout();
         mIsTangoServiceConnected = false;
-        startUIThread();
     }
 
     @Override
@@ -203,21 +199,41 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                 if (mTangoUx != null) {
                     mTangoUx.updatePoseStatus(pose.statusCode);
                 }
-                // Make sure to have atomic access to Tango Pose Data so that
-                // render loop doesn't interfere while Pose call back is updating
-                // the data.
-                synchronized (mUiPoseLock) {
-                    mPose = pose;
-                    // Calculate the delta time from previous pose.
-                    mDeltaTime = (float) (pose.timestamp - mPosePreviousTimeStamp)
-                            * SECS_TO_MILLISECS;
-                    mPosePreviousTimeStamp = (float) pose.timestamp;
-                    if (mPreviousPoseStatus != pose.statusCode) {
-                        mCount = 0;
-                    }
-                    mCount++;
-                    mPreviousPoseStatus = pose.statusCode;
+
+                mPose = pose;
+                // Calculate the delta time from previous pose.
+                final double deltaTime = pose.timestamp - mPosePreviousTimeStamp
+                        * SECS_TO_MILLISECS;
+                mPosePreviousTimeStamp = pose.timestamp;
+                if (mPreviousPoseStatus != pose.statusCode) {
+                    mCount = 0;
                 }
+                mCount++;
+                mPreviousPoseStatus = pose.statusCode;
+                mPoseTimeToNextUpdate -= deltaTime;
+
+                if (mPoseTimeToNextUpdate < 0.0) {
+                    mPoseTimeToNextUpdate = UPDATE_INTERVAL_MS;
+
+                    final String translationString
+                            = TangoPoseUtilities.getTranslationString(mPose, FORMAT_THREE_DECIMAL);
+                    final String quaternionString
+                            = TangoPoseUtilities.getQuaternionString(mPose, FORMAT_THREE_DECIMAL);
+                    final String status = TangoPoseUtilities.getStatusString(mPose);
+                    final String countString = Integer.toString(mCount);
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            mPoseTextView.setText(translationString);
+                            mQuatTextView.setText(quaternionString);
+                            mPoseCountTextView.setText(countString);
+                            mDeltaTextView.setText(FORMAT_THREE_DECIMAL.format(deltaTime));
+                            mPoseStatusTextView.setText(status);
+                        }
+                    });
+                }
+
                 mRenderer.updateDevicePose(pose);
             }
 
@@ -227,28 +243,30 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                     mTangoUx.updateXyzCount(xyzIj.xyzCount);
                 }
                 mPointCloudManager.updateCallbackBufferAndSwap(xyzIj.xyz, xyzIj.xyzCount);
-                TangoPoseData pointCloudPose = mTango.getPoseAtTime(mCurrentTimeStamp,
+                TangoPoseData pointCloudPose = mTango.getPoseAtTime(xyzIj.timestamp,
                         framePairs.get(0));
                 mRenderer.updatePointCloudPose(pointCloudPose);
 
-                // Make sure to have atomic access to TangoXyzIjData so that
-                // UI loop doesn't interfere while onXYZijAvailable callback is updating
-                // the mPoint cloud data.
-                synchronized (mUiDepthLock) {
-                    mCurrentTimeStamp = (float) xyzIj.timestamp;
-                    mPointCloudFrameDelta = (mCurrentTimeStamp - mXyIjPreviousTimeStamp)
-                            * SECS_TO_MILLISECS;
-                    mXyIjPreviousTimeStamp = mCurrentTimeStamp;
-                    mAverageDepth = getAveragedDepth(xyzIj.xyz);
-                    try {
-                        mPointCount = xyzIj.xyzCount;
-                    } catch (TangoErrorException e) {
-                        Toast.makeText(getApplicationContext(), R.string.TangoError,
-                                Toast.LENGTH_SHORT).show();
-                    } catch (TangoInvalidException e) {
-                        Toast.makeText(getApplicationContext(), R.string.TangoError,
-                                Toast.LENGTH_SHORT).show();
-                    }
+                final double currentTimeStamp = xyzIj.timestamp;
+                final double pointCloudFrameDelta = (currentTimeStamp - mXyIjPreviousTimeStamp)
+                        * SECS_TO_MILLISECS;
+                mXyIjPreviousTimeStamp = currentTimeStamp;
+                final double averageDepth = getAveragedDepth(xyzIj.xyz);
+
+                mXyzIjTimeToNextUpdate -= pointCloudFrameDelta;
+
+                if (mXyzIjTimeToNextUpdate < 0.0) {
+                    mXyzIjTimeToNextUpdate = UPDATE_INTERVAL_MS;
+                    final String pointCountString = Integer.toString(xyzIj.xyzCount);
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            mPointCountTextView.setText(pointCountString);
+                            mFrequencyTextView.setText(FORMAT_THREE_DECIMAL.format(pointCloudFrameDelta));
+                            mAverageZTextView.setText(FORMAT_THREE_DECIMAL.format(averageDepth));
+                        }
+                    });
                 }
             }
 
@@ -270,53 +288,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                 // We are not using onFrameAvailable for this application.
             }
         });
-    }
-
-    /**
-     * Create a separate thread to update Log information on UI at the specified interval of
-     * UPDATE_INTERVAL_MS. This function also makes sure to have access to the mPose atomically.
-     */
-    private void startUIThread() {
-        new Thread(new Runnable() {
-            final DecimalFormat threeDec = new DecimalFormat("0.000");
-
-            @Override
-            public void run() {
-                while (true) {
-                    try {
-                        Thread.sleep(UPDATE_INTERVAL_MS);
-                        // Update the UI with TangoPose information
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                synchronized (mUiPoseLock) {
-                                    if (mPose == null) {
-                                        return;
-                                    }
-                                    String translationString = TangoPoseUtilities.getTranslationString(mPose, threeDec);
-                                    String quaternionString = TangoPoseUtilities.getQuaternionString(mPose, threeDec);
-                                    String status = TangoPoseUtilities.getStatusString(mPose);
-                                    mPoseTextView.setText(translationString);
-                                    mQuatTextView.setText(quaternionString);
-                                    mPoseCountTextView.setText(Integer.toString(mCount));
-                                    mDeltaTextView.setText(threeDec.format(mDeltaTime));
-                                    mPoseStatusTextView.setText(status);
-                                }
-                                synchronized (mUiDepthLock) {
-                                    // Display number of points in the mPoint cloud
-                                    mPointCountTextView.setText(Integer.toString(mPointCount));
-                                    mFrequencyTextView.setText(""
-                                            + threeDec.format(mPointCloudFrameDelta));
-                                    mAverageZTextView.setText("" + threeDec.format(mAverageDepth));
-                                }
-                            }
-                        });
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }).start();
     }
 
     private void setupExtrinsics() {
@@ -453,14 +424,14 @@ public class PointCloudActivity extends Activity implements OnClickListener {
      * @return Average depth.
      */
     private float getAveragedDepth(FloatBuffer pointCloudBuffer){
-        mPointCount = pointCloudBuffer.capacity() / 3;
+        int pointCount = pointCloudBuffer.capacity() / 3;
         float totalZ = 0;
         float averageZ = 0;
         for (int i = 0; i < pointCloudBuffer.capacity() - 3; i = i + 3) {
             totalZ = totalZ + pointCloudBuffer.get(i + 2);
         }
-        if (mPointCount != 0)
-            averageZ = totalZ / mPointCount;
+        if (pointCount != 0)
+            averageZ = totalZ / pointCount;
         return  averageZ;
     }
 
