@@ -293,4 +293,56 @@ public class ScenePoseCalcuator {
 
         return m;
     }
+
+    public Matrix4 GetModelTWorldFromCorrespondence(double[] p0Model2D, double[] p1Model2D,
+                                                    double[] p0World, double[] p1World)
+    {
+        // We need to define the transform to a common coordinate frame given our point
+        // correspondences.
+
+        // First, we'll start by defining the transform from a point in the defined frame to the
+        // model frame.
+        double[] modelNormal = new double[3];
+        modelNormal[0] = p1Model2D[0] - p0Model2D[0];
+        modelNormal[1] = p1Model2D[1] - p0Model2D[1];
+        modelNormal[2] = 0.0;
+
+        Vector3 modelUp = new Vector3(0, 0, 1);
+
+        double[] modelOrigin = new double[3];
+        modelOrigin[0] = p0Model2D[0];
+        modelOrigin[1] = p0Model2D[1];
+        modelOrigin[2] = 0.0;
+
+        Matrix4 modelTDefined = matrixFromPointNormalUp(modelOrigin, modelNormal, modelUp);
+
+        // Next we need to define the transform from a point in the defined frame to the world.
+        double[] worldNormal = new double[3];
+        worldNormal[0] = p1World[0] - p0World[0];
+        worldNormal[1] = p1World[1] - p0World[1];
+        worldNormal[2] = p1World[2] - p0World[2]; // TODO(@eitanm): Should we just set to zero?
+
+        // TODO(@eitanm): Should this be passed in? We're assuming up is aligned with gravity.
+        Vector3 worldUp = TANGO_WORLD_UP.clone();
+
+        Matrix4 worldTDefined = matrixFromPointNormalUp(p0World, worldNormal, worldUp);
+
+        return modelTDefined.clone().multiply(worldTDefined.inverse());
+    }
+
+    public double[] worldFromModel2D(double[] pModel2D, Matrix4 modelTWorld)
+    {
+        Vector3 pModel = new Vector3(pModel2D[0], pModel2D[1], 0);
+        Vector3 pWorld = modelTWorld.projectAndCreateVector(pModel);
+        return pWorld.toArray();
+    }
+
+    public double[] model2DFromWorld(double[] pWorld, Matrix4 modelTWorld)
+    {
+        Vector3 pModel = modelTWorld.inverse().projectAndCreateVector(new Vector3(pWorld));
+        double[] ret = new double[2];
+        ret[0] = pModel.x;
+        ret[1] = pModel.y;
+        return ret;
+    }
 }
