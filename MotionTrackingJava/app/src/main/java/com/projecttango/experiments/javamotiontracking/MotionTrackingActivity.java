@@ -25,7 +25,6 @@ import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
-import com.projecttango.tangoutils.TangoPoseUtilities;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -38,6 +37,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.projecttango.tangoutils.TangoPoseUtilities;
 
 import org.rajawali3d.surface.IRajawaliSurface;
 import org.rajawali3d.surface.RajawaliSurfaceView;
@@ -54,7 +55,9 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
 
     private static final String TAG = MotionTrackingActivity.class.getSimpleName();
     private static final int SECS_TO_MILLISECS = 1000;
-    private static final int UPDATE_INTERVAL_MS = 100;
+    private static final double UPDATE_INTERVAL_MS = 100.0f;
+    private static final DecimalFormat FORMAT_THREE_DECIMAL = new DecimalFormat("0.000");
+
     private Tango mTango;
     private TangoConfig mConfig;
     private TextView mDeltaTextView;
@@ -66,14 +69,16 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
     private TextView mApplicationVersionTextView;
     private TextView mTangoEventTextView;
     private Button mMotionResetButton;
-    private float mPreviousTimeStamp;
-    private int mPreviousPoseStatus;
-    private int mCount;
-    private float mDeltaTime;
     private boolean mIsAutoRecovery;
     private MotionTrackingRajawaliRenderer mRenderer;
-    private TangoPoseData mPose;
-    public static Object mUiThreadLock = new Object();
+
+    // State tracking variables for pose callback handler.  If these are
+    // referenced from the main thread, they need to be synchronized with the
+    // pose handler callback.
+    private double mPreviousTimeStamp = 0.0;
+    private int mPreviousPoseStatus = TangoPoseData.POSE_INVALID;
+    private int mCount = 0;
+    private double mTimeToNextUpdate = UPDATE_INTERVAL_MS;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,9 +92,8 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
         mConfig = setupTangoConfig(mTango, mIsAutoRecovery);
         setupTextViewsAndButtons(mConfig);
         mRenderer = setupGLViewAndRenderer();
-        startUIThread();
     }
-    
+
     /**
      * Sets Rajawalisurface view and its renderer. This is ideally called only once in onCreate.
      */
@@ -179,32 +183,63 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
 
         // Listen for new Tango data
         mTango.connectListener(framePairs, new OnTangoUpdateListener() {
-
             @Override
             public void onPoseAvailable(final TangoPoseData pose) {
-                // Update the OpenGL renderable objects with the new Tango Pose data.
-                // Note that locking for thread safe access with the OpenGL loop is done entirely
-                // in the renderer.
+                // Update the OpenGL renderable objects with the new Tango Pose
+                // data.  Note that locking for thread safe access with the
+                // OpenGL loop is done entirely in the renderer.
                 mRenderer.updateDevicePose(pose);
-                
-                // Make sure to have atomic access to Tango Pose Data so that the UI
-                // the UI loop doesn't interfere while Pose call back is updating the data
-                synchronized (mUiThreadLock) {
-                    mPose = pose;
 
-                    //Now lets log some interesting statistics of Motion Tracking like
-                    // Delta Time between two Poses, number of poses since the initialization state.
-                    mDeltaTime = (float) (pose.timestamp - mPreviousTimeStamp) * SECS_TO_MILLISECS;
-                    mPreviousTimeStamp = (float) pose.timestamp;
-                    // Log whenever Motion Tracking enters an invalid state
-                    if (!mIsAutoRecovery && (pose.statusCode == TangoPoseData.POSE_INVALID)) {
-                        Log.w(TAG, "Invalid State");
-                    }
-                    if (mPreviousPoseStatus != pose.statusCode) {
-                        mCount = 0;
-                    }
-                    mCount++;
-                    mPreviousPoseStatus = pose.statusCode;
+                // Now lets log some interesting statistics of Motion Tracking
+                // like Delta Time between two Poses, number of poses since the
+                // initialization state.
+                final double deltaTime = (pose.timestamp - mPreviousTimeStamp)
+                    * SECS_TO_MILLISECS;
+
+                mPreviousTimeStamp = pose.timestamp;
+                // Log whenever Motion Tracking enters an invalid state
+                if (!mIsAutoRecovery && (pose.statusCode == TangoPoseData.POSE_INVALID)) {
+                    Log.w(TAG, "Invalid State");
+                }
+                if (mPreviousPoseStatus != pose.statusCode) {
+                    mCount = 0;
+                }
+                mCount++;
+                final int count = mCount;
+                mPreviousPoseStatus = pose.statusCode;
+
+                // Throttle updates to the UI based on UPDATE_INTERVAL_MS.
+                mTimeToNextUpdate -= deltaTime;
+                boolean updateUI = false;
+                if(mTimeToNextUpdate < 0.0) {
+                    mTimeToNextUpdate = UPDATE_INTERVAL_MS;
+                    updateUI = true;
+                }
+
+                // If the pose is not valid, we may not get another callback so make sure to update
+                // the UI during this call
+                if (pose.statusCode != TangoPoseData.POSE_VALID) {
+                    updateUI = true;
+                }
+
+                if(updateUI) {
+                    final String translationString =
+                        TangoPoseUtilities.getTranslationString(pose, FORMAT_THREE_DECIMAL);
+                    final String quaternionString =
+                        TangoPoseUtilities.getQuaternionString(pose, FORMAT_THREE_DECIMAL);
+                    final String status = TangoPoseUtilities.getStatusString(pose);
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            // Display pose data on screen in TextViews.
+                            mPoseTextView.setText(translationString);
+                            mQuatTextView.setText(quaternionString);
+                            mPoseCountTextView.setText(Integer.toString(count));
+                            mDeltaTextView.setText(FORMAT_THREE_DECIMAL.format(deltaTime));
+                            mPoseStatusTextView.setText(status);
+                        }
+                    });
                 }
             }
 
@@ -300,52 +335,5 @@ public class MotionTrackingActivity extends Activity implements View.OnClickList
     public boolean onTouchEvent(MotionEvent event) {
         mRenderer.onTouchEvent(event);
         return true;
-    }
-
-    /**
-     * Create a separate thread to update Log information on UI at the specified
-     * interval of UPDATE_INTERVAL_MS. This function also makes sure to have access
-     * to the mPose atomically.
-     */
-    private void startUIThread() {
-        new Thread(new Runnable() {
-            DecimalFormat threeDec = new DecimalFormat("00.000");
-            @Override
-            public void run() {
-                while (true) {
-                    try {
-                        Thread.sleep(UPDATE_INTERVAL_MS);
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    synchronized (mUiThreadLock) {
-                                        if (mPose == null) {
-                                            return;
-                                        }
-                                        String translationString =
-                                                TangoPoseUtilities.getTranslationString(mPose, threeDec);
-                                        String quaternionString =
-                                                TangoPoseUtilities.getQuaternionString(mPose, threeDec);
-                                        String status = TangoPoseUtilities.getStatusString(mPose);
-                                        // Display pose data on screen in TextViews
-                                        mPoseTextView.setText(translationString);
-                                        mQuatTextView.setText(quaternionString);
-                                        mPoseCountTextView.setText(Integer.toString(mCount));
-                                        mDeltaTextView.setText(threeDec.format(mDeltaTime));
-                                        mPoseStatusTextView.setText(status);
-                                    }
-                                } catch (NullPointerException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        });
-
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }).start();
     }
 }

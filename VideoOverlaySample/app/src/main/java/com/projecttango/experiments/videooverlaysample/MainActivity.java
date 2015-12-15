@@ -41,10 +41,8 @@ import com.google.atap.tangoservice.TangoXyzIjData;
  * context and connect to the camera we want by using connectToTangoCamera class.Once the connection 
  * is established we need to manually update the TangoCameraPreview's texture by using the
  * onFrameAvailable callbacks.
- * Note:
- * To use TangoCameraPreview class we need to ask the user permissions for MotionTracking 
- * at the minimum level. This is because in Java all the call backs such as 
- * onPoseAvailable,onXyzIjAvailable, onTangoEvents, onFrameAvailable are set together at once. 
+ * NOTE: It is important to declare the CAMERA permission in the Android Manifest to access
+ * the device camera.
  */
 public class MainActivity extends Activity {
 	private TangoCameraPreview tangoCameraPreview;
@@ -56,15 +54,12 @@ public class MainActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		tangoCameraPreview = new TangoCameraPreview(this);
 		mTango = new Tango(this);
-		startActivityForResult(
-				Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_MOTION_TRACKING),
-				Tango.TANGO_INTENT_ACTIVITYCODE);
 		setContentView(tangoCameraPreview);
 	}
 
 	// Camera Preview
 	private void startCameraPreview() {
-		// Connect to color camera
+	    // Connect to color camera
 		tangoCameraPreview.connectToTangoCamera(mTango,
 				TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
 		// Use default configuration for Tango Service.
@@ -84,8 +79,8 @@ public class MainActivity extends Activity {
 			@Override
 			public void onFrameAvailable(int cameraId) {
 
-				// Check if the frame available is for the camera we want and
-				// update its frame on the camera preview.
+			    // Check if the frame available is for the camera we want and
+			    // update its frame on the camera preview.
 				if (cameraId == TangoCameraIntrinsics.TANGO_CAMERA_COLOR) {
 					tangoCameraPreview.onFrameAvailable();
 				}

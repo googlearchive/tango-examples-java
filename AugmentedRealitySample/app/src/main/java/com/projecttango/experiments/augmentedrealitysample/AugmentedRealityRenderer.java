@@ -19,8 +19,6 @@ import android.content.Context;
 import android.view.MotionEvent;
 
 import com.google.atap.tangoservice.TangoPoseData;
-import com.projecttango.rajawali.Pose;
-import com.projecttango.rajawali.ar.TangoRajawaliRenderer;
 
 import org.rajawali3d.Object3D;
 import org.rajawali3d.lights.DirectionalLight;
@@ -31,15 +29,20 @@ import org.rajawali3d.materials.textures.Texture;
 import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.primitives.Cube;
 
+import com.projecttango.rajawali.Pose;
+import com.projecttango.rajawali.ar.TangoRajawaliRenderer;
+
 /**
- * Very simple example augmented reality renderer which displays two objects in a fixed position
- * in the world and the uses the Tango position tracking to keep them in place.
+ * Very simple example augmented reality renderer which displays two objects in
+ * a fixed position in the world and the uses the Tango position tracking to
+ * keep them in place.
  * <p/>
- * This follows the same development model than any regular Rajawali application with the following
- * peculiarities:
- * - It extends <code>TangoRajawaliArRenderer</code>
- * - It calls <code>super.initScene()</code> in the initialization
- * - It doesn't do anything with the camera, since that is handled automatically by Tango
+ * This follows the same development model than any regular Rajawali application
+ * with the following peculiarities:
+ * - It extends <code>TangoRajawaliArRenderer</code>.
+ * - It calls <code>super.initScene()</code> in the initialization.
+ * - It doesn't do anything with the camera, since that is handled automatically
+ *   by Tango.
  */
 public class AugmentedRealityRenderer extends TangoRajawaliRenderer {
     private static final float CUBE_SIDE_LENGTH = 0.5f;
@@ -55,7 +58,8 @@ public class AugmentedRealityRenderer extends TangoRajawaliRenderer {
 
     @Override
     protected void initScene() {
-        // Remember to call super.initScene() to allow TangoRajawaliArRenderer to be set-up.
+        // Remember to call super.initScene() to allow TangoRajawaliArRenderer
+        // to be set-up.
         super.initScene();
 
         // Add a directional light in an arbitrary direction.
@@ -65,7 +69,8 @@ public class AugmentedRealityRenderer extends TangoRajawaliRenderer {
         light.setPosition(3, 2, 4);
         getCurrentScene().addLight(light);
 
-        // Set-up a material: green with application of the light and instructions.
+        // Set-up a material: green with application of the light and
+        // instructions.
         Material material = new Material();
         material.setColor(0xff009900);
         try {
@@ -96,25 +101,29 @@ public class AugmentedRealityRenderer extends TangoRajawaliRenderer {
                 // Place the 3D object in the location of the detected plane.
                 mObject.setPosition(mPlanePose.getPosition());
                 mObject.setOrientation(mPlanePose.getOrientation());
-                // Move it forward by half of the size of the cube to make it flush with the plane
-                // surface.
+                // Move it forward by half of the size of the cube to make it
+                // flush with the plane surface.
                 mObject.moveForward(CUBE_SIDE_LENGTH / 2.0f);
             }
         }
     }
 
     /**
-     * Update the 3D object based on the provided measurement point, normal (in depth frame) and
-     * device pose at the time the point and normal were acquired.
+     * Update the 3D object based on the provided measurement point, normal (in
+     * depth frame) and device pose at the time the point and normal were
+     * acquired.
      */
     public synchronized void updateObjectPose(double[] point, double[] normal,
                                               TangoPoseData devicePose) {
-        mPlanePose = mScenePoseCalcuator.planeFitToOpenGLPose(point, normal, devicePose);
+        mPlanePose = mScenePoseCalcuator.planeFitToOpenGLPose(point, normal,
+                                                              devicePose);
         mPlanePoseUpdated = true;
     }
 
     @Override
-    public void onOffsetsChanged(float xOffset, float yOffset, float xOffsetStep, float yOffsetStep, int xPixelOffset, int yPixelOffset) {
+    public void onOffsetsChanged(float xOffset, float yOffset,
+                                 float xOffsetStep, float yOffsetStep,
+                                 int xPixelOffset, int yPixelOffset) {
 
     }
 

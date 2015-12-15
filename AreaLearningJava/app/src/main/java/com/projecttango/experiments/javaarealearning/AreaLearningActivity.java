@@ -18,12 +18,10 @@ package com.projecttango.experiments.javaarealearning;
 
 import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
 import com.google.atap.tangoservice.Tango;
-import com.google.atap.tangoservice.TangoAreaDescriptionMetaData;
 import com.google.atap.tangoservice.TangoConfig;
 import com.google.atap.tangoservice.TangoCoordinateFramePair;
 import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
-import com.google.atap.tangoservice.TangoException;
 import com.google.atap.tangoservice.TangoInvalidException;
 import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPoseData;
@@ -34,7 +32,6 @@ import android.app.FragmentManager;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -43,13 +40,13 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-
 import com.projecttango.tangoutils.TangoPoseUtilities;
 
 import org.rajawali3d.surface.IRajawaliSurface;
 import org.rajawali3d.surface.RajawaliSurfaceView;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
 
 /**
  * Main Activity class for the Area Learning API Sample. Handles the connection to the Tango service
@@ -60,7 +57,7 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
         SetADFNameDialog.CallbackListener, SaveAdfTask.SaveAdfListener {
 
     private static final String TAG = AreaLearningActivity.class.getSimpleName();
-    private static final int SECONDS_TO_MILLI = 1000;
+    private static final int SECS_TO_MILLISECS = 1000;
     private Tango mTango;
     private TangoConfig mConfig;
     private TextView mTangoEventTextView;
@@ -102,6 +99,9 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
     private double mAdf2DevicePreviousPoseTimeStamp;
     private double mAdf2StartPreviousPoseTimeStamp;
 
+    private double mPreviousPoseTimeStamp;
+    private double mTimeToNextUpdate = UPDATE_INTERVAL_MS;
+
     private boolean mIsRelocalized;
     private boolean mIsLearningMode;
     private boolean mIsConstantSpaceRelocalize;
@@ -113,9 +113,10 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
     private SaveAdfTask mSaveAdfTask;
 
     private TangoPoseData[] mPoses;
-    private static final int UPDATE_INTERVAL_MS = 100;
-    private static final DecimalFormat mThreeDecimalFormat = new DecimalFormat("00.000");
-    private static final Object mSharedLock = new Object();
+    private static final double UPDATE_INTERVAL_MS = 100.0;
+    private static final DecimalFormat FORMAT_THREE_DECIMAL = new DecimalFormat("00.000");
+
+    private final Object mSharedLock = new Object();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -140,8 +141,6 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
         mStart2DevicePoseCount = 0;
         mAdf2DevicePoseCount = 0;
         mAdf2StartPoseCount = 0;
-
-        startUIThread();
     }
 
     /**
@@ -405,7 +404,6 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
                 // UI loop doesn't interfere while Pose call back is updating
                 // the data.
                 synchronized (mSharedLock) {
-                    float[] translation = pose.getTranslationAsFloats();
                     // Check for Device wrt ADF pose, Device wrt Start of Service pose,
                     // Start of Service wrt ADF pose(This pose determines if device
                     // the is relocalized or not).
@@ -421,7 +419,7 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
                         // Calculate time difference between current and last available Device wrt
                         // ADF pose.
                         mAdf2DevicePoseDelta = (pose.timestamp - mAdf2DevicePreviousPoseTimeStamp)
-                                * SECONDS_TO_MILLI;
+                                * SECS_TO_MILLISECS;
                         mAdf2DevicePreviousPoseTimeStamp = pose.timestamp;
                         if (mIsRelocalized) {
                             updateRenderer = true;
@@ -438,7 +436,7 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
                         // Calculate time difference between current and last available Device wrt
                         // SS pose.
                         mStart2DevicePoseDelta = (pose.timestamp - mStart2DevicePreviousPoseTimeStamp)
-                                * SECONDS_TO_MILLI;
+                                * SECS_TO_MILLISECS;
                         mStart2DevicePreviousPoseTimeStamp = pose.timestamp;
                         if (!mIsRelocalized) {
                             updateRenderer = true;
@@ -456,7 +454,7 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
                         // Calculate time difference between current and last available SS wrt ADF
                         // pose.
                         mAdf2StartPoseDelta = (pose.timestamp - mAdf2StartPreviousPoseTimeStamp)
-                                * SECONDS_TO_MILLI;
+                                * SECS_TO_MILLISECS;
                         mAdf2StartPreviousPoseTimeStamp = pose.timestamp;
                         if (pose.statusCode == TangoPoseData.POSE_VALID) {
                             mIsRelocalized = true;
@@ -467,6 +465,24 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
                         }
                     }
                 }
+
+                final double deltaTime = (pose.timestamp - mPreviousPoseTimeStamp) * SECS_TO_MILLISECS;
+                mPreviousPoseTimeStamp = pose.timestamp;
+                mTimeToNextUpdate -= deltaTime;
+
+                if (mTimeToNextUpdate < 0.0) {
+                    mTimeToNextUpdate = UPDATE_INTERVAL_MS;
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            synchronized (mSharedLock) {
+                                updateTextViews();
+                            }
+                        }
+                    });
+                }
+
                 if (updateRenderer) {
                     mRenderer.updateDevicePose(pose, mIsRelocalized);
                 }
@@ -528,42 +544,6 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
     }
 
     /**
-     * Create a separate thread to update Log information on UI at the specified interval of
-     * UPDATE_INTERVAL_MS. This function also makes sure to have access to the mPoses atomically.
-     */
-    private void startUIThread() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (true) {
-                    try {
-                        Thread.sleep(UPDATE_INTERVAL_MS);
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    synchronized (mSharedLock) {
-
-                                        if (mPoses == null) {
-                                            return;
-                                        } else {
-                                            updateTextViews();
-                                        }
-                                    }
-                                } catch (NullPointerException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        });
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }).start();
-    }
-
-    /**
      * Updates the text view in UI screen with the Pose. Each pose is associated with Target and
      * Base Frame. We need to check for that pair and update our views accordingly.
      */
@@ -571,34 +551,31 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
         // Allow clicking of the save button only when Tango is localized to the current ADF.
         mSaveAdfButton.setEnabled(mIsRelocalized);
 
-        if (mPoses[0] != null
-                && mPoses[0].baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
+        if (mPoses[0] != null && mPoses[0].baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
                 && mPoses[0].targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE) {
-            mAdf2DeviceTranslationTextView.setText(TangoPoseUtilities.getTranslationString(mPoses[0], mThreeDecimalFormat));
-            mAdf2DeviceQuatTextView.setText(TangoPoseUtilities.getQuaternionString(mPoses[0], mThreeDecimalFormat));
+            mAdf2DeviceTranslationTextView.setText(TangoPoseUtilities.getTranslationString(mPoses[0], FORMAT_THREE_DECIMAL));
+            mAdf2DeviceQuatTextView.setText(TangoPoseUtilities.getQuaternionString(mPoses[0], FORMAT_THREE_DECIMAL));
             mAdf2DevicePoseStatusTextView.setText(TangoPoseUtilities.getStatusString(mPoses[0]));
             mAdf2DevicePoseCountTextView.setText(Integer.toString(mAdf2DevicePoseCount));
-            mAdf2DevicePoseDeltaTextView.setText(mThreeDecimalFormat.format(mAdf2DevicePoseDelta));
+            mAdf2DevicePoseDeltaTextView.setText(FORMAT_THREE_DECIMAL.format(mAdf2DevicePoseDelta));
         }
 
-        if (mPoses[1] != null
-                && mPoses[1].baseFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE
+        if (mPoses[1] != null && mPoses[1].baseFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE
                 && mPoses[1].targetFrame == TangoPoseData.COORDINATE_FRAME_DEVICE) {
-            mStart2DeviceTranslationTextView.setText(TangoPoseUtilities.getTranslationString(mPoses[1], mThreeDecimalFormat));
-            mStart2DeviceQuatTextView.setText(TangoPoseUtilities.getQuaternionString(mPoses[1], mThreeDecimalFormat));
+            mStart2DeviceTranslationTextView.setText(TangoPoseUtilities.getTranslationString(mPoses[1], FORMAT_THREE_DECIMAL));
+            mStart2DeviceQuatTextView.setText(TangoPoseUtilities.getQuaternionString(mPoses[1], FORMAT_THREE_DECIMAL));
             mStart2DevicePoseStatusTextView.setText(TangoPoseUtilities.getStatusString(mPoses[1]));
             mStart2DevicePoseCountTextView.setText(Integer.toString(mStart2DevicePoseCount));
-            mStart2DevicePoseDeltaTextView.setText(mThreeDecimalFormat.format(mStart2DevicePoseDelta));
+            mStart2DevicePoseDeltaTextView.setText(FORMAT_THREE_DECIMAL.format(mStart2DevicePoseDelta));
         }
 
-        if (mPoses[2] != null
-                && mPoses[2].baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
+        if (mPoses[2] != null && mPoses[2].baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
                 && mPoses[2].targetFrame == TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE) {
-            mAdf2StartTranslationTextView.setText(TangoPoseUtilities.getTranslationString(mPoses[2], mThreeDecimalFormat));
-            mAdf2StartQuatTextView.setText(TangoPoseUtilities.getQuaternionString(mPoses[2], mThreeDecimalFormat));
+            mAdf2StartTranslationTextView.setText(TangoPoseUtilities.getTranslationString(mPoses[2], FORMAT_THREE_DECIMAL));
+            mAdf2StartQuatTextView.setText(TangoPoseUtilities.getQuaternionString(mPoses[2], FORMAT_THREE_DECIMAL));
             mAdf2StartPoseStatusTextView.setText(TangoPoseUtilities.getStatusString(mPoses[2]));
             mAdf2StartPoseCountTextView.setText(Integer.toString(mAdf2StartPoseCount));
-            mAdf2StartPoseDeltaTextView.setText(mThreeDecimalFormat.format(mAdf2StartPoseDelta));
+            mAdf2StartPoseDeltaTextView.setText(FORMAT_THREE_DECIMAL.format(mAdf2StartPoseDelta));
         }
     }
 }
