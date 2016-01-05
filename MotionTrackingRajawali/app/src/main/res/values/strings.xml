@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Copyright (C) 2014 Google Inc.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<resources>
+
+    <string name="app_name">Project Tango Java Motion Tracking </string>
+    <string name="menu_name"> Java Motion Tracking</string>
+    <string name="vertex_count">Number of Points:</string>
+    <string name="serviceversion">Tango service version:</string>
+    <string name="appversion">"App version: "</string>
+    <string name="tangoevent">"Tango system event: "</string>
+    <string name="start2device">Target->Device, Base->Start: </string>
+    <string name="posecount">", count: "</string>
+    <string name="status">"status: "</string>
+    <string name="deltatime">", delta time(ms): "</string>
+    <string name="pose">", position(m): "</string>
+    <string name="quat">", orientation: "</string>
+    <string name="first_person">First</string>
+    <string name="third_person">Third</string>
+    <string name="top_down">Top</string>
+    <string name="start">Start</string>
+    <string name="autorecoveryon">Auto recovery on</string>
+    <string name="autorecoveryoff">Auto recovery off</string>
+    <string name="pointCount">Point count: </string>
+    <string name="TangoError">"Tango exception! Try again!"</string>
+    <string name="TangoOutOfDateException">"Tango service outdated!"</string>
+    <string name="resetmotiontracking">"Reset motion tracking"</string>
+    <string name="motiontrackingpermission">"Motion Tracking permission needed!"</string>
+    <string name="NA">"N/A"</string>
+    <string name="pose_initializing">"initializing"</string>
+    <string name="pose_valid">"valid"</string>
+    <string name="pose_invalid">"invalid"</string>
+    <string name="pose_unknown">"unknown"</string>
+    <string name="latest_adf_is">", Latest ADF is: "</string>
+
+</resources>
