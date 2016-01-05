@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.projecttango.experiments.javamotiontracking;
+package com.projecttango.experiments.motiontrackingrajawali;
 
 import android.content.Context;
 import android.graphics.Color;
