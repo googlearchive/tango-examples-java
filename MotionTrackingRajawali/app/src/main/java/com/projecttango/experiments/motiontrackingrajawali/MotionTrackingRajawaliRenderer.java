@@ -85,14 +85,14 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
 
     @Override
     protected void onRender(long ellapsedRealtime, double deltaTime) {
-        super.onRender(ellapsedRealtime, deltaTime);
-
         synchronized (this) {
             if (mPoseUpdated) {
                 mPoseUpdated = false;
                 mTouchViewHandler.updateCamera(mDevicePose.getPosition(), mDevicePose.getOrientation());
             }
         }
+
+        super.onRender(ellapsedRealtime, deltaTime);
     }
 
     public synchronized void updateDevicePose(TangoPoseData tangoPoseData) {
