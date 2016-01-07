@@ -34,6 +34,9 @@ import org.rajawali3d.math.vector.Vector3;
 
 import org.rajawali3d.renderer.RajawaliRenderer;
 
+/**
+ * This class implements the rendering logic for the Motion Tracking application using Rajawali.
+ */
 public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
 
     private static final float CAMERA_NEAR = 0.01f;

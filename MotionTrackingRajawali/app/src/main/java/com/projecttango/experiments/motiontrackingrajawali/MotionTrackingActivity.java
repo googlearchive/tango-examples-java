@@ -35,6 +35,11 @@ import org.rajawali3d.surface.RajawaliSurfaceView;
 
 import java.util.ArrayList;
 
+/**
+ * Main Activity class for the Motion Tracking Rajawali Sample. Handles the connection to the Tango
+ * service and propagation of Tango pose data to OpenGL and Layout views. OpenGL rendering logic is
+ * delegated to the {@link MotionTrackingRajawaliRenderer} class.
+ */
 public class MotionTrackingActivity extends Activity {
 
     private Tango mTango;
