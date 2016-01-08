@@ -52,11 +52,14 @@ public class MotionTrackingActivity extends Activity {
 
         setContentView(R.layout.activity_motion_tracking);
         mTango = new Tango(this);
-        mConfig = setupTangoConfig(mTango, true);
+        mConfig = new TangoConfig();
+        mConfig = mTango.getConfig(mConfig.CONFIG_TYPE_CURRENT);
+        mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
+        mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_AUTORECOVERY, true);
         mRenderer = setupGLViewAndRenderer();
     }
 
-    private MotionTrackingRajawaliRenderer setupGLViewAndRenderer(){
+    private MotionTrackingRajawaliRenderer setupGLViewAndRenderer() {
         MotionTrackingRajawaliRenderer renderer = new MotionTrackingRajawaliRenderer(this);
         RajawaliSurfaceView glView = (RajawaliSurfaceView) findViewById(R.id.gl_surface_view);
         glView.setEGLContextClientVersion(2);
@@ -64,14 +67,6 @@ public class MotionTrackingActivity extends Activity {
         glView.setSurfaceRenderer(renderer);
         return renderer;
 
-    }
-
-    private TangoConfig setupTangoConfig(Tango tango, boolean isAutoRecovery){
-        TangoConfig config = new TangoConfig();
-        config = tango.getConfig(config.CONFIG_TYPE_CURRENT);
-        config.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
-        config.putBoolean(TangoConfig.KEY_BOOLEAN_AUTORECOVERY, isAutoRecovery);
-        return config;
     }
 
     private void setTangoListeners() {
@@ -130,10 +125,5 @@ public class MotionTrackingActivity extends Activity {
         } catch (TangoErrorException e) {
             Toast.makeText(getApplicationContext(), R.string.TangoError, Toast.LENGTH_SHORT).show();
         }
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
     }
 }
