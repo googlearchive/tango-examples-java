@@ -94,7 +94,7 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
                 mTouchViewHandler.updateCamera(mDevicePose.getPosition(), mDevicePose.getOrientation());
             }
         }
-
+        // Make sure we update the camera position before GL content get rendered in Rajawali.
         super.onRender(ellapsedRealtime, deltaTime);
     }
 
