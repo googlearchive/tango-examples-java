@@ -20,42 +20,37 @@ import android.graphics.Color;
 import android.view.MotionEvent;
 
 import com.google.atap.tangoservice.TangoPoseData;
+import com.google.atap.tangoservice.TangoXyzIjData;
+import com.projecttango.rajawali.DeviceExtrinsics;
 import com.projecttango.rajawali.Pose;
-import com.projecttango.rajawali.ScenePoseCalcuator;
+import com.projecttango.rajawali.ScenePoseCalculator;
 import com.projecttango.rajawali.TouchViewHandler;
 import com.projecttango.rajawali.renderables.FrustumAxes;
 import com.projecttango.rajawali.renderables.Grid;
-import com.projecttango.rajawali.renderables.primitives.Points;
+import com.projecttango.rajawali.renderables.PointCloud;
 
-import org.rajawali3d.math.Matrix4;
 import org.rajawali3d.renderer.RajawaliRenderer;
 
 /**
- * Renderer for Point Cloud data. This is also a thread safe class as in when Renderloop and
- * OnposeAvailable callbacks are synchronized with each other.
+ * Renderer for Point Cloud data.
  */
 public class PointCloudRajawaliRenderer extends RajawaliRenderer {
 
     private static final float CAMERA_NEAR = 0.01f;
     private static final float CAMERA_FAR = 200f;
     private static final int MAX_NUMBER_OF_POINTS = 60000;
+
+    private TouchViewHandler mTouchViewHandler;
+    private DeviceExtrinsics mDeviceExtrinsics;
+
+    // Objects rendered in the scene
+    private PointCloud mPointCloud;
     private FrustumAxes mFrustumAxes;
     private Grid mGrid;
 
-    private TouchViewHandler mTouchViewHandler;
-    private ScenePoseCalcuator mScenePoseCalcuator;
-    private Pose mCameraPose;
-    private Pose mPointCloudPose;
-
-    // Latest available device pose
-    private Points mPoints;
-    private PointCloudManager mPointCloudManager;
-
-    public PointCloudRajawaliRenderer(Context context, PointCloudManager pointCloudManager) {
+    public PointCloudRajawaliRenderer(Context context) {
         super(context);
         mTouchViewHandler = new TouchViewHandler(mContext, getCurrentCamera());
-        mScenePoseCalcuator = new ScenePoseCalcuator();
-        mPointCloudManager = pointCloudManager;
     }
 
     @Override
@@ -67,46 +62,41 @@ public class PointCloudRajawaliRenderer extends RajawaliRenderer {
         mFrustumAxes = new FrustumAxes(3);
         getCurrentScene().addChild(mFrustumAxes);
 
-        mPoints = new Points(MAX_NUMBER_OF_POINTS);
-        getCurrentScene().addChild(mPoints);
+        mPointCloud = new PointCloud(MAX_NUMBER_OF_POINTS);
+        getCurrentScene().addChild(mPointCloud);
         getCurrentScene().setBackgroundColor(Color.WHITE);
         getCurrentCamera().setNearPlane(CAMERA_NEAR);
         getCurrentCamera().setFarPlane(CAMERA_FAR);
         getCurrentCamera().setFieldOfView(37.5);
     }
 
-    @Override
-    protected void onRender(long ellapsedRealtime, double deltaTime) {
-        super.onRender(ellapsedRealtime, deltaTime);
-        PointCloudManager.PointCloudData renderPointCloudData
-                = mPointCloudManager.updateAndGetLatestPointCloudRenderBuffer();
-        mPoints.updatePoints(renderPointCloudData.floatBuffer, renderPointCloudData.pointCount);
-        if(mCameraPose==null || mPointCloudPose == null){
-            return;
-        }
-        // Update the scene objects with the latest device position and orientation information.
-        // Synchronize to avoid concurrent access from the Tango callback thread below.
-        synchronized (this) {
-            mFrustumAxes.setPosition(mCameraPose.getPosition());
-            mFrustumAxes.setOrientation(mCameraPose.getOrientation());
-
-            mPoints.setPosition(mPointCloudPose.getPosition());
-            mPoints.setOrientation(mPointCloudPose.getOrientation());
-            mTouchViewHandler.updateCamera(mCameraPose.getPosition(), mCameraPose.getOrientation());
+    /**
+     * Updates the rendered point cloud. For this, we need the point cloud data and the device pose
+     * at the time the cloud data was acquired.
+     * NOTE: This needs to be called from the OpenGL rendering thread.
+     */
+    public void updatePointCloud(TangoXyzIjData xyzIjData, TangoPoseData devicePose) {
+        if (mDeviceExtrinsics != null) {
+            Pose pointCloudPose =
+                    ScenePoseCalculator.toDepthCameraOpenGlPose(devicePose, mDeviceExtrinsics);
+            mPointCloud.updateCloud(xyzIjData.xyzCount, xyzIjData.xyz);
+            mPointCloud.setPosition(pointCloudPose.getPosition());
+            mPointCloud.setOrientation(pointCloudPose.getOrientation());
         }
     }
 
     /**
      * Updates our information about the current device pose.
-     * This is called from the Tango service thread through the callback API. Synchronize to avoid
-     * concurrent access from the OpenGL thread above.
+     * NOTE: This needs to be called from the OpenGL rendering thread.
      */
-    public synchronized void updateDevicePose(TangoPoseData tangoPoseData) {
-        mCameraPose = mScenePoseCalcuator.toOpenGLCameraPose(tangoPoseData);
-    }
-
-    public synchronized void updatePointCloudPose(TangoPoseData pointCloudPose) {
-        mPointCloudPose = mScenePoseCalcuator.toOpenGLPointCloudPose(pointCloudPose);
+    public void updateDevicePose(TangoPoseData tangoPoseData) {
+        if (mDeviceExtrinsics != null) {
+            Pose cameraPose =
+                    ScenePoseCalculator.toOpenGlCameraPose(tangoPoseData, mDeviceExtrinsics);
+            mFrustumAxes.setPosition(cameraPose.getPosition());
+            mFrustumAxes.setOrientation(cameraPose.getOrientation());
+            mTouchViewHandler.updateCamera(cameraPose.getPosition(), cameraPose.getOrientation());
+        }
     }
 
     @Override
@@ -139,7 +129,7 @@ public class PointCloudRajawaliRenderer extends RajawaliRenderer {
      */
     public void setupExtrinsics(TangoPoseData imuTDevicePose, TangoPoseData imuTColorCameraPose,
                                 TangoPoseData imuTDepthCameraPose) {
-        mScenePoseCalcuator.setupExtrinsics(imuTDevicePose, imuTColorCameraPose, imuTDepthCameraPose);
+        mDeviceExtrinsics =
+                new DeviceExtrinsics(imuTDevicePose, imuTColorCameraPose, imuTDepthCameraPose);
     }
-
 }

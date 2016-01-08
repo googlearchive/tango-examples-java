@@ -22,10 +22,10 @@ import android.view.MotionEvent;
 
 import com.google.atap.tangoservice.TangoPoseData;
 import com.projecttango.rajawali.Pose;
+import com.projecttango.rajawali.ScenePoseCalculator;
 import com.projecttango.rajawali.TouchViewHandler;
 import com.projecttango.rajawali.renderables.FrustumAxes;
 import com.projecttango.rajawali.renderables.Grid;
-import com.projecttango.rajawali.ScenePoseCalcuator;
 import com.projecttango.rajawali.renderables.Trajectory;
 
 import org.rajawali3d.math.Quaternion;
@@ -37,7 +37,7 @@ import org.rajawali3d.renderer.RajawaliRenderer;
  */
 public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
 
-    private final String TAG = ScenePoseCalcuator.class.getSimpleName();
+    private final String TAG = MotionTrackingRajawaliRenderer.class.getSimpleName();
 
     // Only add line segments to the trajectory if the deviced moved more than THRESHOLD meters
     private static final double THRESHOLD = 0.002f;
@@ -104,7 +104,7 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
      * concurrent access from the OpenGL thread above.
      */
     public synchronized void updateDevicePose(TangoPoseData tangoPoseData) {
-        mDevicePose = ScenePoseCalcuator.toOpenGLPose(tangoPoseData);
+        mDevicePose = ScenePoseCalculator.toOpenGLPose(tangoPoseData);
         mPoseUpdated = true;
     }
 

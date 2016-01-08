@@ -16,6 +16,7 @@
 package com.projecttango.experiments.augmentedrealitysample;
 
 import android.content.Context;
+
 import android.view.MotionEvent;
 
 import com.google.atap.tangoservice.TangoPoseData;
@@ -29,28 +30,32 @@ import org.rajawali3d.materials.textures.Texture;
 import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.primitives.Cube;
 
+import com.projecttango.rajawali.DeviceExtrinsics;
 import com.projecttango.rajawali.Pose;
+import com.projecttango.rajawali.ScenePoseCalculator;
 import com.projecttango.rajawali.ar.TangoRajawaliRenderer;
 
 /**
- * Very simple example augmented reality renderer which displays two objects in
- * a fixed position in the world and the uses the Tango position tracking to
- * keep them in place.
- * <p/>
+ * Very simple example augmented reality renderer which displays a cube fixed in place.
+ * Whenever the user clicks on the screen, the cube is placed flush with the surface detected
+ * with the depth camera in the position clicked.
+ *
  * This follows the same development model than any regular Rajawali application
  * with the following peculiarities:
  * - It extends <code>TangoRajawaliArRenderer</code>.
  * - It calls <code>super.initScene()</code> in the initialization.
- * - It doesn't do anything with the camera, since that is handled automatically
- *   by Tango.
+ * - When an updated pose for the object is obtained after a user click, the object pose is updated
+ *   in the render loop
+ * - The associated AugmentedRealityActivity is taking care of updating the camera pose to match
+ *   the displayed RGB camera texture and produce the AR effect through a Scene Frame Callback
+ *   (@see AugmentedRealityActivity)
  */
 public class AugmentedRealityRenderer extends TangoRajawaliRenderer {
     private static final float CUBE_SIDE_LENGTH = 0.5f;
 
-    private Pose mPlanePose;
-    private boolean mPlanePoseUpdated = false;
-
     private Object3D mObject;
+    private Pose mObjectPose;
+    private boolean mObjectPoseUpdated = false;
 
     public AugmentedRealityRenderer(Context context) {
         super(context);
@@ -93,38 +98,49 @@ public class AugmentedRealityRenderer extends TangoRajawaliRenderer {
 
     @Override
     protected void onRender(long elapsedRealTime, double deltaTime) {
-        super.onRender(elapsedRealTime, deltaTime);
-
+        // Update the AR object if necessary
+        // Synchronize against concurrent access with the setter below.
         synchronized (this) {
-            if (mPlanePoseUpdated) {
-                mPlanePoseUpdated = false;
+            if (mObjectPoseUpdated) {
                 // Place the 3D object in the location of the detected plane.
-                mObject.setPosition(mPlanePose.getPosition());
-                mObject.setOrientation(mPlanePose.getOrientation());
+                mObject.setPosition(mObjectPose.getPosition());
+                mObject.setOrientation(mObjectPose.getOrientation());
                 // Move it forward by half of the size of the cube to make it
                 // flush with the plane surface.
                 mObject.moveForward(CUBE_SIDE_LENGTH / 2.0f);
+                mObjectPoseUpdated = false;
             }
         }
+
+        super.onRender(elapsedRealTime, deltaTime);
     }
 
     /**
-     * Update the 3D object based on the provided measurement point, normal (in
-     * depth frame) and device pose at the time the point and normal were
-     * acquired.
+     * Save the updated plane fit pose to update the AR object on the next render pass.
+     * This is synchronized against concurrent access in the render loop above.
      */
-    public synchronized void updateObjectPose(double[] point, double[] normal,
-                                              TangoPoseData devicePose) {
-        mPlanePose = mScenePoseCalcuator.planeFitToOpenGLPose(point, normal,
-                                                              devicePose);
-        mPlanePoseUpdated = true;
+    public synchronized void updateObjectPose(TangoPoseData planeFitPose) {
+        mObjectPose = ScenePoseCalculator.toOpenGLPose(planeFitPose);
+        mObjectPoseUpdated = true;
+    }
+
+    /**
+     * Update the scene camera based on the provided pose in Tango start of service frame.
+     * The device pose should match the pose of the device at the time the last rendered RGB
+     * frame, which can be retrieved with this.getTimestamp();
+     *
+     * NOTE: This must be called from the OpenGL render thread - it is not thread safe.
+     */
+    public void updateRenderCameraPose(TangoPoseData devicePose, DeviceExtrinsics extrinsics) {
+        Pose cameraPose = ScenePoseCalculator.toOpenGlCameraPose(devicePose, extrinsics);
+        getCurrentCamera().setRotation(cameraPose.getOrientation());
+        getCurrentCamera().setPosition(cameraPose.getPosition());
     }
 
     @Override
     public void onOffsetsChanged(float xOffset, float yOffset,
                                  float xOffsetStep, float yOffsetStep,
                                  int xPixelOffset, int yPixelOffset) {
-
     }
 
     @Override

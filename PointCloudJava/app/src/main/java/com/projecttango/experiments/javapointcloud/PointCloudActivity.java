@@ -27,13 +27,11 @@ import com.google.atap.tangoservice.TangoConfig;
 import com.google.atap.tangoservice.TangoCoordinateFramePair;
 import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
-import com.google.atap.tangoservice.TangoInvalidException;
 import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Bundle;
@@ -45,8 +43,10 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.projecttango.tangosupport.TangoPointCloudManager;
 import com.projecttango.tangoutils.TangoPoseUtilities;
 
+import org.rajawali3d.scene.ASceneFrameCallback;
 import org.rajawali3d.surface.RajawaliSurfaceView;
 
 import java.lang.Override;
@@ -63,6 +63,16 @@ public class PointCloudActivity extends Activity implements OnClickListener {
 
     private static final String TAG = PointCloudActivity.class.getSimpleName();
     private static final int SECS_TO_MILLISECS = 1000;
+
+    // Configure the Tango coordinate frame pair
+    private static final ArrayList<TangoCoordinateFramePair> FRAME_PAIRS =
+            new ArrayList<TangoCoordinateFramePair>();
+    {
+        FRAME_PAIRS.add(new TangoCoordinateFramePair(
+                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+                TangoPoseData.COORDINATE_FRAME_DEVICE));
+    }
+
     private Tango mTango;
     private TangoConfig mConfig;
 
@@ -90,7 +100,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
     private double mXyIjPreviousTimeStamp;
     private boolean mIsTangoServiceConnected;
     private TangoPoseData mPose;
-    private PointCloudManager mPointCloudManager;
+    private TangoPointCloudManager mPointCloudManager;
     private TangoUx mTangoUx;
 
     private static final DecimalFormat FORMAT_THREE_DECIMAL = new DecimalFormat("0.000");
@@ -110,8 +120,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         setupTextViewsAndButtons(mConfig);
 
         int maxDepthPoints = mConfig.getInt("max_point_cloud_elements");
-        mPointCloudManager = new PointCloudManager(maxDepthPoints);
-        mRenderer = setupGLViewAndRenderer(mPointCloudManager);
+        mRenderer = setupGLViewAndRenderer();
         mTangoUx = setupTangoUxAndLayout();
         mIsTangoServiceConnected = false;
     }
@@ -121,8 +130,10 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         super.onPause();
         mTangoUx.stop();
         try {
+            mRenderer.getCurrentScene().clearFrameCallbacks();
             mTango.disconnect();
             mIsTangoServiceConnected = false;
+            mPose = null;
         } catch (TangoErrorException e) {
             Toast.makeText(getApplicationContext(), R.string.TangoError, Toast.LENGTH_SHORT).show();
         }
@@ -135,6 +146,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         mTangoUx.start(params);
         try {
             setTangoListeners();
+            setRendererListener();
         } catch (TangoErrorException e) {
             Toast.makeText(this, R.string.TangoError, Toast.LENGTH_SHORT).show();
         } catch (SecurityException e) {
@@ -143,8 +155,9 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         }
         try {
             mTango.connect(mConfig);
-            mIsTangoServiceConnected = true;
+            mPointCloudManager = new TangoPointCloudManager();
             setupExtrinsics();
+            mIsTangoServiceConnected = true;
         } catch (TangoOutOfDateException outDateEx) {
             if (mTangoUx != null) {
                 mTangoUx.showTangoOutOfDate();
@@ -185,14 +198,8 @@ public class PointCloudActivity extends Activity implements OnClickListener {
     }
 
     private void setTangoListeners() {
-        // Configure the Tango coordinate frame pair
-        final ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
-        framePairs.add(new TangoCoordinateFramePair(
-                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
-                TangoPoseData.COORDINATE_FRAME_DEVICE));
         // Listen for new Tango data
-        mTango.connectListener(framePairs, new OnTangoUpdateListener() {
-
+        mTango.connectListener(FRAME_PAIRS, new OnTangoUpdateListener() {
             @Override
             public void onPoseAvailable(final TangoPoseData pose) {
                 // Passing in the pose data to UX library produce exceptions.
@@ -200,7 +207,12 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                     mTangoUx.updatePoseStatus(pose.statusCode);
                 }
 
-                mPose = pose;
+                // Update our copy of the latest pose
+                // Synchronize against concurrent use in the render loop.
+                synchronized (this) {
+                    mPose = pose;
+                }
+
                 // Calculate the delta time from previous pose.
                 final double deltaTime = (pose.timestamp - mPosePreviousTimeStamp)
                         * SECS_TO_MILLISECS;
@@ -233,8 +245,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                         }
                     });
                 }
-
-                mRenderer.updateDevicePose(pose);
             }
 
             @Override
@@ -242,10 +252,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                 if (mTangoUx != null) {
                     mTangoUx.updateXyzCount(xyzIj.xyzCount);
                 }
-                mPointCloudManager.updateCallbackBufferAndSwap(xyzIj.xyz, xyzIj.xyzCount);
-                TangoPoseData pointCloudPose = mTango.getPoseAtTime(xyzIj.timestamp,
-                        framePairs.get(0));
-                mRenderer.updatePointCloudPose(pointCloudPose);
+                mPointCloudManager.updateXyzIj(xyzIj);
 
                 final double currentTimeStamp = xyzIj.timestamp;
                 final double pointCloudFrameDelta = (currentTimeStamp - mXyIjPreviousTimeStamp)
@@ -290,6 +297,46 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         });
     }
 
+    public void setRendererListener() {
+        mRenderer.getCurrentScene().registerFrameCallback(new ASceneFrameCallback() {
+            @Override
+            public void onPreFrame(long sceneTime, double deltaTime) {
+                // NOTE: This will be executed on each cycle before rendering, called from the
+                // OpenGL rendering thread
+
+                // Update point cloud data
+                TangoXyzIjData pointCloud = mPointCloudManager.getLatestXyzIj();
+                if (pointCloud != null && mIsTangoServiceConnected) {
+                    TangoPoseData pointCloudPose =
+                            mTango.getPoseAtTime(pointCloud.timestamp, FRAME_PAIRS.get(0));
+                    mRenderer.updatePointCloud(pointCloud, pointCloudPose);
+                }
+
+                // Update current device pose
+                synchronized (this) {
+                    if (mPose != null) {
+                        mRenderer.updateDevicePose(mPose);
+                    }
+                }
+            }
+
+            @Override
+            public boolean callPreFrame() {
+                return true;
+            }
+
+            @Override
+            public void onPreDraw(long sceneTime, double deltaTime) {
+
+            }
+
+            @Override
+            public void onPostFrame(long sceneTime, double deltaTime) {
+
+            }
+        });
+    }
+
     private void setupExtrinsics() {
         TangoCoordinateFramePair framePair = new TangoCoordinateFramePair();
         framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_IMU;
@@ -300,7 +347,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         TangoPoseData imuTDepthCameraPose = mTango.getPoseAtTime(0.0,framePair);
 
         framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_DEVICE;
-        TangoPoseData imuTDevicePose = mTango.getPoseAtTime(0.0,framePair);
+        TangoPoseData imuTDevicePose = mTango.getPoseAtTime(0.0, framePair);
 
         mRenderer.setupExtrinsics(imuTDevicePose, imuTColorCameraPose, imuTDepthCameraPose);
     }
@@ -399,8 +446,8 @@ public class PointCloudActivity extends Activity implements OnClickListener {
     /**
      * Sets Rajawalisurface view and its renderer. This is ideally called only once in onCreate.
      */
-    private PointCloudRajawaliRenderer setupGLViewAndRenderer(PointCloudManager pointCloudManager){
-        PointCloudRajawaliRenderer renderer = new PointCloudRajawaliRenderer(this, pointCloudManager);
+    private PointCloudRajawaliRenderer setupGLViewAndRenderer(){
+        PointCloudRajawaliRenderer renderer = new PointCloudRajawaliRenderer(this);
         RajawaliSurfaceView glView = (RajawaliSurfaceView) findViewById(R.id.gl_surface_view);
         glView.setEGLContextClientVersion(2);
         glView.setSurfaceRenderer(renderer);
@@ -434,5 +481,4 @@ public class PointCloudActivity extends Activity implements OnClickListener {
             averageZ = totalZ / pointCount;
         return  averageZ;
     }
-
 }

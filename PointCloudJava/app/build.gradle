@@ -40,6 +40,7 @@ repositories{
 
 dependencies {
     compile (name: 'tango-ux-support-library', ext: 'aar')
+    compile (name: 'tango_support_java_lib', ext: 'aar')
     compile 'org.rajawali3d:rajawali:1.0.294-SNAPSHOT@aar'
     compile project(':TangoUtils')
 }
