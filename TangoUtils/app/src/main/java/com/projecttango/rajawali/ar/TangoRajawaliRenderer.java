@@ -24,8 +24,9 @@ import com.google.atap.tangoservice.TangoCoordinateFramePair;
 import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoInvalidException;
 import com.google.atap.tangoservice.TangoPoseData;
+import com.projecttango.rajawali.DeviceExtrinsics;
 import com.projecttango.rajawali.Pose;
-import com.projecttango.rajawali.ScenePoseCalcuator;
+import com.projecttango.rajawali.ScenePoseCalculator;
 
 import org.rajawali3d.materials.Material;
 import org.rajawali3d.materials.textures.ATexture;
@@ -55,30 +56,27 @@ import javax.microedition.khronos.opengles.GL10;
  *    handled by this mRenderer.
  */
 public abstract class TangoRajawaliRenderer extends RajawaliRenderer {
-    private static final String TAG = "TangoRajawaliRenderer";
+    private static final String TAG = TangoRajawaliRenderer.class.getSimpleName();
 
     private static TangoCoordinateFramePair TANGO_WORLD_T_DEVICE = new TangoCoordinateFramePair(
             TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
             TangoPoseData.COORDINATE_FRAME_DEVICE
     );
 
-    // Tango support objects.
+    // Rajawali scene objects to render the color camera
     private StreamingTexture mTangoCameraTexture;
+    private ScreenQuad mBackgroundQuad;
+
     private Tango mTango;
     private int mCameraId;
     private boolean mUpdatePending = false;
     private int mConnectedTextureId = -1;
     private double mLastRGBFrameTimestamp = -1;
-    private double mLastSceneCameraFrameTimestamp = -1;
-    // The ScreenQuad used to render the Tango camera in the background of the scene.
-    private ScreenQuad mBackgroundQuad;
     private boolean mIsCameraConfigured = false;
-
-    protected ScenePoseCalcuator mScenePoseCalcuator;
+    private Matrix4 mProjectionMatrix;
 
     public TangoRajawaliRenderer(Context context) {
         super(context);
-        mScenePoseCalcuator = new ScenePoseCalcuator();
     }
 
     /**
@@ -105,35 +103,18 @@ public abstract class TangoRajawaliRenderer extends RajawaliRenderer {
 
     @Override
     protected void onRender(long elapsedRealTime, double deltaTime) {
-        super.onRender(elapsedRealTime, deltaTime);
-
         synchronized (this) {
+            // mTango != null is used to indicate that a Tango device is connected to this
+            // renderer, via a corresponding TangoRajawaliView
             if (mTango != null) {
                 try {
                     if (mUpdatePending) {
                         mLastRGBFrameTimestamp = updateTexture();
                         mUpdatePending = false;
                     }
-                    if (mLastRGBFrameTimestamp != mLastSceneCameraFrameTimestamp) {
-                        // We delay the camera set-up until now because if we do it earlier (i.e., when the
-                        // camera is connected to the renderer) the Tango service may still not have the
-                        // necessary intrinsic and extrinsic transformation information available.
-                        if (!mIsCameraConfigured) {
-                            configureCamera();
-                            mIsCameraConfigured = true;
-                        }
-
-                        // Calculate the device pose at the camera frame update time.
-                        TangoPoseData lastFramePose =
-                                mTango.getPoseAtTime(mLastRGBFrameTimestamp, TANGO_WORLD_T_DEVICE);
-
-                        if (lastFramePose.statusCode != TangoPoseData.POSE_VALID) {
-                            Log.w(TAG, "Unable to get device pose at camera frame update time = " + mLastRGBFrameTimestamp);
-                        } else {
-                            Pose sceneCameraPose = mScenePoseCalcuator.toOpenGLCameraPose(lastFramePose);
-                            updateCameraPose(sceneCameraPose);
-                            mLastSceneCameraFrameTimestamp = mLastRGBFrameTimestamp;
-                        }
+                    if (!mIsCameraConfigured) {
+                        getCurrentCamera().setProjectionMatrix(mProjectionMatrix);
+                        mIsCameraConfigured = true;
                     }
                 } catch (TangoInvalidException ex) {
                     Log.e(TAG, "Error while updating texture!", ex);
@@ -142,42 +123,8 @@ public abstract class TangoRajawaliRenderer extends RajawaliRenderer {
                 }
             }
         }
-    }
 
-    /**
-     * Override onRenderSurfaceSizeChanged() so that it will be called after onSurfaceCreated,
-     * nested view get reset or resized, including activity get paused and resumed, in this function
-     * sets mIsCameraConfigured to false since Rajawali will reset the scene camera if SurfaceSizeChanged
-     * get called.
-     */
-    @Override
-    public void onRenderSurfaceSizeChanged(GL10 gl, int width, int height) {
-        super.onRenderSurfaceSizeChanged(gl, width, height);
-        mConnectedTextureId = -1;
-        mIsCameraConfigured = false;
-    }
-
-    /**
-     * Triggered whenever there is new information of the Tango position, with the provided
-     * data to update the Rajawali camera to match.
-     * It doesn't need to be overwritten. By default it will automatically update the Rajawali
-     * Camera to match.
-     */
-    protected void updateCameraPose(Pose sceneCameraPose) {
-        getCurrentCamera().setPosition(sceneCameraPose.getPosition());
-        getCurrentCamera().setOrientation(sceneCameraPose.getOrientation());
-    }
-
-    /**
-     * Sets up the coordinate frame to use as a device reference. It should be one of
-     * <code>TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE</code> or
-     * <code>TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION</code>.
-     *
-     * COORDINATE_FRAME_START_OF_SERVICE will be used by default.
-     */
-    public void setWorldFrameReference(int worldFrameReference) {
-        TANGO_WORLD_T_DEVICE = new TangoCoordinateFramePair( worldFrameReference,
-                TangoPoseData.COORDINATE_FRAME_DEVICE);
+        super.onRender(elapsedRealTime, deltaTime);
     }
 
     /**
@@ -185,7 +132,7 @@ public abstract class TangoRajawaliRenderer extends RajawaliRenderer {
      *
      * @return the timestamp of the RGB image rendered into the texture.
      */
-    public double updateTexture() {
+    private double updateTexture() {
         // Try this again here because it is possible that when the user called
         // connectToTangoCamera the texture wasn't assigned yet and the connection couldn't
         // be done
@@ -212,35 +159,17 @@ public abstract class TangoRajawaliRenderer extends RajawaliRenderer {
         return textureId;
     }
 
-    private void configureCamera() {
-        // This should never happen, but it never hurts to double-check.
-        if (mTango == null) {
-            return;
-        }
-
-        // Configure the Rajawali Scene camera projection to match the Tango camera intrinsic.
-        TangoCameraIntrinsics intrinsics = mTango.getCameraIntrinsics(mCameraId);
-        Matrix4 projectionMatrix = ScenePoseCalcuator.calculateProjectionMatrix(
-                intrinsics.width, intrinsics.height, intrinsics.fx, intrinsics.fy, intrinsics.cx,
-                intrinsics.cy);
-        getCurrentCamera().setProjectionMatrix(projectionMatrix);
-    }
-
-    /**
-     * Set-up device to sensors transforms.
-     */
-    public void setupExtrinsics(TangoPoseData imuTDevicePose, TangoPoseData imuTColorCameraPose,
-                                 TangoPoseData imuTDepthCameraPose) {
-        mScenePoseCalcuator.setupExtrinsics(imuTDevicePose, imuTColorCameraPose, imuTDepthCameraPose);
-    }
-
     /**
      * Intended to be called from <code>TangoRajawaliView</code>.
      */
-    void connectCamera(Tango tango, int cameraId) {
-        this.mTango = tango;
-        this.mCameraId = cameraId;
-        this.mConnectedTextureId = connectTangoTexture();
+    synchronized void connectCamera(Tango tango, int cameraId) {
+        mTango = tango;
+        mCameraId = cameraId;
+        mConnectedTextureId = connectTangoTexture();
+        TangoCameraIntrinsics intrinsics = tango.getCameraIntrinsics(mCameraId);
+        mProjectionMatrix = ScenePoseCalculator.calculateProjectionMatrix(
+                intrinsics.width, intrinsics.height,
+                intrinsics.fx, intrinsics.fy, intrinsics.cx, intrinsics.cy);
     }
 
     /**
@@ -270,7 +199,14 @@ public abstract class TangoRajawaliRenderer extends RajawaliRenderer {
      * @return The timestamp. This can be used to associate camera data with a
      * pose or other sensor data using other pieces of the Tango API.
      */
-    public double getTimestamp() {
+    synchronized public double getTimestamp() {
         return mLastRGBFrameTimestamp;
+    }
+
+    @Override
+    public void onRenderSurfaceSizeChanged(GL10 gl, int width, int height) {
+        super.onRenderSurfaceSizeChanged(gl, width, height);
+        // The camera projection matrix gets reset whenever the render surface is changed
+        mIsCameraConfigured = false;
     }
 }

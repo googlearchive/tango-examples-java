@@ -135,9 +135,13 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
         // Configure OpenGL renderer
         mRenderer = setupGLViewAndRenderer();
 
-        mPoses = new TangoPoseData[3];
+    }
 
-        // Set the number of loop closures to zero at start.
+    /**
+     * Initializes pose data we keep track of. To be done
+     */
+    private void initializePoseData() {
+        mPoses = new TangoPoseData[3];
         mStart2DevicePoseCount = 0;
         mAdf2DevicePoseCount = 0;
         mAdf2StartPoseCount = 0;
@@ -172,6 +176,9 @@ public class AreaLearningActivity extends Activity implements View.OnClickListen
     @Override
     protected void onResume() {
         super.onResume();
+
+        // Reset pose data and start counting from resume.
+        initializePoseData();
 
         // Clear the relocalization state: we don't know where the device has been since our app was paused.
         mIsRelocalized = false;

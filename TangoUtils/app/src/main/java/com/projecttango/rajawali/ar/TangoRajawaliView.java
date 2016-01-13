@@ -72,17 +72,6 @@ public class TangoRajawaliView extends RajawaliSurfaceView {
     }
 
     /**
-     * Updates the TangoRajawaliView with the latest camera data. This does not
-     * synchronize data in the OpenGL context.
-     *
-     * Note, you need to call connectToTangoCamera() with a valid camera ID before
-     * calling this method.
-     */
-    public void updateTexture() {
-        mRenderer.updateTexture();
-    }
-
-    /**
      * Updates the TangoRajawaliView with the latest camera data. This method
      * synchronizes the data in the OpenGL context.
      *

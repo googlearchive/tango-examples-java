@@ -22,7 +22,7 @@ import android.view.MotionEvent;
 
 import com.google.atap.tangoservice.TangoPoseData;
 import com.projecttango.rajawali.Pose;
-import com.projecttango.rajawali.ScenePoseCalcuator;
+import com.projecttango.rajawali.ScenePoseCalculator;
 import com.projecttango.rajawali.TouchViewHandler;
 import com.projecttango.rajawali.renderables.FrustumAxes;
 import com.projecttango.rajawali.renderables.Grid;
@@ -115,7 +115,7 @@ public class AreaLearningRajawaliRenderer extends RajawaliRenderer {
      *                      updated.
      */
     public synchronized void updateDevicePose(TangoPoseData tangoPoseData, boolean isRelocalized) {
-        mDevicePose = ScenePoseCalcuator.toOpenGLPose(tangoPoseData);
+        mDevicePose = ScenePoseCalculator.toOpenGLPose(tangoPoseData);
         mIsRelocalized = isRelocalized;
         mPoseUpdated = true;
     }
