@@ -118,15 +118,18 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
         touchViewHandler.onTouchEvent(motionEvent);
     }
 
-    public void setFirstPersonView() {
+    public synchronized void setFirstPersonView() {
         touchViewHandler.setFirstPersonView();
+        mPoseUpdated = true;
     }
 
-    public void setTopDownView() {
+    public synchronized void setTopDownView() {
         touchViewHandler.setTopDownView();
+        mPoseUpdated = true;
     }
 
-    public void setThirdPersonView() {
+    public synchronized void setThirdPersonView() {
         touchViewHandler.setThirdPersonView();
+        mPoseUpdated = true;
     }
 }
