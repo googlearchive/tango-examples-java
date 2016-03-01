@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Java Floor Plan</string>
+    <string name="app_name_long">Java Floor Plan Example</string>
+    <string name="exception_out_of_date">"Tango service outdated!"</string>
+    <string name="failed_measurement">Failed to fit plane</string>
+    <string name="failed_permissions">Permissions required!</string>
+
+</resources>

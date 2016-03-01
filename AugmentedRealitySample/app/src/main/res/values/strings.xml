@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-
-    <string name="app_name">AugmentedRealitySample</string>
-    <string name="TangoOutOfDateException">"Tango service outdated!"</string>
-    <string name="failed_measurement">Failed to fit plane</string>
-    <string name="failed_permissions">Permissions required!</string>
-
-</resources>
