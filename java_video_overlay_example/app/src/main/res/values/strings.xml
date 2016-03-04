@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Java Video Overlay</string>
+    <string name="app_name_long">Java Video Overlay Example</string>
+    <string name="exception_tango_error">"Tango exception! Try again!"</string>
+    <string name="exception_tango_out_of_date">"Tango service outdated!"</string>
+
+</resources>

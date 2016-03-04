@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Copyright 2014 Google Inc.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<resources>
+    <string name="app_name">Java Point Cloud</string>
+    <string name="app_name_long">Java Point Cloud Example</string>
+    <string name="first_person">First</string>
+    <string name="third_person">Third</string>
+    <string name="top_down">Top</string>
+    <string name="start">Start</string>
+    <string name="auto_reset_on">Auto Reset On</string>
+    <string name="auto_reset_off">Auto Reset Off</string>
+
+    <string name="average_z">"Average depth (m): "</string>
+    <string name="point_count">"Point count: "</string>
+
+    <string name="exception_tango_error">"Tango Exception! Try again!"</string>
+    <string name="exception_out_of_date">"Tango Service outdated!"</string>
+    <string name="motiontrackingpermission">"Motion Tracking permission needed!"</string>
+    <string name="na">"N/A"</string>
+    <string name="pose_initializing">"initializing"</string>
+    <string name="pose_valid">"valid"</string>
+    <string name="pose_invalid">"invalid"</string>
+    <string name="pose_unknown">"unknown"</string>
+    <string name="latest_adf_is">", Latest ADF is: "</string>
+
+</resources>

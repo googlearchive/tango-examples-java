@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Java Point To Point Measurement</string>
+    <string name="app_name_long">Java Point To Point Measurement Example</string>
+    <string name="tango_out_of_date_exception">"Tango service outdated!"</string>
+    <string name="failed_measurement">Failed to place point</string>
+    <string name="failed_permissions">Permissions required!</string>
+    <string name="measurement">DISTANCE: </string>
+
+</resources>
