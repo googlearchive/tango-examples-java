@@ -41,6 +41,7 @@ import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.scene.ASceneFrameCallback;
 
 import java.util.ArrayList;
+import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.projecttango.rajawali.DeviceExtrinsics;
@@ -90,6 +91,9 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
     private double mCameraPoseTimestamp = 0;
     private TextView mDistanceMeasure;
 
+    private Vector3[] mLinePoints = new Vector3[2];
+    private boolean mPointSwitch = true;
+
     // Handles the debug text UI update loop.
     private Handler mHandler = new Handler();
 
@@ -104,12 +108,14 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
         mTango = new Tango(this);
         mPointCloudManager = new TangoPointCloudManager();
         mDistanceMeasure = (TextView) findViewById(R.id.distance_textview);
+        mLinePoints[0] = null;
+        mLinePoints[1] = null;
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        mRenderer.clearLine();
+        clearLine();
         if (mIsConnected.compareAndSet(true, false)) {
             mRenderer.getCurrentScene().clearFrameCallbacks();
             mGLView.disconnectCamera();
@@ -280,7 +286,8 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                 if (rgbPoint != null) {
                     // Update a line endpoint to the touch location.
                     // This update is made thread safe by the renderer
-                    mRenderer.updateLine(rgbPoint);
+                    updateLine(rgbPoint);
+                    mRenderer.setLine(generateEndpoints());
                 } else {
                     Log.w(TAG, "Point was null.");
                 }
@@ -330,6 +337,63 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                     mTango.getPoseAtTime(rgbTimestamp, FRAME_PAIR));
     }
 
+    /**
+     * Update the oldest line endpoint to the value passed into this function.
+     * This will also flag the line for update on the next render pass.
+     */
+    private synchronized void updateLine(Vector3 worldPoint) {
+        if (mPointSwitch) {
+            mPointSwitch = !mPointSwitch;
+            mLinePoints[0] = worldPoint;
+            return;
+        }
+        mPointSwitch = !mPointSwitch;
+        mLinePoints[1] = worldPoint;
+    }
+
+    /**
+     * Return the endpoints of the line as a Stack of Vector3s. Returns
+     * null if the line is not visible.
+     */
+    private synchronized Stack<Vector3> generateEndpoints() {
+
+        // Place the line based on the two points.
+        if (mLinePoints[0] != null && mLinePoints[1] != null) {
+            Stack<Vector3> points = new Stack<Vector3>();
+            points.push(mLinePoints[0]);
+            points.push(mLinePoints[1]);
+            return points;
+        }
+        return null;
+    }
+    
+    /*
+     * Remove all the points from the Scene.
+     */
+    private synchronized void clearLine() {
+        mLinePoints[0] = null;
+        mLinePoints[1] = null;
+        mPointSwitch = true;
+        mRenderer.setLine(null);
+    }
+
+    /**
+     * Produces the String for the line length base on
+     * endpoint locations.
+     */
+    private synchronized String getPointSeparation() {
+        if (mLinePoints[0] == null || mLinePoints[1] == null) {
+            return "Null";
+        }
+        Vector3 p1 = mLinePoints[0];
+        Vector3 p2 = mLinePoints[1];
+        double separation = Math.sqrt(
+                                Math.pow(p1.x - p2.x, 2) + 
+                                Math.pow(p1.y - p2.y, 2) + 
+                                Math.pow(p1.z - p2.z, 2));
+        return String.format("%.2f", separation) + " meters";
+    }
+
     // Debug text UI update loop, updating at 10Hz.
     private Runnable mUpdateUiLoopRunnable = new Runnable() {
         public void run() {
@@ -338,9 +402,9 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
         }
     };
 
-    private void updateUi(){
+    private synchronized void updateUi(){
         try {
-            mDistanceMeasure.setText(mRenderer.getPointSeparation());
+            mDistanceMeasure.setText(getPointSeparation());
         } catch (Exception e) {
             e.printStackTrace();
         }
