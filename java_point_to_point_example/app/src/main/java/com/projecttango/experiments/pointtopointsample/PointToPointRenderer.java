@@ -28,7 +28,6 @@ import org.rajawali3d.materials.methods.DiffuseMethod;
 import org.rajawali3d.materials.textures.ATexture;
 import org.rajawali3d.materials.textures.Texture;
 import org.rajawali3d.math.vector.Vector3;
-import org.rajawali3d.primitives.Cube;
 import org.rajawali3d.primitives.Line3D;
 
 import java.util.Stack;
@@ -56,10 +55,8 @@ import com.projecttango.rajawali.ar.TangoRajawaliRenderer;
 public class PointToPointRenderer extends TangoRajawaliRenderer {
 
     private Object3D mLine;
-    private Vector3[] mLinePoints = new Vector3[2];
-    private boolean mLineIsVisible = false;
-    private boolean mPointsUpdated = false;
-    private boolean mPointSwitch = true;
+    private Stack<Vector3> mPoints;
+    private boolean mLineUpdated = false;
 
     public PointToPointRenderer(Context context) {
         super(context);
@@ -84,28 +81,20 @@ public class PointToPointRenderer extends TangoRajawaliRenderer {
         // Update the AR object if necessary
         // Synchronize against concurrent access with the setter below.
         synchronized (this) {
-            if (mPointsUpdated) {
-                if (mLineIsVisible) {
-                    // Remove current line
-                    if (mLine != null) {
-                        getCurrentScene().removeChild(mLine);
-                    }
-                    // Place the line based on the two points.
-                    Stack<Vector3> points = new Stack<Vector3>();
-                    points.push(mLinePoints[0]);
-                    points.push(mLinePoints[1]);
-                    mLine = new Line3D(points, 50, Color.RED);
+            if (mLineUpdated) {
+                if (mLine != null) {
+                    getCurrentScene().removeChild(mLine);
+                }
+                if (mPoints != null) {
+                    mLine = new Line3D(mPoints, 50, Color.RED);
                     Material m = new Material();
                     m.setColor(Color.RED);
                     mLine.setMaterial(m);
                     getCurrentScene().addChild(mLine);
                 } else {
-                    // Remove line
-                    if (mLine != null) {
-                        getCurrentScene().removeChild(mLine);
-                    }
+                    mLine = null;
                 }
-                mPointsUpdated = false;
+                mLineUpdated = false;
             }
             
         }
@@ -113,49 +102,9 @@ public class PointToPointRenderer extends TangoRajawaliRenderer {
         super.onRender(elapsedRealTime, deltaTime);
     }
 
-    /**
-     * Update the oldest line endpoint to the value passed into this function.
-     * This will also flag the line for update on the next render pass.
-     */
-    public synchronized void updateLine(Vector3 worldPoint) {
-        mPointsUpdated = true;
-        if (mPointSwitch) {
-            mPointSwitch = !mPointSwitch;
-            mLinePoints[0] = worldPoint;
-            return;
-        }
-        mPointSwitch = !mPointSwitch;
-        mLinePoints[1] = worldPoint;
-        mLineIsVisible = true;
-    }
-    
-    /*
-     * Remove all the points from the Scene.
-     */
-    public synchronized void clearLine() {
-        if (mLine != null) {
-            getCurrentScene().removeChild(mLine);
-        }
-        mLineIsVisible = false;
-        mPointSwitch = true;
-        mPointsUpdated = true;
-    }
-
-    /**
-     * Produces the String for the line length base on
-     * endpoint locations.
-     */
-    public synchronized String getPointSeparation() {
-        if (!mLineIsVisible) {
-            return "Null";
-        }
-        Vector3 p1 = mLinePoints[0];
-        Vector3 p2 = mLinePoints[1];
-        double separation = Math.sqrt(
-                                Math.pow(p1.x - p2.x, 2) + 
-                                Math.pow(p1.y - p2.y, 2) + 
-                                Math.pow(p1.z - p2.z, 2));
-        return String.format("%.2f", separation) + " meters";
+    public synchronized void setLine(Stack<Vector3> points) {
+        mPoints = points;
+        mLineUpdated = true;
     }
 
     /**

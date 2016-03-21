@@ -75,6 +75,7 @@ public class PointCloud extends Points {
         for (int i = 0; i < pointCount; i++) {
             z = points[i * 3 + 2];
             colorIndex = (int) Math.min(z / CLOUD_MAX_Z * mPalette.length, mPalette.length - 1);
+            colorIndex = Math.max(colorIndex, 0);
             color = mPalette[colorIndex];
             mColorArray[i * 4] = Color.red(color) / 255f;
             mColorArray[i * 4 + 1] = Color.green(color) / 255f;
