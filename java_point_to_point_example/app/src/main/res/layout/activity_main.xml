@@ -2,7 +2,7 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent">
 
-    <com.projecttango.rajawali.ar.TangoRajawaliView
+    <org.rajawali3d.surface.RajawaliSurfaceView
         android:id="@+id/ar_view"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"

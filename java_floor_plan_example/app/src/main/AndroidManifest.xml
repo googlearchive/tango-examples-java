@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.projecttango.experiments.floorplansample"
+    package="com.projecttango.examples.java.floorplan"
     android:versionCode="0"
     android:versionName="0" >
 
