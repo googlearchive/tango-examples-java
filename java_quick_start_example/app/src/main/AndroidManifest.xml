@@ -15,7 +15,7 @@
    limitations under the License.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.projecttango.experiments.quickstartjava"
+    package="com.projecttango.examples.java.quickstart"
     android:versionCode="0"
     android:versionName="0" >
 
@@ -34,7 +34,7 @@
             android:name="com.projecttango.libtango_device"
             android:required="true" />
         <activity
-            android:name="com.projecttango.experiments.quickstartjava.MainActivity"
+            android:name=".MainActivity"
             android:label="@string/app_name_long" >
             <intent-filter android:label="@string/app_name">
                 <action android:name="android.intent.action.MAIN" />

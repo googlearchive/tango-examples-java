@@ -3,9 +3,9 @@
     xmlns:surfaceview="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.projecttango.experiments.floorplansample.FloorplanActivity">
+    tools:context="com.projecttango.experiments.floorplan.FloorplanActivity">
 
-    <com.projecttango.rajawali.ar.TangoRajawaliView
+    <org.rajawali3d.surface.RajawaliSurfaceView
         android:id="@+id/ar_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
