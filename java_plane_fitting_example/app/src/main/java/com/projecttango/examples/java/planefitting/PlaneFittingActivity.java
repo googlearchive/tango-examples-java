@@ -69,20 +69,21 @@ import com.projecttango.tangosupport.TangoSupport.IntersectionPointPlaneModelPai
  */
 public class PlaneFittingActivity extends Activity implements View.OnTouchListener {
     private static final String TAG = PlaneFittingActivity.class.getSimpleName();
+    private static final int INVALID_TEXTURE_ID = 0;
+
     private RajawaliSurfaceView mSurfaceView;
     private PlaneFittingRenderer mRenderer;
     private TangoCameraIntrinsics mIntrinsics;
     private DeviceExtrinsics mExtrinsics;
     private TangoPointCloudManager mPointCloudManager;
     private Tango mTango;
-    private AtomicBoolean mIsConnected = new AtomicBoolean(false);
+    private boolean mIsConnected = false;
     private double mCameraPoseTimestamp = 0;
 
     // Texture rendering related fields
     // NOTE: Naming indicates which thread is in charge of updating this variable
-    private int mConnectedTextureIdGlThread = -1;  // We use the -1 (invalid texture name) to
-                                                   // to indicate that no texture is connected
-    private boolean mIsFrameAvailableTangoThread;
+    private int mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
+    private AtomicBoolean mIsFrameAvailableTangoThread = new AtomicBoolean(false);
     private double mRgbTimestampGlThread;
 
     public static final TangoCoordinateFramePair FRAME_PAIR = new TangoCoordinateFramePair(
@@ -107,13 +108,14 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
         // Synchronize against disconnecting while the service is being used in the OpenGL thread or
         // in the UI thread.
         synchronized (this) {
-            if (mIsConnected.compareAndSet(true, false)) {
+            if (mIsConnected) {
                 mRenderer.getCurrentScene().clearFrameCallbacks();
                 mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
                 // We need to invalidate the connected texture ID so that we cause a re-connection
                 // in the OpenGL thread after resume
-                mConnectedTextureIdGlThread = -1;
+                mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
                 mTango.disconnect();
+                mIsConnected = false;
             }
         }
     }
@@ -124,10 +126,11 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
         // Synchronize against disconnecting while the service is being used in the OpenGL thread or
         // in the UI thread.
         synchronized (this) {
-            if (mIsConnected.compareAndSet(false, true)) {
+            if (!mIsConnected) {
                 try {
                     connectTango();
                     connectRenderer();
+                    mIsConnected = true;
                 } catch (TangoOutOfDateException e) {
                     Toast.makeText(getApplicationContext(), R.string.exception_out_of_date,
                             Toast.LENGTH_SHORT).show();
@@ -164,10 +167,8 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
                 // Check if the frame available is for the camera we want and update its frame
                 // on the view.
                 if (cameraId == TangoCameraIntrinsics.TANGO_CAMERA_COLOR) {
-                    // Mark
-                    synchronized (PlaneFittingActivity.this) {
-                        mIsFrameAvailableTangoThread = true;
-                    }
+                    // Mark a camera frame is available for rendering in the OpenGL thread
+                    mIsFrameAvailableTangoThread.set(true);
                     mSurfaceView.requestRender();
                 }
             }
@@ -206,7 +207,7 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
 
                 synchronized (PlaneFittingActivity.this) {
                     // Don't execute any tango API actions if we're not connected to the service
-                    if (!mIsConnected.get()) {
+                    if (!mIsConnected) {
                         return;
                     }
 
@@ -226,10 +227,9 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
                     }
 
                     // If there is a new RGB camera frame available, update the texture with it
-                    if (mIsFrameAvailableTangoThread) {
+                    if (mIsFrameAvailableTangoThread.compareAndSet(true, false)) {
                         mRgbTimestampGlThread =
                                 mTango.updateTexture(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
-                        mIsFrameAvailableTangoThread = false;
                     }
 
                     if (mRgbTimestampGlThread > mCameraPoseTimestamp) {

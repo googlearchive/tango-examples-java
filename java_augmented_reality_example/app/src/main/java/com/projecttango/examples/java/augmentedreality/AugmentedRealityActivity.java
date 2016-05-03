@@ -64,14 +64,14 @@ public class AugmentedRealityActivity extends Activity {
     private static final TangoCoordinateFramePair FRAME_PAIR = new TangoCoordinateFramePair(
             TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
             TangoPoseData.COORDINATE_FRAME_DEVICE);
-    private static final int INVALID_TEXTURE_ID = -1;
+    private static final int INVALID_TEXTURE_ID = 0;
 
     private RajawaliSurfaceView mSurfaceView;
     private AugmentedRealityRenderer mRenderer;
     private TangoCameraIntrinsics mIntrinsics;
     private DeviceExtrinsics mExtrinsics;
     private Tango mTango;
-    private AtomicBoolean mIsConnected = new AtomicBoolean(false);
+    private boolean mIsConnected = false;
     private double mCameraPoseTimestamp = 0;
 
     // Texture rendering related fields
@@ -99,13 +99,14 @@ public class AugmentedRealityActivity extends Activity {
         // will block here until all Tango callback calls are finished. If you lock against this
         // object in a Tango callback thread it will cause a deadlock.
         synchronized (this) {
-            if (mIsConnected.compareAndSet(true, false)) {
+            if (mIsConnected) {
                 mRenderer.getCurrentScene().clearFrameCallbacks();
                 mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
                 // We need to invalidate the connected texture ID so that we cause a re-connection
                 // in the OpenGL thread after resume
                 mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
                 mTango.disconnect();
+                mIsConnected = false;
             }
         }
     }
@@ -116,10 +117,11 @@ public class AugmentedRealityActivity extends Activity {
         // Synchronize against disconnecting while the service is being used in the OpenGL thread or
         // in the UI thread.
         synchronized (this) {
-            if (mIsConnected.compareAndSet(false, true)) {
+            if (!mIsConnected) {
                 try {
                     connectTango();
                     connectRenderer();
+                    mIsConnected = true;
                 } catch (TangoOutOfDateException e) {
                     Toast.makeText(getApplicationContext(), R.string.exception_out_of_date,
                             Toast.LENGTH_SHORT).show();
@@ -195,7 +197,7 @@ public class AugmentedRealityActivity extends Activity {
                 // callback thread and service disconnection from an onPause event.
                 synchronized (AugmentedRealityActivity.this) {
                     // Don't execute any tango API actions if we're not connected to the service
-                    if (!mIsConnected.get()) {
+                    if (!mIsConnected) {
                         return;
                     }
 
