@@ -66,43 +66,42 @@ public class MainActivity extends Activity {
         mTranslationTextView = (TextView) findViewById(R.id.translation_textview);
         mRotationTextView = (TextView) findViewById(R.id.rotation_textview);
 
-        // Instantiate Tango client
-        mTango = new Tango(this);
-
-        // Set up Tango configuration for motion tracking
-        // If you want to use other APIs, add more appropriate to the config
-        // like: mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true)
-        mConfig = mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT);
-        mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
-
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // Lock the Tango configuration and reconnect to the service each time
-        // the app
-        // is brought to the foreground.
-        super.onResume();
         if (!mIsTangoServiceConnected) {
-            try {
-                setTangoListeners();
-            } catch (TangoErrorException e) {
-                Toast.makeText(this, "Tango Error! Restart the app!",
-                        Toast.LENGTH_SHORT).show();
-            }
-            try {
-                mTango.connect(mConfig);
-                mIsTangoServiceConnected = true;
-            } catch (TangoOutOfDateException e) {
-                Toast.makeText(getApplicationContext(),
-                        "Tango Service out of date!", Toast.LENGTH_SHORT)
-                        .show();
-            } catch (TangoErrorException e) {
-                Toast.makeText(getApplicationContext(),
-                        "Tango Error! Restart the app!", Toast.LENGTH_SHORT)
-                        .show();
-            }
+            // Initialize Tango Service as a normal Android Service, since we call
+            // mTango.disconnect() in onPause, this will unbind Tango Service, so
+            // everytime when onResume get called, we should create a new Tango object.
+            mTango = new Tango(MainActivity.this, new Runnable() {
+                // Pass in a Runnable to be called from UI thread when Tango is ready,
+                // this Runnable will be running on a new thread.
+                // When Tango is ready, we can call Tango functions safely here only
+                // when there is no UI thread changes involved.
+                @Override
+                public void run() {
+                    // Set up Tango configuration for motion tracking
+                    // If you want to use other APIs, add more appropriate to the config
+                    // like: mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true)
+                    mConfig = mTango.getConfig(TangoConfig.CONFIG_TYPE_CURRENT);
+                    mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
+                    try {
+                        setTangoListeners();
+                    } catch (TangoErrorException e) {
+                        Log.e(TAG, "Tango Error! Restart the app!", e);
+                    }
+                    try {
+                        mTango.connect(mConfig);
+                        mIsTangoServiceConnected = true;
+                    } catch (TangoOutOfDateException e) {
+                        Log.e(TAG, "Tango Service out of date!", e);
+                    } catch (TangoErrorException e) {
+                        Log.e(TAG, "Tango Error! Restart the app!", e);
+                    }
+                }
+            });
         }
     }
 

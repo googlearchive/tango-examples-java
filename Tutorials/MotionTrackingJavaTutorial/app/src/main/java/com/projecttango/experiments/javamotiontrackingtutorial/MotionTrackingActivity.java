@@ -28,6 +28,7 @@ import com.google.atap.tangoservice.TangoXyzIjData;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Toast;
 
 import org.rajawali3d.surface.IRajawaliSurface;
@@ -41,7 +42,7 @@ import java.util.ArrayList;
  * delegated to the {@link MotionTrackingRajawaliRenderer} class.
  */
 public class MotionTrackingActivity extends Activity {
-
+    private static final String TAG = MotionTrackingActivity.class.getSimpleName();
     private Tango mTango;
     private TangoConfig mConfig;
     private MotionTrackingRajawaliRenderer mRenderer;
@@ -51,10 +52,6 @@ public class MotionTrackingActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_motion_tracking);
-        mTango = new Tango(this);
-        mConfig = mTango.getConfig(mConfig.CONFIG_TYPE_CURRENT);
-        mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
-        mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_AUTORECOVERY, true);
         mRenderer = setupGLViewAndRenderer();
     }
 
@@ -107,21 +104,35 @@ public class MotionTrackingActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        try {
-            setTangoListeners();
-        } catch (TangoErrorException e) {
-            Toast.makeText(getApplicationContext(), R.string.TangoError, Toast.LENGTH_SHORT).show();
-        } catch (SecurityException e) {
-            Toast.makeText(getApplicationContext(), R.string.motiontrackingpermission,
-                    Toast.LENGTH_SHORT).show();
-        }
-        try {
-            mTango.connect(mConfig);
-        } catch (TangoOutOfDateException e) {
-            Toast.makeText(getApplicationContext(), R.string.TangoOutOfDateException,
-                    Toast.LENGTH_SHORT).show();
-        } catch (TangoErrorException e) {
-            Toast.makeText(getApplicationContext(), R.string.TangoError, Toast.LENGTH_SHORT).show();
-        }
+
+        // Initialize Tango Service as a normal Android Service, since we call 
+        // mTango.disconnect() in onPause, this will unbind Tango Service, so
+        // everytime when onResume get called, we should create a new Tango object.
+        mTango = new Tango(MotionTrackingActivity.this, new Runnable() {
+            // Pass in a Runnable to be called from UI thread when Tango is ready,
+            // this Runnable will be running on a new thread.
+            // When Tango is ready, we can call Tango functions safely here only
+            // when there is no UI thread changes involved.
+            @Override
+            public void run() {
+                mConfig = mTango.getConfig(mConfig.CONFIG_TYPE_CURRENT);
+                mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
+                mConfig.putBoolean(TangoConfig.KEY_BOOLEAN_AUTORECOVERY, true);
+                try {
+                    setTangoListeners();
+                } catch (TangoErrorException e) {
+                    Log.e(TAG, getString(R.string.TangoError), e);
+                } catch (SecurityException e) {
+                    Log.e(TAG, getString(R.string.motiontrackingpermission), e);
+                }
+                try {
+                    mTango.connect(mConfig);
+                } catch (TangoOutOfDateException e) {
+                    Log.e(TAG, getString(R.string.TangoOutOfDateException), e);
+                } catch (TangoErrorException e) {
+                    Log.e(TAG, getString(R.string.TangoError), e);
+                }
+            }
+        });
     }
 }

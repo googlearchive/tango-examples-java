@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Java Model Correspondence</string>
+    <string name="app_name_long">Java Model Correspondence Example</string>
+    <string name="TangoOutOfDateException">"Tango service outdated!"</string>
+    <string name="failed_measurement">Failed to fit plane</string>
+    <string name="failed_permissions">Permissions required!</string>
+    <string name="wait_message">Loading model...</string>
+
+</resources>

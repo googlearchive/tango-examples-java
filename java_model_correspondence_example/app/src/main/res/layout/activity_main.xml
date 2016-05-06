@@ -1,0 +1,60 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:surfaceview="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.projecttango.examples.java.modelcorrespondence.ModelCorrespondenceActivity">
+
+    <org.rajawali3d.surface.RajawaliSurfaceView
+        android:id="@+id/ar_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        surfaceview:frameRate="30.0"
+        surfaceview:isTransparent="true"
+        surfaceview:renderMode="RENDER_WHEN_DIRTY" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_gravity="bottom|end">
+
+        <Button
+            android:id="@+id/undo_button"
+            android:onClick="undoPoint"
+            android:text="Undo"
+            android:textSize="22sp"
+            android:layout_width="120dp"
+            android:layout_height="100dp"
+            android:layout_margin="30dp" />
+
+        <ImageButton
+            android:id="@+id/add_point_button"
+            android:onClick="addPoint"
+            android:layout_width="120dp"
+            android:layout_height="100dp"
+            android:src="@drawable/plus"
+            android:scaleType="centerInside"
+            android:layout_margin="30dp" />
+
+        <Button
+            android:id="@+id/reset_button"
+            android:onClick="reset"
+            android:text="Reset"
+            android:visibility="gone"
+            android:textSize="22sp"
+            android:layout_width="120dp"
+            android:layout_height="100dp"
+            android:layout_margin="30dp" />
+    </LinearLayout>
+
+    <!-- Crosshair -->
+    <ImageView
+        android:id="@+id/crosshair"
+        android:layout_width="70dp"
+        android:layout_height="70dp"
+        android:layout_gravity="center"
+        android:src="@drawable/crosshair"/>
+
+
+</FrameLayout>

@@ -91,6 +91,35 @@ public class AugmentedRealityActivity extends Activity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+
+        // Synchronize against disconnecting while the service is being used in the OpenGL thread or
+        // in the UI thread.
+        if (!mIsConnected) {
+            // Initialize Tango Service as a normal Android Service, since we call
+            // mTango.disconnect() in onPause, this will unbind Tango Service, so
+            // everytime when onResume get called, we should create a new Tango object.
+            mTango = new Tango(AugmentedRealityActivity.this, new Runnable() {
+                // Pass in a Runnable to be called from UI thread when Tango is ready,
+                // this Runnable will be running on a new thread.
+                // When Tango is ready, we can call Tango functions safely here only
+                // when there is no UI thread changes involved.
+                @Override
+                public void run() {
+                    try {
+                        connectTango();
+                        setupRenderer();
+                        mIsConnected = true;
+                    } catch (TangoOutOfDateException e) {
+                        Log.e(TAG, getString(R.string.exception_out_of_date), e);
+                    }
+                }
+            });
+        }
+    }
+
+    @Override
     protected void onPause() {
         super.onPause();
         // Synchronize against disconnecting while the service is being used in the OpenGL thread or
@@ -100,32 +129,13 @@ public class AugmentedRealityActivity extends Activity {
         // object in a Tango callback thread it will cause a deadlock.
         synchronized (this) {
             if (mIsConnected) {
+                mIsConnected = false;
                 mRenderer.getCurrentScene().clearFrameCallbacks();
                 mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
                 // We need to invalidate the connected texture ID so that we cause a re-connection
                 // in the OpenGL thread after resume
                 mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
                 mTango.disconnect();
-                mIsConnected = false;
-            }
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        // Synchronize against disconnecting while the service is being used in the OpenGL thread or
-        // in the UI thread.
-        synchronized (this) {
-            if (!mIsConnected) {
-                try {
-                    connectTango();
-                    connectRenderer();
-                    mIsConnected = true;
-                } catch (TangoOutOfDateException e) {
-                    Toast.makeText(getApplicationContext(), R.string.exception_out_of_date,
-                            Toast.LENGTH_SHORT).show();
-                }
             }
         }
     }
@@ -137,29 +147,19 @@ public class AugmentedRealityActivity extends Activity {
         // Use default configuration for Tango Service, plus color camera and
         // low latency IMU integration.
         TangoConfig config = mTango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
+        config.putBoolean(TangoConfig.KEY_BOOLEAN_COLORCAMERA, true);
         // NOTE: Low latency integration is necessary to achieve a precise alignment of
         // virtual objects with the RBG image and produce a good AR effect.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION, true);
-        config.putBoolean(TangoConfig.KEY_BOOLEAN_COLORCAMERA, true);
         mTango.connect(config);
 
         // No need to add any coordinate frame pairs since we are not using pose data from callbacks
         ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
+
         mTango.connectListener(framePairs, new OnTangoUpdateListener() {
             @Override
             public void onPoseAvailable(TangoPoseData pose) {
                 // We are not using onPoseAvailable for this app.
-            }
-
-            @Override
-            public void onFrameAvailable(int cameraId) {
-                // Check if the frame available is for the camera we want and update its frame
-                // on the view.
-                if (cameraId == TangoCameraIntrinsics.TANGO_CAMERA_COLOR) {
-                    // Mark a camera frame is available for rendering in the OpenGL thread
-                    mIsFrameAvailableTangoThread.set(true);
-                    mSurfaceView.requestRender();
-                }
             }
 
             @Override
@@ -171,6 +171,20 @@ public class AugmentedRealityActivity extends Activity {
             public void onTangoEvent(TangoEvent event) {
                 // We are not using onTangoEvent for this app.
             }
+
+            @Override
+            public void onFrameAvailable(int cameraId) {
+                // Check if the frame available is for the camera we want and update its frame
+                // on the view.
+                if (cameraId == TangoCameraIntrinsics.TANGO_CAMERA_COLOR) {
+                    // Mark a camera frame is available for rendering in the OpenGL thread
+                    mIsFrameAvailableTangoThread.set(true);
+                    // Trigger an Rajawali render to update the scene with the new RGB data.
+                    mSurfaceView.requestRender();
+                }
+            }
+
+
         });
 
         // Get extrinsics from device for use in transforms. This needs
@@ -182,7 +196,7 @@ public class AugmentedRealityActivity extends Activity {
     /**
      * Connects the view and renderer to the color camara and callbacks.
      */
-    private void connectRenderer() {
+    private void setupRenderer() {
         // Register a Rajawali Scene Frame Callback to update the scene camera pose whenever a new
         // RGB frame is rendered.
         // (@see https://github.com/Rajawali/Rajawali/wiki/Scene-Frame-Callbacks)
@@ -226,7 +240,7 @@ public class AugmentedRealityActivity extends Activity {
                     if (mRgbTimestampGlThread > mCameraPoseTimestamp) {
                         // Calculate the device pose at the camera frame update time.
                         TangoPoseData lastFramePose = mTango.getPoseAtTime(mRgbTimestampGlThread,
-                            FRAME_PAIR);
+                                FRAME_PAIR);
                         if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
                             // Update the camera pose from the renderer
                             mRenderer.updateRenderCameraPose(lastFramePose, mExtrinsics);

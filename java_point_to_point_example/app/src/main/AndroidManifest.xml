@@ -9,7 +9,7 @@
         android:targetSdkVersion="19" />
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <uses-library android:name="com.projecttango.libtango_device" android:required="true" />
+    <uses-library android:name="com.projecttango.libtango_device2" android:required="true" />
 
     <application
         android:allowBackup="true"

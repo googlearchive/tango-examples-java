@@ -27,6 +27,8 @@ import android.view.animation.LinearInterpolator;
 import org.rajawali3d.Object3D;
 import org.rajawali3d.animation.Animation;
 import org.rajawali3d.animation.Animation3D;
+import org.rajawali3d.animation.EllipticalOrbitAnimation3D;
+import org.rajawali3d.animation.RotateAroundAnimation3D;
 import org.rajawali3d.animation.RotateOnAxisAnimation;
 import org.rajawali3d.lights.DirectionalLight;
 import org.rajawali3d.materials.Material;
@@ -92,29 +94,65 @@ public class AugmentedRealityRenderer extends RajawaliRenderer {
         getCurrentScene().addLight(light);
 
         // Create sphere with earth texture and place it in space 3m forward from the origin
-        Material material = new Material();
+        Material earthMaterial = new Material();
         try {
-            Texture t = new Texture("earth", R.drawable.earth_diffuse);
-            material.addTexture(t);
+            Texture t = new Texture("earth", R.drawable.earth);
+            earthMaterial.addTexture(t);
         } catch (ATexture.TextureException e) {
             Log.e(TAG, "Exception generating earth texture", e);
         }
-        material.setColorInfluence(0);
-        material.enableLighting(true);
-        material.setDiffuseMethod(new DiffuseMethod.Lambert());
-        Object3D earth = new Sphere(0.5f, 20, 20);
-        earth.setMaterial(material);
+        earthMaterial.setColorInfluence(0);
+        earthMaterial.enableLighting(true);
+        earthMaterial.setDiffuseMethod(new DiffuseMethod.Lambert());
+        Object3D earth = new Sphere(0.4f, 20, 20);
+        earth.setMaterial(earthMaterial);
         earth.setPosition(0, 0, -3);
         getCurrentScene().addChild(earth);
 
-        // Rotate around the Y axis
-        Animation3D anim = new RotateOnAxisAnimation(Vector3.Axis.Y, 0, -360);
-        anim.setInterpolator(new LinearInterpolator());
-        anim.setDurationMilliseconds(60000);
-        anim.setRepeatMode(Animation.RepeatMode.INFINITE);
-        anim.setTransformable3D(earth);
-        getCurrentScene().registerAnimation(anim);
-        anim.play();
+        // Rotate around its Y axis
+        Animation3D animEarth = new RotateOnAxisAnimation(Vector3.Axis.Y, 0, -360);
+        animEarth.setInterpolator(new LinearInterpolator());
+        animEarth.setDurationMilliseconds(60000);
+        animEarth.setRepeatMode(Animation.RepeatMode.INFINITE);
+        animEarth.setTransformable3D(earth);
+        getCurrentScene().registerAnimation(animEarth);
+        animEarth.play();
+
+        // Create sphere with moon texture
+        Material moonMaterial = new Material();
+        try {
+            Texture t = new Texture("moon", R.drawable.moon);
+            moonMaterial.addTexture(t);
+        } catch (ATexture.TextureException e) {
+            Log.e(TAG, "Exception generating moon texture", e);
+        }
+        moonMaterial.setColorInfluence(0);
+        moonMaterial.enableLighting(true);
+        moonMaterial.setDiffuseMethod(new DiffuseMethod.Lambert());
+        Object3D moon = new Sphere(0.1f, 20, 20);
+        moon.setMaterial(moonMaterial);
+        moon.setPosition(0, 0, -1);
+        getCurrentScene().addChild(moon);
+
+        // Rotate the moon around its Y axis
+        Animation3D animMoon = new RotateOnAxisAnimation(Vector3.Axis.Y, 0, -360);
+        animMoon.setInterpolator(new LinearInterpolator());
+        animMoon.setDurationMilliseconds(60000);
+        animMoon.setRepeatMode(Animation.RepeatMode.INFINITE);
+        animMoon.setTransformable3D(moon);
+        getCurrentScene().registerAnimation(animMoon);
+        animMoon.play();
+
+        // Make the moon orbit around the earth, the first two parameters are the focal point and
+        // periapsis of the orbit
+        Animation3D translationMoon =  new EllipticalOrbitAnimation3D(new Vector3(0, 0, -5),
+                new Vector3(0, 0, -1), Vector3.getAxisVector(Vector3.Axis.Y), 0,
+                360, EllipticalOrbitAnimation3D.OrbitDirection.COUNTERCLOCKWISE);
+        translationMoon.setDurationMilliseconds(60000);
+        translationMoon.setRepeatMode(Animation.RepeatMode.INFINITE);
+        translationMoon.setTransformable3D(moon);
+        getCurrentScene().registerAnimation(translationMoon);
+        translationMoon.play();
     }
 
     /**

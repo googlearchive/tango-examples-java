@@ -105,7 +105,6 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
         mRenderer = new PointToPointRenderer(this);
         mSurfaceView.setSurfaceRenderer(mRenderer);
         mSurfaceView.setOnTouchListener(this);
-        mTango = new Tango(this);
         mPointCloudManager = new TangoPointCloudManager();
         mDistanceMeasure = (TextView) findViewById(R.id.distance_textview);
         mLinePoints[0] = null;
@@ -141,15 +140,25 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
         // in the UI thread.
         synchronized (this) {
             if (!mIsConnected) {
-                try {
-                    connectTango();
-                    connectRenderer();
-                    mIsConnected = true;
-                } catch (TangoOutOfDateException e) {
-                    Toast.makeText(getApplicationContext(),
-                            R.string.tango_out_of_date_exception,
-                            Toast.LENGTH_SHORT).show();
-                }
+                // Initialize Tango Service as a normal Android Service, since we call
+                // mTango.disconnect() in onPause, this will unbind Tango Service, so
+                // everytime when onResume get called, we should create a new Tango object.
+                mTango = new Tango(PointToPointActivity.this, new Runnable() {
+                    // Pass in a Runnable to be called from UI thread when Tango is ready,
+                    // this Runnable will be running on a new thread.
+                    // When Tango is ready, we can call Tango functions safely here only
+                    // when there is no UI thread changes involved.
+                    @Override
+                    public void run() {
+                        try {
+                            connectTango();
+                            connectRenderer();
+                            mIsConnected = true;
+                        } catch (TangoOutOfDateException e) {
+                            Log.e(TAG, getString(R.string.tango_out_of_date_exception), e);
+                        }
+                    }
+                });
             }
         }
         mHandler.post(mUpdateUiLoopRunnable);

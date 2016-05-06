@@ -121,7 +121,6 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
         // Set ZOrderOnTop to false so the other views don't get hidden by the SurfaceView.
         mSurfaceView.setZOrderOnTop(false);
         mProgressGroup = (ViewGroup) findViewById(R.id.progress_group);
-        mTango = new Tango(this);
         mPointCloudManager = new TangoPointCloudManager();
         mWallMeasurementList = new ArrayList<WallMeasurement>();
         mDoneButton = (Button) findViewById(R.id.done_button);
@@ -174,8 +173,6 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
                 Toast.makeText(this, "Area Learning Permissions Required!",
                         Toast.LENGTH_SHORT).show();
                 finish();
-            } else {
-                connectAndStart();
             }
         }
     }
@@ -188,15 +185,25 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
         // in the UI thread.
         synchronized (this) {
             if (!mIsConnected) {
-                try {
-                    connectTango();
-                    connectRenderer();
-                    mIsConnected = true;
-                } catch (TangoOutOfDateException e) {
-                    Toast.makeText(getApplicationContext(),
-                            R.string.exception_out_of_date,
-                            Toast.LENGTH_SHORT).show();
-                }
+                // Initialize Tango Service as a normal Android Service, since we call
+                // mTango.disconnect() in onPause, this will unbind Tango Service, so
+                // everytime when onResume get called, we should create a new Tango object.
+                mTango = new Tango(FloorplanActivity.this, new Runnable() {
+                    // Pass in a Runnable to be called from UI thread when Tango is ready,
+                    // this Runnable will be running on a new thread.
+                    // When Tango is ready, we can call Tango functions safely here only
+                    // when there is no UI thread changes involved.
+                    @Override
+                    public void run() {
+                        try {
+                            connectTango();
+                            connectRenderer();
+                            mIsConnected = true;
+                        } catch (TangoOutOfDateException e) {
+                            Log.e(TAG, getString(R.string.exception_out_of_date), e);
+                        }
+                    }
+                });
             }
         }
     }
