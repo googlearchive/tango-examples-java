@@ -52,10 +52,6 @@ public class MotionTrackingActivity extends Activity {
     private TangoConfig mConfig;
     private MotionTrackingRajawaliRenderer mRenderer;
 
-    // The current screen rotation index. The index value follow the Android surface rotation enum:
-    // http://developer.android.com/reference/android/view/Surface.html#ROTATION_0
-    private int mScreenRotation = 0;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -66,7 +62,7 @@ public class MotionTrackingActivity extends Activity {
         // Check the current screen rotation and set it to the renderer.
         WindowManager mWindowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         Display mDisplay = mWindowManager.getDefaultDisplay();
-        mScreenRotation = mDisplay.getOrientation();
+        mRenderer.setCurrentScreenRotation(mDisplay.getOrientation());
     }
 
     /**
@@ -99,48 +95,10 @@ public class MotionTrackingActivity extends Activity {
         return  config;
     }
 
-    /**
-     * Set up the callback listeners for the Tango service, then begin using the Motion
-     * Tracking API. This is called in response to the user clicking the 'Start' Button.
-     */
-    private void setTangoListeners() {
-        // Lock configuration and connect to Tango
-        // Select coordinate frame pair
-        final ArrayList<TangoCoordinateFramePair> framePairs =
-                new ArrayList<TangoCoordinateFramePair>();
-        framePairs.add(new TangoCoordinateFramePair(
-                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
-                TangoPoseData.COORDINATE_FRAME_DEVICE));
-
-        // Listen for new Tango data
-        mTango.connectListener(framePairs, new OnTangoUpdateListener() {
-            @Override
-            public void onPoseAvailable(final TangoPoseData pose) {
-                // Update the OpenGL renderable objects with the new Tango Pose
-                // data.  Note that locking for thread safe access with the
-                // OpenGL loop is done entirely in the renderer.
-                mRenderer.updateDevicePose(pose, mScreenRotation);
-            }
-
-            @Override
-            public void onXyzIjAvailable(TangoXyzIjData arg0) {
-                // We are not using TangoXyzIjData for this application
-            }
-
-            @Override
-            public void onTangoEvent(final TangoEvent event) {
-            }
-
-            @Override
-            public void onFrameAvailable(int cameraId) {
-                // We are not using onFrameAvailable for this application
-            }
-        });
-    }
-
     @Override
     protected void onPause() {
         super.onPause();
+        mRenderer.onPause();
         try {
             mTango.disconnect();
         } catch (TangoErrorException e) {
@@ -152,6 +110,7 @@ public class MotionTrackingActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        mRenderer.onResume();
         // Initialize Tango Service as a normal Android Service, since we call 
         // mTango.disconnect() in onPause, this will unbind Tango Service, so
         // everytime when onResume get called, we should create a new Tango object.
@@ -163,13 +122,6 @@ public class MotionTrackingActivity extends Activity {
             @Override
             public void run() {
                 mConfig = setupTangoConfig(mTango);
-                try {
-                    setTangoListeners();
-                } catch (TangoErrorException e) {
-                    Log.e(TAG, getString(R.string.exception_tango_error), e);
-                } catch (SecurityException e) {
-                    Log.e(TAG, getString(R.string.permission_motion_tracking), e);
-                }
                 try {
                     mTango.connect(mConfig);
                 } catch (TangoOutOfDateException e) {

@@ -16,10 +16,12 @@
 
 package com.projecttango.examples.java.motiontracking;
 
+import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoPoseData;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.util.Log;
 import android.view.MotionEvent;
 
 import org.rajawali3d.math.Quaternion;
@@ -30,10 +32,13 @@ import com.projecttango.rajawali.Pose;
 import com.projecttango.rajawali.ScenePoseCalculator;
 import com.projecttango.rajawali.renderables.Grid;
 
+import com.projecttango.tangosupport.TangoSupport;
+
 /**
  * This class implements the rendering logic for the Motion Tracking application using Rajawali.
  */
 public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
+    private static final String TAG = MotionTrackingRajawaliRenderer.class.getSimpleName();
 
     private static final float CAMERA_NEAR = 0.01f;
     private static final float CAMERA_FAR = 200f;
@@ -41,11 +46,19 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
     // Latest available device pose;
     private Pose mDevicePose = new Pose(Vector3.ZERO, Quaternion.getIdentity());
     private boolean mPoseUpdated = false;
+  
+    // The current screen rotation index. The index value follow the Android surface rotation enum:
+    // http://developer.android.com/reference/android/view/Surface.html#ROTATION_0
+    private int mCurrentScreenRotation = 0;
 
     public MotionTrackingRajawaliRenderer(Context context) {
         super(context);
     }
 
+    public void setCurrentScreenRotation(int currentRotation) {
+        mCurrentScreenRotation = currentRotation;
+    }
+  
     @Override
     protected void initScene() {
         Grid grid = new Grid(100, 1, 1, 0xFFCCCCCC);
@@ -62,29 +75,33 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
     protected void onRender(long ellapsedRealtime, double deltaTime) {
         // Update the scene objects with the latest device position and orientation information.
         // Synchronize to avoid concurrent access from the Tango callback thread below.
-        synchronized (this) {
-            if (mPoseUpdated) {
-                mPoseUpdated = false;
+        try {
+            TangoPoseData pose =
+                TangoSupport.getPoseAtTime(0.0, TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+                                     TangoPoseData.COORDINATE_FRAME_DEVICE,
+                                     TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                     mCurrentScreenRotation);
+            if (pose.statusCode == TangoPoseData.POSE_VALID) {
+                getCurrentCamera().setPosition((float) pose.translation[0],
+                                               (float) pose.translation[1],
+                                               (float) pose.translation[2]);
+            
+        
+                Quaternion invOrientation = new Quaternion((float) pose.rotation[3],
+                                                            (float) pose.rotation[0],
+                                                            (float) pose.rotation[1],
+                                                            (float) pose.rotation[2]);
 
-                // Update the scene camera position and orientation
-                getCurrentCamera().setPosition(mDevicePose.getPosition());
-                getCurrentCamera().setOrientation(mDevicePose.getOrientation());
+                // For some reason, rajawalli's orientation is inversed.
+                Quaternion orientation = invOrientation.inverse();
+                getCurrentCamera().setOrientation(orientation);   
             }
+        } catch (TangoErrorException e) {
+            Log.e(TAG, "TangoSupport.getPoseAtTime error", e);
         }
 
         // Perform the actual OpenGL rendering of the updated objects
         super.onRender(ellapsedRealtime, deltaTime);
-    }
-
-    /**
-     * Updates our information about the current device pose.
-     * This is called from the Tango service thread through the callback API. Synchronize to avoid
-     * concurrent access from the OpenGL thread above.
-     */
-    public synchronized void updateDevicePose(TangoPoseData tangoPoseData, int rotationIndex) {
-        mDevicePose =
-                ScenePoseCalculator.toOpenGLPoseWithScreenRotation(tangoPoseData, rotationIndex);
-        mPoseUpdated = true;
     }
 
     @Override

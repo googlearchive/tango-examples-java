@@ -29,6 +29,7 @@ import com.google.atap.tangoservice.TangoXyzIjData;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -44,15 +45,15 @@ import java.util.ArrayList;
  * the device camera.
  */
 public class MainActivity extends Activity {
+    private static final String TAG = "JavaVideoOverlay";
     private TangoCameraPreview tangoCameraPreview;
     private Tango mTango;
-    private boolean mIsConnected;
+    private boolean mIsConnected = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         tangoCameraPreview = new TangoCameraPreview(this);
-        mTango = new Tango(this);
         setContentView(tangoCameraPreview);
     }
 
@@ -110,16 +111,26 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        try {
-            if (!mIsConnected) {
-                startCameraPreview();
-            }
-        } catch (TangoOutOfDateException e) {
-            Toast.makeText(getApplicationContext(), R.string.exception_tango_out_of_date,
-                    Toast.LENGTH_SHORT).show();
-        } catch (TangoErrorException e) {
-            Toast.makeText(getApplicationContext(), R.string.exception_tango_error,
-                Toast.LENGTH_SHORT).show();
+        if (!mIsConnected) {
+            // Initialize Tango Service as a normal Android Service, since we call
+            // mTango.disconnect() in onPause, this will unbind Tango Service, so
+            // everytime when onResume get called, we should create a new Tango object.
+            mTango = new Tango(MainActivity.this, new Runnable() {
+                // Pass in a Runnable to be called from UI thread when Tango is ready,
+                // this Runnable will be running on a new thread.
+                // When Tango is ready, we can call Tango functions safely here only
+                // when there is no UI thread changes involved.
+                @Override
+                public void run() {
+                    try {
+                        startCameraPreview();
+                    } catch (TangoOutOfDateException e) {
+                        Log.e(TAG, getString(R.string.exception_tango_out_of_date), e);
+                    } catch (TangoErrorException e) {
+                        Log.e(TAG, getString(R.string.exception_tango_error), e);
+                    }
+                }
+            });
         }
     }
 }

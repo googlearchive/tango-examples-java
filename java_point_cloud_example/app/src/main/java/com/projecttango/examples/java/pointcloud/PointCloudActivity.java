@@ -101,10 +101,8 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         setContentView(R.layout.activity_jpoint_cloud);
 
         mRenderer = setupGLViewAndRenderer();
-        mTango = new Tango(this);
         mPointCloudManager = new TangoPointCloudManager();
         mTangoUx = setupTangoUxAndLayout();
-
         setupTextViewsAndButtons();
     }
 
@@ -124,19 +122,30 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         super.onResume();
         if (mIsConnected.compareAndSet(false, true)) {
             mTangoUx.start(new StartParams());
-            try {
-                connectTango();
-                connectRenderer();
-            } catch (TangoOutOfDateException outDateEx) {
-                if (mTangoUx != null) {
-                    mTangoUx.showTangoOutOfDate();
+            // Initialize Tango Service as a normal Android Service, since we call
+            // mTango.disconnect() in onPause, this will unbind Tango Service, so
+            // everytime when onResume get called, we should create a new Tango object.
+            mTango = new Tango(PointCloudActivity.this, new Runnable() {
+                // Pass in a Runnable to be called from UI thread when Tango is ready,
+                // this Runnable will be running on a new thread.
+                // When Tango is ready, we can call Tango functions safely here only
+                // when there is no UI thread changes involved.
+                @Override
+                public void run() {
+                    try {
+                        connectTango();
+                        connectRenderer();
+                    } catch (TangoOutOfDateException outDateEx) {
+                        if (mTangoUx != null) {
+                            mTangoUx.showTangoOutOfDate();
+                        }
+                    } catch (TangoErrorException e) {
+                        Log.e(TAG, getString(R.string.exception_tango_error), e);
+                    } catch (SecurityException e) {
+                        Log.e(TAG, getString(R.string.motiontrackingpermission), e);
+                    }
                 }
-            } catch (TangoErrorException e) {
-                Toast.makeText(this, R.string.exception_tango_error, Toast.LENGTH_SHORT).show();
-            } catch (SecurityException e) {
-                Toast.makeText(getApplicationContext(), R.string.motiontrackingpermission,
-                        Toast.LENGTH_SHORT).show();
-            }
+            });
         }
     }
 
