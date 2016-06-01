@@ -39,6 +39,8 @@ import org.rajawali3d.surface.RajawaliSurfaceView;
 
 import java.util.ArrayList;
 
+import com.projecttango.tangosupport.TangoSupport;
+
 /**
  * Main Activity class for the Motion Tracking API Sample. Handles the connection to the Tango
  * service and propagation of Tango pose data to OpenGL and Layout views. OpenGL rendering logic is
@@ -131,6 +133,7 @@ public class MotionTrackingActivity extends Activity {
                 }
             }
         });
+        TangoSupport.initialize();
     }
 
     @Override

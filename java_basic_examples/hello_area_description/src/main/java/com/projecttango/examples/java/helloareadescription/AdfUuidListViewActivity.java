@@ -187,9 +187,9 @@ public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialo
         }
         TangoAreaDescriptionMetaData metadata;
         metadata = mTango.loadAreaDescriptionMetaData(uuid);
-        byte[] adfNameBytes = metadata.get("name");
+        byte[] adfNameBytes = metadata.get(TangoAreaDescriptionMetaData.KEY_NAME);
         if (adfNameBytes != name.getBytes()) {
-            metadata.set("name", name.getBytes());
+            metadata.set(TangoAreaDescriptionMetaData.KEY_NAME, name.getBytes());
         }
         mTango.saveAreaDescriptionMetadata(uuid, metadata);
         updateList();
@@ -284,7 +284,7 @@ public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialo
                 } catch (TangoErrorException e) {
                     Toast.makeText(this, R.string.tango_error, Toast.LENGTH_SHORT).show();
                 }
-                name = new String(metadata.get("name"));
+                name = new String(metadata.get(TangoAreaDescriptionMetaData.KEY_NAME));
                 mTangoSpaceAdfDataList.add(new AdfData(uuid, name));
             }
         } catch (TangoErrorException e) {
@@ -314,12 +314,12 @@ public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialo
         }
         Bundle bundle = new Bundle();
         TangoAreaDescriptionMetaData metaData = mTango.loadAreaDescriptionMetaData(mCurrentUuid);
-        byte[] adfNameBytes = metaData.get("name");
+        byte[] adfNameBytes = metaData.get(TangoAreaDescriptionMetaData.KEY_NAME);
         if (adfNameBytes != null) {
             String fillDialogName = new String(adfNameBytes);
-            bundle.putString("name", fillDialogName);
+            bundle.putString(TangoAreaDescriptionMetaData.KEY_NAME, fillDialogName);
         }
-        bundle.putString("id", mCurrentUuid);
+        bundle.putString(TangoAreaDescriptionMetaData.KEY_UUID, mCurrentUuid);
         FragmentManager manager = getFragmentManager();
         SetAdfNameDialog setAdfNameDialog = new SetAdfNameDialog();
         setAdfNameDialog.setArguments(bundle);

@@ -20,7 +20,8 @@
         android:textSize="22sp"
         android:layout_width="120dp"
         android:layout_height="100dp"
-        android:layout_margin="30dp" />
+        android:layout_margin="30dp"
+        android:onClick="finishPlan" />
 
     <LinearLayout
         android:id="@+id/progress_group"

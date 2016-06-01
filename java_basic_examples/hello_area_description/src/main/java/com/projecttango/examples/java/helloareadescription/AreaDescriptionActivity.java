@@ -18,6 +18,7 @@ package com.projecttango.examples.java.helloareadescription;
 
 import com.google.atap.tangoservice.Tango;
 import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
+import com.google.atap.tangoservice.TangoAreaDescriptionMetaData;
 import com.google.atap.tangoservice.TangoConfig;
 import com.google.atap.tangoservice.TangoCoordinateFramePair;
 import com.google.atap.tangoservice.TangoErrorException;
@@ -352,8 +353,9 @@ public class AreaDescriptionActivity extends Activity implements SetAdfNameDialo
      */
     private void showSetAdfNameDialog() {
         Bundle bundle = new Bundle();
-        bundle.putString("name", "New ADF");
-        bundle.putString("id", ""); // UUID is generated after the ADF is saved.
+        bundle.putString(TangoAreaDescriptionMetaData.KEY_NAME, "New ADF");
+        // UUID is generated after the ADF is saved.
+        bundle.putString(TangoAreaDescriptionMetaData.KEY_UUID, "");
 
         FragmentManager manager = getFragmentManager();
         SetAdfNameDialog setAdfNameDialog = new SetAdfNameDialog();

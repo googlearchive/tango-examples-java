@@ -39,7 +39,6 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import org.rajawali3d.scene.ASceneFrameCallback;
 import org.rajawali3d.surface.RajawaliSurfaceView;
@@ -49,8 +48,8 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.projecttango.rajawali.DeviceExtrinsics;
 import com.projecttango.tangosupport.TangoPointCloudManager;
+import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * Main Activity class for the Point Cloud Sample. Handles the connection to the {@link Tango}
@@ -75,7 +74,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
     private Tango mTango;
     private TangoUx mTangoUx;
     private TangoPointCloudManager mPointCloudManager;
-    private DeviceExtrinsics mExtrinsics;
 
     private PointCloudRajawaliRenderer mRenderer;
 
@@ -88,7 +86,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
 
     private double mXyIjPreviousTimeStamp;
     private AtomicBoolean mIsConnected = new AtomicBoolean(false);
-    private TangoPoseData mPose;
 
     private static final DecimalFormat FORMAT_THREE_DECIMAL = new DecimalFormat("0.000");
     private static final double UPDATE_INTERVAL_MS = 100.0;
@@ -113,7 +110,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
             mTangoUx.stop();
             mRenderer.getCurrentScene().clearFrameCallbacks();
             mTango.disconnect();
-            mPose = null;
         }
     }
 
@@ -133,6 +129,7 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                 @Override
                 public void run() {
                     try {
+                        TangoSupport.initialize();
                         connectTango();
                         connectRenderer();
                     } catch (TangoOutOfDateException outDateEx) {
@@ -191,12 +188,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                 if (mTangoUx != null) {
                     mTangoUx.updatePoseStatus(pose.statusCode);
                 }
-
-                // Update our copy of the latest pose
-                // Synchronize against concurrent use in the render loop.
-                synchronized (this) {
-                    mPose = pose;
-                }
             }
 
             @Override
@@ -241,8 +232,6 @@ public class PointCloudActivity extends Activity implements OnClickListener {
             }
         });
 
-        // After connecting the Tang service, query and store the camera extrinsics information
-        mExtrinsics = setupExtrinsics();
     }
 
     public void connectRenderer() {
@@ -262,16 +251,29 @@ public class PointCloudActivity extends Activity implements OnClickListener {
                 // Update point cloud data
                 TangoXyzIjData pointCloud = mPointCloudManager.getLatestXyzIj();
                 if (pointCloud != null) {
-                    TangoPoseData pointCloudPose =
-                            mTango.getPoseAtTime(pointCloud.timestamp, FRAME_PAIRS.get(0));
-                    mRenderer.updatePointCloud(pointCloud, pointCloudPose, mExtrinsics);
+                    // Calculate the camera color pose at the camera frame update time in
+                    // OpenGL engine.
+                    TangoSupport.TangoMatrixTransformData transform =
+                            TangoSupport.getMatrixTransformAtTime(pointCloud.timestamp,
+                                    TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+                                    TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
+                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                    TangoSupport.TANGO_SUPPORT_ENGINE_TANGO);
+                    if (transform.statusCode == TangoPoseData.POSE_VALID) {
+                        mRenderer.updatePointCloud(pointCloud, transform.matrix);
+                    }
                 }
 
-                // Update current device pose
-                synchronized (this) {
-                    if (mPose != null) {
-                        mRenderer.updateDevicePose(mPose, mExtrinsics);
-                    }
+                // Update current camera pose
+                try {
+                    // Calculate the last camera color pose.
+                    TangoPoseData lastFramePose = TangoSupport.getPoseAtTime(0,
+                            TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+                            TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
+                            TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL, 0);
+                    mRenderer.updateCameraPose(lastFramePose);
+                } catch (TangoErrorException e) {
+                    Log.e(TAG, "Could not get valid transform");
                 }
             }
 
@@ -292,30 +294,15 @@ public class PointCloudActivity extends Activity implements OnClickListener {
         });
     }
 
-    private DeviceExtrinsics setupExtrinsics() {
-        TangoCoordinateFramePair framePair = new TangoCoordinateFramePair();
-        framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_IMU;
-        framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR;
-        TangoPoseData imuTColorCameraPose = mTango.getPoseAtTime(0.0, framePair);
-
-        framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH;
-        TangoPoseData imuTDepthCameraPose = mTango.getPoseAtTime(0.0, framePair);
-
-        framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_DEVICE;
-        TangoPoseData imuTDevicePose = mTango.getPoseAtTime(0.0, framePair);
-
-        return new DeviceExtrinsics(imuTDevicePose, imuTColorCameraPose, imuTDepthCameraPose);
-    }
-
     /*
-   * This is an advanced way of using UX exceptions. In most cases developers can just use the in
-   * built exception notifications using the Ux Exception layout. In case a developer doesn't want
-   * to use the default Ux Exception notifications, he can set the UxException listener as shown
-   * below.
-   * In this example we are just logging all the ux exceptions to logcat, but in a real app,
-   * developers should use these exceptions to contextually notify the user and help direct the
-   * user in using the device in a way Tango service expects it.
-   */
+    * This is an advanced way of using UX exceptions. In most cases developers can just use the in
+    * built exception notifications using the Ux Exception layout. In case a developer doesn't want
+    * to use the default Ux Exception notifications, he can set the UxException listener as shown
+    * below.
+    * In this example we are just logging all the ux exceptions to logcat, but in a real app,
+    * developers should use these exceptions to contextually notify the user and help direct the
+    * user in using the device in a way Tango service expects it.
+    */
     private UxExceptionEventListener mUxExceptionListener = new UxExceptionEventListener() {
 
         @Override

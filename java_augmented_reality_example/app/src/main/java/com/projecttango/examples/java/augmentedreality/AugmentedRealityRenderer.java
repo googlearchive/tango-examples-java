@@ -37,6 +37,7 @@ import org.rajawali3d.materials.textures.ATexture;
 import org.rajawali3d.materials.textures.StreamingTexture;
 import org.rajawali3d.materials.textures.Texture;
 import org.rajawali3d.math.Matrix4;
+import org.rajawali3d.math.Quaternion;
 import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.primitives.ScreenQuad;
 import org.rajawali3d.primitives.Sphere;
@@ -157,14 +158,19 @@ public class AugmentedRealityRenderer extends RajawaliRenderer {
 
     /**
      * Update the scene camera based on the provided pose in Tango start of service frame.
-     * The device pose should match the pose of the device at the time the last rendered RGB
+     * The camera pose should match the pose of the camera color at the time the last rendered RGB
      * frame, which can be retrieved with this.getTimestamp();
+     * <p/>
      * NOTE: This must be called from the OpenGL render thread - it is not thread safe.
      */
-    public void updateRenderCameraPose(TangoPoseData devicePose, DeviceExtrinsics extrinsics) {
-        Pose cameraPose = ScenePoseCalculator.toOpenGlCameraPose(devicePose, extrinsics);
-        getCurrentCamera().setRotation(cameraPose.getOrientation());
-        getCurrentCamera().setPosition(cameraPose.getPosition());
+    public void updateRenderCameraPose(TangoPoseData cameraPose) {
+        float[] rotation = cameraPose.getRotationAsFloats();
+        float[] translation = cameraPose.getTranslationAsFloats();
+        Quaternion quaternion = new Quaternion(rotation[3], rotation[0], rotation[1], rotation[2]);
+        // Conjugating the Quaternion is need because Rajawali uses left handed convention for
+        // quaternions.
+        getCurrentCamera().setRotation(quaternion.conjugate());
+        getCurrentCamera().setPosition(translation[0], translation[1], translation[2]);
     }
 
     /**

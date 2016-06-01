@@ -168,21 +168,19 @@ public class FloorplanRenderer extends RajawaliRenderer {
 
     /**
      * Update the scene camera based on the provided pose in Tango start of service frame.
-     * The device pose should match the pose of the device at the time of the last rendered RGB
+     * The camera pose should match the pose of the camera color at the time the last rendered RGB
      * frame, which can be retrieved with this.getTimestamp();
      * <p/>
      * NOTE: This must be called from the OpenGL render thread - it is not thread safe.
      */
-    public void updateRenderCameraPose(TangoPoseData devicePose) {
-        TangoPoseData cameraPose = TangoSupport.getPoseInEngineFrame(
-                TangoSupport.TANGO_SUPPORT_COORDINATE_CONVENTION_OPENGL,
-                TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR, devicePose);
+    public void updateRenderCameraPose(TangoPoseData cameraPose) {
         float[] rotation = cameraPose.getRotationAsFloats();
         float[] translation = cameraPose.getTranslationAsFloats();
-        // Conjugation is needed because Rajawali uses left handed convention for rotations.
-        getCurrentCamera().setRotation(
-                new Quaternion(rotation[3], rotation[0], rotation[1], rotation[2]).conjugate());
-        getCurrentCamera().setPosition(new Vector3(translation[0], translation[1], translation[2]));
+        Quaternion quaternion = new Quaternion(rotation[3], rotation[0], rotation[1], rotation[2]);
+        // Conjugating the Quaternion is need because Rajawali uses left handed convention for
+        // quaternions.
+        getCurrentCamera().setRotation(quaternion.conjugate());
+        getCurrentCamera().setPosition(translation[0], translation[1], translation[2]);
     }
 
     /**
@@ -235,15 +233,10 @@ public class FloorplanRenderer extends RajawaliRenderer {
      * A new cube will be added at the plane position and orientation to represent the measurement.
      */
     public synchronized void addWallMeasurement(WallMeasurement wallMeasurement) {
-        TangoPoseData openGLPose = TangoSupport.getPoseInEngineFrame(
-                TangoSupport.TANGO_SUPPORT_COORDINATE_CONVENTION_OPENGL,
-                TangoPoseData.COORDINATE_FRAME_DEVICE,
-                wallMeasurement.getPlanePose()
-        );
-        float[] rotation = openGLPose.getRotationAsFloats();
-        float[] translation = openGLPose.getTranslationAsFloats();
-        mNewPoseList.add(new Pose(new Vector3(translation[0], translation[1], translation[2]),
-                new Quaternion(rotation[3], rotation[0], rotation[1], rotation[2])));
+        float[] openGlTWall = wallMeasurement.getPlaneTransform();
+        Matrix4 openGlTWallMatrix = new Matrix4(openGlTWall);
+        mNewPoseList.add(new Pose(openGlTWallMatrix.getTranslation(),
+                new Quaternion().fromMatrix(openGlTWallMatrix).conjugate()));
         mObjectPoseUpdated = true;
     }
 
@@ -252,20 +245,8 @@ public class FloorplanRenderer extends RajawaliRenderer {
      */
     public synchronized void updatePlan(Floorplan plan) {
         Stack<Vector3> points = new Stack<Vector3>();
-        for (Vector3 vector3 : plan.getPlanPoints()) {
-            TangoPoseData pose = new TangoPoseData();
-            // Render z = 0.
-            pose.translation = new double[]{vector3.x, vector3.y, 0};
-            pose.baseFrame = TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION;
-            // NOTE: We need to set the target frame to COORDINATE_FRAME_DEVICE because that is the
-            // default target frame to place objects in the OpenGL world with
-            // TangoSupport.getPoseInEngineFrame.
-            pose.targetFrame = TangoPoseData.COORDINATE_FRAME_DEVICE;
-            TangoPoseData openGLPose = TangoSupport.getPoseInEngineFrame(
-                    TangoSupport.TANGO_SUPPORT_COORDINATE_CONVENTION_OPENGL,
-                    TangoPoseData.COORDINATE_FRAME_DEVICE, pose);
-            float[] translation = openGLPose.getTranslationAsFloats();
-            points.add(new Vector3(translation[0], translation[1], translation[2]));
+        for (float[] point : plan.getPlanPoints()) {
+            points.add(new Vector3(point[0], 0, point[2]));
         }
         mPlanPoints = points;
         mPlanUpdated = true;

@@ -171,8 +171,8 @@ public class ModelCorrespondenceRenderer extends RajawaliRenderer {
      * correspondence destination points as red spheres. Render the 3d model in the position and
      * orientation given by the found correspondence transform.
      */
-    public void updateModelRendering(HouseModel houseModel, Matrix4 openGlTHouse,
-                                     List<Vector3> destPoints) {
+    public void updateModelRendering(HouseModel houseModel, float[] openGlTHouse,
+                                     List<float[]> destPoints) {
         if (destPoints.size() > mDestPointsObjectList.size()) {
             // If new destination points were measured, then add them as points as red spheres.
             for (int i = mDestPointsObjectList.size(); i < destPoints.size(); i++) {
@@ -191,13 +191,14 @@ public class ModelCorrespondenceRenderer extends RajawaliRenderer {
 
         // Move the position of the next source point to be added.
         int nextPointNumber = destPoints.size();
-        List<Vector3> houseModelPoints = houseModel.getOpenGlModelPpoints(openGlTHouse);
+        List<float[]> houseModelPoints = houseModel.getOpenGlModelPpoints(openGlTHouse);
         if (nextPointNumber < houseModelPoints.size()) {
             if (mNextPointObject3D == null) {
-                mNextPointObject3D = makePoint(new Vector3(0, 0, 0), Color.GREEN);
+                mNextPointObject3D = makePoint(new float[]{0, 0, 0}, Color.GREEN);
                 getCurrentScene().addChild(mNextPointObject3D);
             }
-            mNextPointObject3D.setPosition(houseModelPoints.get(nextPointNumber));
+            float[] position = houseModelPoints.get(nextPointNumber);
+            mNextPointObject3D.setPosition(position[0], position[1], position[2]);
         } else {
             getCurrentScene().removeChild(mNextPointObject3D);
             mNextPointObject3D = null;
@@ -206,7 +207,7 @@ public class ModelCorrespondenceRenderer extends RajawaliRenderer {
         // Place the house object in the position and orientation given by the correspondence
         // transform.
         if (mHouseObject3D != null) {
-            Matrix4 transform = openGlTHouse.clone();
+            Matrix4 transform = new Matrix4(openGlTHouse);
             double scale = transform.getScaling().x;
             mHouseObject3D.setScale(scale);
             // Multiply by the inverse of the scale so the transform is only rotation and
@@ -225,21 +226,19 @@ public class ModelCorrespondenceRenderer extends RajawaliRenderer {
 
     /**
      * Update the scene camera based on the provided pose in Tango start of service frame.
-     * The device pose should match the pose of the device at the time the last rendered RGB
+     * The camera pose should match the pose of the camera color at the time the last rendered RGB
      * frame, which can be retrieved with this.getTimestamp();
      * <p/>
      * NOTE: This must be called from the OpenGL render thread - it is not thread safe.
      */
-    public void updateRenderCameraPose(TangoPoseData devicePose) {
-        TangoPoseData cameraPose = TangoSupport.getPoseInEngineFrame(
-                TangoSupport.TANGO_SUPPORT_COORDINATE_CONVENTION_OPENGL,
-                TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR, devicePose);
+    public void updateRenderCameraPose(TangoPoseData cameraPose) {
         float[] rotation = cameraPose.getRotationAsFloats();
         float[] translation = cameraPose.getTranslationAsFloats();
-        // Conjugation is needed because Rajawali uses left handed convention for rotations.
-        getCurrentCamera().setRotation(
-                new Quaternion(rotation[3], rotation[0], rotation[1], rotation[2]).conjugate());
-        getCurrentCamera().setPosition(new Vector3(translation[0], translation[1], translation[2]));
+        Quaternion quaternion = new Quaternion(rotation[3], rotation[0], rotation[1], rotation[2]);
+        // Conjugating the Quaternion is need because Rajawali uses left handed convention for
+        // quaternions.
+        getCurrentCamera().setRotation(quaternion.conjugate());
+        getCurrentCamera().setPosition(translation[0], translation[1], translation[2]);
     }
 
     @Override
@@ -256,11 +255,11 @@ public class ModelCorrespondenceRenderer extends RajawaliRenderer {
     /**
      * Render the new correspondence destination point measurements as red spheres.
      */
-    private Object3D makePoint(Vector3 openGLPpoint, int color) {
+    private Object3D makePoint(float[] openGLPpoint, int color) {
         Object3D object3D = new Sphere(SPHERE_RADIUS, 10, 10);
         object3D.setMaterial(mSphereMaterial);
         object3D.setColor(color);
-        object3D.setPosition(openGLPpoint);
+        object3D.setPosition(openGLPpoint[0], openGLPpoint[1], openGLPpoint[2]);
         return object3D;
     }
 

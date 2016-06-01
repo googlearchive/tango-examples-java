@@ -21,6 +21,7 @@ import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
 import com.google.atap.tangoservice.TangoCameraIntrinsics;
 import com.google.atap.tangoservice.TangoConfig;
 import com.google.atap.tangoservice.TangoCoordinateFramePair;
+import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoException;
 import com.google.atap.tangoservice.TangoOutOfDateException;
@@ -29,6 +30,7 @@ import com.google.atap.tangoservice.TangoXyzIjData;
 
 import android.animation.ValueAnimator;
 import android.app.Activity;
+import android.opengl.Matrix;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -38,7 +40,6 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import org.rajawali3d.math.Matrix4;
-import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.scene.ASceneFrameCallback;
 import org.rajawali3d.surface.RajawaliSurfaceView;
 
@@ -46,8 +47,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.projecttango.rajawali.DeviceExtrinsics;
-import com.projecttango.rajawali.ScenePoseCalculator;
 import com.projecttango.tangosupport.TangoPointCloudManager;
 import com.projecttango.tangosupport.TangoSupport;
 
@@ -83,18 +82,17 @@ public class ModelCorrespondenceActivity extends Activity {
     private RajawaliSurfaceView mSurfaceView;
     private ModelCorrespondenceRenderer mRenderer;
     private TangoCameraIntrinsics mIntrinsics;
-    private DeviceExtrinsics mExtrinsics;
     private TangoPointCloudManager mPointCloudManager;
     private Tango mTango;
     private boolean mIsConnected = false;
     private double mCameraPoseTimestamp = 0;
     private ImageView mCrosshair;
     // The destination points to make the correspondence.
-    private List<Vector3> mDestPointList = new ArrayList<Vector3>();
+    private List<float[]> mDestPointList;
     // The given data model.
     private HouseModel mHouseModel;
     // Transform of the house in OpenGl frame.
-    private Matrix4 mOpenGlTHouse;
+    private float[] mOpenGlTHouse;
     // A flag indicating whether the model was updated and must be re rendered in the next loop.
     private boolean mModelUpdated;
     // If the correspondence was not done yet, the model object is fixed to the camera in the top
@@ -128,10 +126,6 @@ public class ModelCorrespondenceActivity extends Activity {
         mPointCloudManager = new TangoPointCloudManager();
         mCrosshair = (ImageView) findViewById(R.id.crosshair);
         mCrosshair.setColorFilter(getResources().getColor(R.color.crosshair_ready));
-        mHouseModel = new HouseModel();
-        mModelUpdated = true;
-        mCorrespondenceDone = false;
-        mOpenGlTHouse = new Matrix4();
     }
 
     @Override
@@ -156,6 +150,13 @@ public class ModelCorrespondenceActivity extends Activity {
     protected void onResume() {
         super.onResume();
         connectAndStart();
+        // Reset status and correspondence every time we connect again to the service.
+        // If we didn't do it, then the old points wouldn't make sense.
+        mHouseModel = new HouseModel();
+        mModelUpdated = true;
+        mCorrespondenceDone = false;
+        mOpenGlTHouse = new float[16];
+        mDestPointList = new ArrayList<float[]>();
     }
 
     /**
@@ -174,6 +175,7 @@ public class ModelCorrespondenceActivity extends Activity {
                 @Override
                 public void run() {
                     try {
+                        TangoSupport.initialize();
                         connectTango();
                         connectRenderer();
                         mIsConnected = true;
@@ -234,9 +236,6 @@ public class ModelCorrespondenceActivity extends Activity {
             }
         });
 
-        // Get extrinsics from device for use in transforms. This needs
-        // to be done after connecting Tango and listeners.
-        mExtrinsics = setupExtrinsics(mTango);
         mIntrinsics = mTango.getCameraIntrinsics(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
     }
 
@@ -281,9 +280,14 @@ public class ModelCorrespondenceActivity extends Activity {
 
                     // If a new RGB frame has been rendered, update the camera pose to match.
                     if (mRgbTimestampGlThread > mCameraPoseTimestamp) {
-                        // Calculate the device pose at the camera frame update time.
-                        TangoPoseData lastFramePose = mTango.getPoseAtTime(mRgbTimestampGlThread,
-                                FRAME_PAIR);
+                        // Calculate the camera color pose at the camera frame update time in
+                        // OpenGL engine.
+                        TangoPoseData lastFramePose = TangoSupport.getPoseAtTime(
+                                mRgbTimestampGlThread,
+                                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+                                TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
+                                TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL, 0);
+
                         if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
                             // Update the camera pose from the renderer
                             mRenderer.updateRenderCameraPose(lastFramePose);
@@ -291,20 +295,31 @@ public class ModelCorrespondenceActivity extends Activity {
                             // While the correspondence is not done, fix the model to the upper
                             // right corner of the screen by following the camera.
                             if (!mCorrespondenceDone) {
-                                TangoPoseData openGlTrgb = TangoSupport.getPoseInEngineFrame(
-                                        TangoSupport.TANGO_SUPPORT_COORDINATE_CONVENTION_OPENGL,
-                                        TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR, lastFramePose);
-                                // Place it in the top left corner, and rotate and scale it
-                                // accordingly.
-                                Matrix4 rgbTHouse = calculateModelTransformFixedToCam();
-                                // Combine the two transforms.
-                                Matrix4 openGlTHouse = ScenePoseCalculator.
-                                        tangoPoseToMatrix(openGlTrgb).multiply(rgbTHouse);
-                                mOpenGlTHouse = openGlTHouse;
-                                mModelUpdated = true;
+                                TangoSupport.TangoMatrixTransformData transform =
+                                        TangoSupport.getMatrixTransformAtTime(
+                                                mCameraPoseTimestamp,
+                                                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+                                                TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
+                                                TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                                TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL);
+                                if (transform.statusCode == TangoPoseData.POSE_VALID) {
+                                    // Place it in the top left corner, and rotate and scale it
+                                    // accordingly.
+                                    float[] rgbTHouse = calculateModelTransformFixedToCam();
+                                    // Combine the two transforms.
+                                    float[] openGlTHouse = new float[16];
+                                    Matrix.multiplyMM(openGlTHouse, 0, transform.matrix,
+                                            0, rgbTHouse, 0);
+                                    mOpenGlTHouse = openGlTHouse;
+                                    mModelUpdated = true;
+                                } else {
+                                    Log.w(TAG, "Can't get camera transform at time: " +
+                                            mCameraPoseTimestamp);
+                                }
                             }
                         } else {
-                            Log.w(TAG, "Can't get device pose at time: " + mRgbTimestampGlThread);
+                            Log.w(TAG, "Can't get device pose at time: " +
+                                    mRgbTimestampGlThread);
                         }
                     }
 
@@ -334,28 +349,6 @@ public class ModelCorrespondenceActivity extends Activity {
     }
 
     /**
-     * Calculates and stores the fixed transformations between the device and
-     * the various sensors to be used later for transformations between frames.
-     */
-    private static DeviceExtrinsics setupExtrinsics(Tango tango) {
-        // Create camera to IMU transform.
-        TangoCoordinateFramePair framePair = new TangoCoordinateFramePair();
-        framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_IMU;
-        framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR;
-        TangoPoseData imuTrgbPose = tango.getPoseAtTime(0.0, framePair);
-
-        // Create device to IMU transform.
-        framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_DEVICE;
-        TangoPoseData imuTdevicePose = tango.getPoseAtTime(0.0, framePair);
-
-        // Create depth camera to IMU transform.
-        framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH;
-        TangoPoseData imuTdepthPose = tango.getPoseAtTime(0.0, framePair);
-
-        return new DeviceExtrinsics(imuTdevicePose, imuTrgbPose, imuTdepthPose);
-    }
-
-    /**
      * This method handles when the user clicks the add point button. It will try to find a point
      * using the point cloud and the TangoSupportLibrary in the aimed location with the crosshair.
      * The resulting point will be shown in AR as a red sphere.
@@ -368,7 +361,7 @@ public class ModelCorrespondenceActivity extends Activity {
             synchronized (this) {
                 // Take a point measurement by using the TangoSupportLibrary and the point cloud
                 // data.
-                Vector3 point = doPointMeasurement(u, v, mRgbTimestampGlThread);
+                float[] point = doPointMeasurement(u, v, mRgbTimestampGlThread);
                 // If the measurement was successful add it to the list and render a sphere.
                 if (point != null) {
                     mDestPointList.add(point);
@@ -432,7 +425,7 @@ public class ModelCorrespondenceActivity extends Activity {
      * Use the TangoSupport library with point cloud data to calculate the point in OpenGL frame
      * pointed at the location the crosshair is aiming.
      */
-    private Vector3 doPointMeasurement(float u, float v, double rgbTimestamp) {
+    private float[] doPointMeasurement(float u, float v, double rgbTimestamp) {
         TangoXyzIjData xyzIj = mPointCloudManager.getLatestXyzIj();
 
         if (xyzIj == null) {
@@ -450,22 +443,27 @@ public class ModelCorrespondenceActivity extends Activity {
         float[] point = TangoSupport.getDepthAtPointNearestNeighbor(xyzIj, mIntrinsics,
                 colorTdepthPose, u, v);
 
-        // Get the device pose at the time the plane data was acquired.
-        TangoPoseData devicePose =
-                mTango.getPoseAtTime(rgbTimestamp, FRAME_PAIR);
-        if (point == null) {
+        // Get the transform from depth camera to OpenGL world at the timestamp of the cloud.
+        TangoSupport.TangoMatrixTransformData transform =
+                TangoSupport.getMatrixTransformAtTime(xyzIj.timestamp,
+                        TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+                        TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
+                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                        TangoSupport.TANGO_SUPPORT_ENGINE_TANGO);
+        if (transform.statusCode == TangoPoseData.POSE_VALID) {
+            if (point == null) {
+                return null;
+            }
+
+            float[] dephtPoint = new float[]{point[0], point[1], point[2], 1};
+            float[] openGlPoint = new float[4];
+            Matrix.multiplyMV(openGlPoint, 0, transform.matrix, 0, dephtPoint, 0);
+
+            return openGlPoint;
+        } else {
+            Log.w(TAG, "Can't get depth camera transform at time: " + xyzIj.timestamp);
             return null;
         }
-
-        // Get depth frame to start of service frame transform.
-        Matrix4 ssTdev = ScenePoseCalculator.tangoPoseToMatrix(devicePose);
-        Matrix4 ssTdepth = ssTdev.multiply(mExtrinsics.getDeviceTDepthCamera());
-
-        Vector3 depthPpoint = new Vector3(point[0], point[1], point[2]);
-        // Transform the point in depth frame to start of service frame.
-        Vector3 ssPpoint = depthPpoint.multiply(ssTdepth);
-
-        return worldVector3ToOpenGlVector3(ssPpoint);
     }
 
 
@@ -476,74 +474,60 @@ public class ModelCorrespondenceActivity extends Activity {
      */
     public void findCorrespondence() {
         // Get the correspondence source 3D points.
-        List<Vector3> srcVectors = mHouseModel.getOpenGlModelPpoints(mOpenGlTHouse);
+        List<float[]> srcVectors = mHouseModel.getOpenGlModelPpoints(mOpenGlTHouse);
         double[][] src = new double[4][3];
         for (int i = 0; i < mHouseModel.getNumberOfPoints(); i++) {
-            Vector3 v = srcVectors.get(i);
-            src[i][0] = v.x;
-            src[i][1] = v.y;
-            src[i][2] = v.z;
+            float[] v = srcVectors.get(i);
+            src[i][0] = v[0];
+            src[i][1] = v[1];
+            src[i][2] = v[2];
         }
         // Get the correspondence destination 3D points.
         double[][] dest = new double[4][3];
         for (int i = 0; i < mHouseModel.getNumberOfPoints(); i++) {
-            Vector3 v = mDestPointList.get(i);
-            dest[i][0] = v.x;
-            dest[i][1] = v.y;
-            dest[i][2] = v.z;
+            float[] v = mDestPointList.get(i);
+            dest[i][0] = v[0];
+            dest[i][1] = v[1];
+            dest[i][2] = v[2];
         }
 
         // Find the correspondence similarity transform.
         double[] output = TangoSupport.findCorrespondenceSimilarityTransform(src, dest);
         // Place the model in the desired location.
-        transformModel(new Matrix4(output));
+        transformModel(toFloatArray(output));
     }
 
     /**
      * Update the pose of the model.
      */
-    public void transformModel(Matrix4 newTransform) {
-        mOpenGlTHouse = newTransform.multiply(mOpenGlTHouse);
+    public void transformModel(float[] newTransform) {
+        float[] newOpenGlTModel = new float[16];
+        Matrix.multiplyMM(newOpenGlTModel, 0, newTransform, 0, mOpenGlTHouse, 0);
+        mOpenGlTHouse = newOpenGlTModel;
         mModelUpdated = true;
         mCorrespondenceDone = true;
-    }
-
-    /**
-     * Convert a Vector3 in world frame to OpenGL frame.
-     * This should be removed when the new support library functions come out.
-     */
-    private Vector3 worldVector3ToOpenGlVector3(Vector3 worldPPoint) {
-        TangoPoseData pose = new TangoPoseData();
-        pose.translation = new double[]{worldPPoint.x, worldPPoint.y, worldPPoint.z};
-        pose.baseFrame = TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE;
-        // NOTE: We need to set the target frame to COORDINATE_FRAME_DEVICE because that is the
-        // default target frame to place objects in the OpenGL world with
-        // TangoSupport.getPoseInEngineFrame.
-        pose.targetFrame = TangoPoseData.COORDINATE_FRAME_DEVICE;
-        TangoPoseData openGLPose = TangoSupport.getPoseInEngineFrame(
-                TangoSupport.TANGO_SUPPORT_COORDINATE_CONVENTION_OPENGL,
-                TangoPoseData.COORDINATE_FRAME_DEVICE, pose);
-        float[] translation = openGLPose.getTranslationAsFloats();
-        return new Vector3(translation[0], translation[1], translation[2]);
     }
 
     /**
      * Calculate the transform needed to place the model in the upper left corner of the camera,
      * and rotate it to show the next point to make the correspondence.
      */
-    private Matrix4 calculateModelTransformFixedToCam() {
+    private float[] calculateModelTransformFixedToCam() {
         // Translate to the upper left corner and ahead of the cam.
-        Matrix4 rgbTHouse = new Matrix4().setToTranslation(-1.5, 0.3, -4);
-        // Rotate it around the X axis so it looks better as seen from above.
-        rgbTHouse.rotate(Vector3.Axis.X, 70);
+        float[] rgbTHouse = new float[16];
+        Matrix.setIdentityM(rgbTHouse, 0);
+        Matrix.translateM(rgbTHouse, 0, -1.5f, 0.3f, -4);
         // Rotate it 180 degrees around the Z axis to show the front of the house as default
         // orientation.
-        rgbTHouse.rotate(Vector3.Axis.Z, 180);
+        Matrix.rotateM(rgbTHouse, 0, 180, 0, 0, 1);
+        // Rotate it around the X axis so it looks better as seen from above.
+        Matrix.rotateM(rgbTHouse, 0, 70, 1, 0, 0);
         // Rotate it around the Z axis to show the next correspondence point to be added.
-        rgbTHouse.rotate(Vector3.Axis.Z, mModelZRotation);
+        Matrix.rotateM(rgbTHouse, 0, -mModelZRotation, 0, 0, 1);
         // Scale it to a proper size.
-        Matrix4 scale = Matrix4.createScaleMatrix(0.03, 0.03, 0.03);
-        return rgbTHouse.multiply(scale);
+        Matrix.scaleM(rgbTHouse, 0, 0.03f, 0.03f, 0.03f);
+        Matrix4 m = new Matrix4(rgbTHouse);
+        return rgbTHouse;
     }
 
     /**
@@ -564,4 +548,11 @@ public class ModelCorrespondenceActivity extends Activity {
         mZRotationAnimator.start();
     }
 
+    float[] toFloatArray(double[] source) {
+        float[] dest = new float[source.length];
+        for (int i = 0; i < source.length; i++) {
+            dest[i] = (float) source[i];
+        }
+        return dest;
+    }
 }

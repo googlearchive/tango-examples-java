@@ -34,12 +34,12 @@ public class PlanBuilder {
      *                            measurements. If false, continue the floor plan.
      */
     public static Floorplan buildPlan(List<WallMeasurement> wallMeasurementList, boolean closed) {
-        List<Vector3> planPoints = new ArrayList<Vector3>();
+        List<float[]> planPoints = new ArrayList<float[]>();
         WallMeasurement lastWallMeasurement = null;
         // Intersect every measurement with the previous one and add the result to the plan.
         if (!wallMeasurementList.isEmpty()) {
             boolean first = true;
-            Vector3 lastAddedPoint = null;
+            float[] lastAddedPoint = null;
             for (WallMeasurement wallMeasurement : wallMeasurementList) {
                 if (lastWallMeasurement != null) {
                     if (!first) {
@@ -48,9 +48,9 @@ public class PlanBuilder {
                     planPoints.add(wallMeasurement.intersect(lastWallMeasurement));
                     first = false;
                 }
-                float[] translation = wallMeasurement.getPlanePose().getTranslationAsFloats();
-                Vector3 measurementPoint = new Vector3(translation[0], translation[1],
-                        translation[2]);
+                float[] openGlWall = wallMeasurement.getPlaneTransform();
+                float[] measurementPoint = new float[]{openGlWall[12], openGlWall[13],
+                        openGlWall[14]};
                 planPoints.add(measurementPoint);
                 lastWallMeasurement = wallMeasurement;
                 lastAddedPoint = measurementPoint;
