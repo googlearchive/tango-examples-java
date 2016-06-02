@@ -28,7 +28,7 @@ if (project.hasProperty("Tango.catkin_devel_prefix")) {
     external_lib_prefix = project.property("Tango.catkin_devel_prefix")
 } else {
     // Building in standalone sample form.
-    external_lib_prefix = "../../../TangoReleaseLibs"
+    external_lib_prefix = "../../TangoReleaseLibs"
 }
 
 dependencies {
