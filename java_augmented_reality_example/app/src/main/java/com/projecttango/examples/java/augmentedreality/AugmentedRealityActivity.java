@@ -21,6 +21,7 @@ import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
 import com.google.atap.tangoservice.TangoCameraIntrinsics;
 import com.google.atap.tangoservice.TangoConfig;
 import com.google.atap.tangoservice.TangoCoordinateFramePair;
+import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPoseData;
@@ -29,7 +30,6 @@ import com.google.atap.tangoservice.TangoXyzIjData;
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
-import android.widget.Toast;
 
 import org.rajawali3d.scene.ASceneFrameCallback;
 import org.rajawali3d.surface.RajawaliSurfaceView;
@@ -37,39 +37,35 @@ import org.rajawali3d.surface.RajawaliSurfaceView;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.projecttango.rajawali.DeviceExtrinsics;
+import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * An example showing how to use the Tango APIs to create an augmented reality application.
  * It displays the planet earth floating in space one meter in front of the device.
- *
+ * <p/>
  * This example uses Rajawali for the OpenGL rendering. This includes the color camera image in the
  * background and a 3D sphere with a texture of the earth floating in space three meter forward.
  * This part is implemented in the {@code AugmentedRealityRenderer} class, like a regular Rajawali
  * application.
- *
+ * <p/>
  * This example focuses on how to use the Tango APIs to get the color camera data into an OpenGL
  * texture efficiently and have the OpenGL camera track the movement of the device in order to
  * achieve an augmented reality effect.
- *
+ * <p/>
  * Note that it is important to include the KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION configuration
  * parameter in order to achieve best results synchronizing the Rajawali virtual world with the
  * RGB camera.
- *
+ * <p/>
  * If you're looking for a more stripped down example that doesn't use a rendering library like
  * Rajawali, see java_hello_video_example.
  */
 public class AugmentedRealityActivity extends Activity {
     private static final String TAG = AugmentedRealityActivity.class.getSimpleName();
-    private static final TangoCoordinateFramePair FRAME_PAIR = new TangoCoordinateFramePair(
-            TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
-            TangoPoseData.COORDINATE_FRAME_DEVICE);
     private static final int INVALID_TEXTURE_ID = 0;
 
     private RajawaliSurfaceView mSurfaceView;
     private AugmentedRealityRenderer mRenderer;
     private TangoCameraIntrinsics mIntrinsics;
-    private DeviceExtrinsics mExtrinsics;
     private Tango mTango;
     private boolean mIsConnected = false;
     private double mCameraPoseTimestamp = 0;
@@ -108,6 +104,7 @@ public class AugmentedRealityActivity extends Activity {
                 @Override
                 public void run() {
                     try {
+                        TangoSupport.initialize();
                         connectTango();
                         setupRenderer();
                         mIsConnected = true;
@@ -187,9 +184,6 @@ public class AugmentedRealityActivity extends Activity {
 
         });
 
-        // Get extrinsics from device for use in transforms. This needs
-        // to be done after connecting Tango and listeners.
-        mExtrinsics = setupExtrinsics(mTango);
         mIntrinsics = mTango.getCameraIntrinsics(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
     }
 
@@ -238,15 +232,20 @@ public class AugmentedRealityActivity extends Activity {
 
                     // If a new RGB frame has been rendered, update the camera pose to match.
                     if (mRgbTimestampGlThread > mCameraPoseTimestamp) {
-                        // Calculate the device pose at the camera frame update time.
-                        TangoPoseData lastFramePose = mTango.getPoseAtTime(mRgbTimestampGlThread,
-                                FRAME_PAIR);
+                        // Calculate the camera color pose at the camera frame update time in
+                        // OpenGL engine.
+                        TangoPoseData lastFramePose = TangoSupport.getPoseAtTime(
+                                mRgbTimestampGlThread,
+                                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+                                TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
+                                TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL, 0);
                         if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
                             // Update the camera pose from the renderer
-                            mRenderer.updateRenderCameraPose(lastFramePose, mExtrinsics);
+                            mRenderer.updateRenderCameraPose(lastFramePose);
                             mCameraPoseTimestamp = lastFramePose.timestamp;
                         } else {
-                            Log.w(TAG, "Can't get device pose at time: " + mRgbTimestampGlThread);
+                            Log.w(TAG, "Can't get device pose at time: " +
+                                    mRgbTimestampGlThread);
                         }
                     }
                 }
@@ -269,25 +268,4 @@ public class AugmentedRealityActivity extends Activity {
         });
     }
 
-    /**
-     * Calculates and stores the fixed transformations between the device and
-     * the various sensors to be used later for transformations between frames.
-     */
-    private static DeviceExtrinsics setupExtrinsics(Tango tango) {
-        // Create camera to IMU transform.
-        TangoCoordinateFramePair framePair = new TangoCoordinateFramePair();
-        framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_IMU;
-        framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR;
-        TangoPoseData imuTrgbPose = tango.getPoseAtTime(0.0, framePair);
-
-        // Create device to IMU transform.
-        framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_DEVICE;
-        TangoPoseData imuTdevicePose = tango.getPoseAtTime(0.0, framePair);
-
-        // Create depth camera to IMU transform.
-        framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH;
-        TangoPoseData imuTdepthPose = tango.getPoseAtTime(0.0, framePair);
-
-        return new DeviceExtrinsics(imuTdevicePose, imuTrgbPose, imuTdepthPose);
-    }
 }

@@ -15,7 +15,7 @@
  */
 package com.projecttango.examples.java.floorplan;
 
-import com.google.atap.tangoservice.TangoPoseData;
+import android.opengl.Matrix;
 
 import org.rajawali3d.math.Matrix4;
 import org.rajawali3d.math.vector.Vector3;
@@ -27,37 +27,38 @@ import com.projecttango.rajawali.ScenePoseCalculator;
  */
 public class WallMeasurement {
     /**
-     * The pose of the plane in ADF frame.
+     * The pose of the plane in OpenGl frame.
      */
-    private TangoPoseData mAdfTPlanePose;
+    private float[] mOpenGlTPlaneTransform;
     /**
-     * The pose of the device when the measurement was taken in ADF frame.
+     * The pose of the depth camera when the measurement was taken in OpenGl frame.
      */
-    private TangoPoseData mAdfTDevicePose;
+    private float[] mOpenGlTDepthTransform;
+    /**
+     * The mTimestamp of the measurement.
+     */
+    private double mTimestamp;
 
-    public WallMeasurement(TangoPoseData adfTPlanePose, TangoPoseData adfTDevicePose) {
-        mAdfTPlanePose = adfTPlanePose;
-        mAdfTDevicePose = adfTDevicePose;
+    public WallMeasurement(float[] openGlTPlaneTransform, float[] openGlTDepthTransform, double
+            timestamp) {
+        mOpenGlTPlaneTransform = openGlTPlaneTransform;
+        mOpenGlTDepthTransform = openGlTDepthTransform;
+        mTimestamp = timestamp;
     }
 
     /**
-     * Update the plane pose of the measurement given an updated device pose at the timestamp of the
-     * measurement.
+     * Update the plane pose of the measurement given an updated device pose at the timestamp of
+     * the measurement.
      */
-    public void update(TangoPoseData newAdfTDevicePose) {
-        Matrix4 worldTDevice = ScenePoseCalculator.tangoPoseToMatrix(mAdfTDevicePose);
-        Matrix4 newWorldTDevice = ScenePoseCalculator.tangoPoseToMatrix(newAdfTDevicePose);
-        Matrix4 worldTPlane = ScenePoseCalculator.tangoPoseToMatrix(mAdfTPlanePose);
-        Matrix4 newWorldTPlane = newWorldTDevice.multiply(
-                worldTDevice.inverse().multiply(worldTPlane));
-
-        mAdfTDevicePose = newAdfTDevicePose;
-        mAdfTPlanePose = ScenePoseCalculator.matrixToTangoPose(newWorldTPlane);
-        mAdfTPlanePose.baseFrame = TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION;
-        // NOTE: We need to set the target frame to COORDINATE_FRAME_DEVICE because that is the
-        // default target frame to place objects in the OpenGL world with
-        // TangoSupport.getPoseInEngineFrame.
-        mAdfTPlanePose.targetFrame = TangoPoseData.COORDINATE_FRAME_DEVICE;
+    public void update(float[] newOpenGlTDepthTransform) {
+        float[] depthTOpenGl = new float[16];
+        Matrix.invertM(depthTOpenGl, 0, mOpenGlTDepthTransform, 0);
+        float[] newOpenGlTOldOpenGl = new float[16];
+        Matrix.multiplyMM(newOpenGlTOldOpenGl, 0, newOpenGlTDepthTransform, 0, depthTOpenGl, 0);
+        float[] newOpenGlTPlane = new float[16];
+        Matrix.multiplyMM(newOpenGlTPlane, 0, newOpenGlTOldOpenGl, 0, mOpenGlTPlaneTransform, 0);
+        mOpenGlTPlaneTransform = newOpenGlTPlane;
+        mOpenGlTDepthTransform = newOpenGlTDepthTransform;
     }
 
     /**
@@ -66,34 +67,39 @@ public class WallMeasurement {
      * @param otherWallMeasurement The other WallMeasurement to intersect with.
      * @return The point of intersection in world frame.
      */
-    public Vector3 intersect(WallMeasurement otherWallMeasurement) {
-        Matrix4 worldTPlane = ScenePoseCalculator.tangoPoseToMatrix(getPlanePose());
-        Matrix4 worldTOtherPlane =
-                ScenePoseCalculator.tangoPoseToMatrix(otherWallMeasurement.getPlanePose());
+    public float[] intersect(WallMeasurement otherWallMeasurement) {
+        float[] openGlTPlane = getPlaneTransform();
+        float[] openGlTOtherPlane = otherWallMeasurement.getPlaneTransform();
         // We will calculate the intersection in the frame of the first transformation.
         // Transform the second wall measurement to the first measurement frame
-        Matrix4 firstPlaneTsecondPlane = worldTPlane.clone().inverse().multiply(worldTOtherPlane);
+        float[] planeTOpenGl = new float[16];
+        Matrix.invertM(planeTOpenGl, 0, openGlTPlane, 0);
+        float[] firstPlaneTsecondPlane = new float[16];
+        Matrix.multiplyMM(firstPlaneTsecondPlane, 0, planeTOpenGl, 0, openGlTOtherPlane, 0);
 
         // The translation of the second transform origin, in the first one's frame
-        Vector3 wallPsecond = firstPlaneTsecondPlane.getTranslation();
+        float[] wallPsecond = new float[]{firstPlaneTsecondPlane[12], firstPlaneTsecondPlane[13],
+                firstPlaneTsecondPlane[14]};
         // The vector representing the X axis of the second transform, in the first's frame
-        double[] matrixValues = firstPlaneTsecondPlane.getDoubleValues();
-        Vector3 wallTXsecond = new Vector3(matrixValues[0], matrixValues[1], matrixValues[2]);
+        float[] wallTXsecond = new float[]{firstPlaneTsecondPlane[0], firstPlaneTsecondPlane[1],
+                firstPlaneTsecondPlane[2]};
 
-        Vector3 wallPintersection =
-                new Vector3(wallPsecond.x - wallTXsecond.x / wallTXsecond.z * wallPsecond.z, 0, 0);
-        Matrix4 wallTintersection = new Matrix4();
-        wallTintersection.setToTranslation(wallPintersection);
+        float[] wallPintersection =
+                new float[]{wallPsecond[0] - wallTXsecond[0] / wallTXsecond[2] * wallPsecond[2],
+                        0, 0, 1};
 
-        return worldTPlane.multiply(wallTintersection).getTranslation();
+        float[] worldPIntersection = new float[4];
+        Matrix.multiplyMV(worldPIntersection, 0, openGlTPlane, 0, wallPintersection, 0);
+
+        return worldPIntersection;
     }
 
-    public TangoPoseData getPlanePose() {
-        return mAdfTPlanePose;
+    public float[] getPlaneTransform() {
+        return mOpenGlTPlaneTransform;
     }
 
-    public double getDevicePoseTimeStamp() {
-        return mAdfTDevicePose.timestamp;
+    public double getDepthTransformTimeStamp() {
+        return mTimestamp;
     }
 
 }

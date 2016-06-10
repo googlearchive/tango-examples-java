@@ -32,6 +32,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.opengl.Matrix;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -39,11 +40,9 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 
-import org.rajawali3d.math.Matrix4;
-import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.scene.ASceneFrameCallback;
 import org.rajawali3d.surface.RajawaliSurfaceView;
 
@@ -51,8 +50,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.projecttango.rajawali.DeviceExtrinsics;
-import com.projecttango.rajawali.ScenePoseCalculator;
 import com.projecttango.tangosupport.TangoPointCloudManager;
 import com.projecttango.tangosupport.TangoSupport;
 import com.projecttango.tangosupport.TangoSupport.IntersectionPointPlaneModelPair;
@@ -63,36 +60,30 @@ import com.projecttango.tangosupport.TangoSupport.IntersectionPointPlaneModelPai
  * When the user clicks on the display, plane detection is done on the surface at the location of
  * the click and a 3D object will be placed in the scene anchored at that location. A
  * {@code WallMeasurement} will be recorded for that plane.
- *
+ * <p/>
  * You need to take exactly one measurement per wall in clockwise order. As you take measurements,
  * the perimeter of the floor plan will be displayed as lines in AR. After you have taken all the
  * measurements you can press the 'Done' button and the final result will be drawn in 2D as seen
  * from above along with labels showing the sizes of the walls.
- *
+ * <p/>
  * You are going to be building an ADF as you take the measurements. After pressing the 'Done'
  * button the ADF will be saved and an optimization will be run on it. After that, all the recorded
  * measurements are re-queried and the floor plan will be rebuilt in order to have better precision.
- *
+ * <p/>
  * Note that it is important to include the KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION configuration
  * parameter in order to achieve the best results synchronizing the Rajawali virtual world with the
  * RGB camera.
- *
+ * <p/>
  * For more details on the augmented reality effects, including color camera texture rendering,
  * see java_augmented_reality_example or java_hello_video_example.
  */
 public class FloorplanActivity extends Activity implements View.OnTouchListener {
     private static final String TAG = FloorplanActivity.class.getSimpleName();
-    // Record Device to Area Description as the main frame pair to be used for device pose
-    // queries.
-    private static final TangoCoordinateFramePair FRAME_PAIR = new TangoCoordinateFramePair(
-            TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
-            TangoPoseData.COORDINATE_FRAME_DEVICE);
     private static final int INVALID_TEXTURE_ID = 0;
 
     private RajawaliSurfaceView mSurfaceView;
     private FloorplanRenderer mRenderer;
     private TangoCameraIntrinsics mIntrinsics;
-    private DeviceExtrinsics mExtrinsics;
     private TangoPointCloudManager mPointCloudManager;
     private Tango mTango;
     private boolean mIsConnected = false;
@@ -122,14 +113,7 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
         mSurfaceView.setZOrderOnTop(false);
         mProgressGroup = (ViewGroup) findViewById(R.id.progress_group);
         mPointCloudManager = new TangoPointCloudManager();
-        mWallMeasurementList = new ArrayList<WallMeasurement>();
         mDoneButton = (Button) findViewById(R.id.done_button);
-        mDoneButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                finishPlan();
-            }
-        });
     }
 
     @Override
@@ -156,6 +140,11 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
         // Check if it has permissions.
         // Area learning permissions are needed in order to save the adf.
         if (Tango.hasPermission(this, Tango.PERMISSIONTYPE_ADF_LOAD_SAVE)) {
+            // Reset the status every time we connect to the service. The old measurements don't
+            // make sense.
+            mWallMeasurementList = new ArrayList<WallMeasurement>();
+            mRenderer.removeMeasurements();
+            mRenderer.updatePlan(new Floorplan(new ArrayList<float[]>()));
             connectAndStart();
         } else {
             startActivityForResult(
@@ -183,29 +172,32 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
     private void connectAndStart() {
         // Synchronize against disconnecting while the service is being used in the OpenGL thread or
         // in the UI thread.
-        synchronized (this) {
-            if (!mIsConnected) {
-                // Initialize Tango Service as a normal Android Service, since we call
-                // mTango.disconnect() in onPause, this will unbind Tango Service, so
-                // everytime when onResume get called, we should create a new Tango object.
-                mTango = new Tango(FloorplanActivity.this, new Runnable() {
-                    // Pass in a Runnable to be called from UI thread when Tango is ready,
-                    // this Runnable will be running on a new thread.
-                    // When Tango is ready, we can call Tango functions safely here only
-                    // when there is no UI thread changes involved.
-                    @Override
-                    public void run() {
-                        try {
+
+        if (!mIsConnected) {
+            // Initialize Tango Service as a normal Android Service, since we call
+            // mTango.disconnect() in onPause, this will unbind Tango Service, so
+            // everytime when onResume get called, we should create a new Tango object.
+            mTango = new Tango(FloorplanActivity.this, new Runnable() {
+                // Pass in a Runnable to be called from UI thread when Tango is ready,
+                // this Runnable will be running on a new thread.
+                // When Tango is ready, we can call Tango functions safely here only
+                // when there is no UI thread changes involved.
+                @Override
+                public void run() {
+                    try {
+                        synchronized (FloorplanActivity.this) {
+                            TangoSupport.initialize();
                             connectTango();
                             connectRenderer();
                             mIsConnected = true;
-                        } catch (TangoOutOfDateException e) {
-                            Log.e(TAG, getString(R.string.exception_out_of_date), e);
                         }
+                    } catch (TangoOutOfDateException e) {
+                        Log.e(TAG, getString(R.string.exception_out_of_date), e);
                     }
-                });
-            }
+                }
+            });
         }
+
     }
 
     /**
@@ -256,9 +248,6 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
             }
         });
 
-        // Get extrinsics from device for use in transforms. This needs
-        // to be done after connecting Tango and listeners.
-        mExtrinsics = setupExtrinsics(mTango);
         mIntrinsics = mTango.getCameraIntrinsics(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
     }
 
@@ -307,15 +296,20 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
 
                     // If a new RGB frame has been rendered, update the camera pose to match.
                     if (mRgbTimestampGlThread > mCameraPoseTimestamp) {
-                        // Calculate the device pose at the camera frame update time.
-                        TangoPoseData lastFramePose = mTango.getPoseAtTime(mRgbTimestampGlThread,
-                                FRAME_PAIR);
+                        // Calculate the camera color pose at the camera frame update time in
+                        // OpenGL engine.
+                        TangoPoseData lastFramePose = TangoSupport.getPoseAtTime(
+                                mRgbTimestampGlThread,
+                                TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+                                TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
+                                TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL, 0);
                         if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
                             // Update the camera pose from the renderer
                             mRenderer.updateRenderCameraPose(lastFramePose);
                             mCameraPoseTimestamp = lastFramePose.timestamp;
                         } else {
-                            Log.w(TAG, "Can't get device pose at time: " + mRgbTimestampGlThread);
+                            Log.w(TAG, "Can't get device pose at time: " +
+                                    mRgbTimestampGlThread);
                         }
                     }
                 }
@@ -336,28 +330,6 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
                 return true;
             }
         });
-    }
-
-    /**
-     * Calculates and stores the fixed transformations between the device and
-     * the various sensors to be used later for transformations between frames.
-     */
-    private static DeviceExtrinsics setupExtrinsics(Tango tango) {
-        // Create camera to IMU transform.
-        TangoCoordinateFramePair framePair = new TangoCoordinateFramePair();
-        framePair.baseFrame = TangoPoseData.COORDINATE_FRAME_IMU;
-        framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR;
-        TangoPoseData imuTrgbPose = tango.getPoseAtTime(0.0, framePair);
-
-        // Create device to IMU transform.
-        framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_DEVICE;
-        TangoPoseData imuTdevicePose = tango.getPoseAtTime(0.0, framePair);
-
-        // Create depth camera to IMU transform.
-        framePair.targetFrame = TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH;
-        TangoPoseData imuTdepthPose = tango.getPoseAtTime(0.0, framePair);
-
-        return new DeviceExtrinsics(imuTdevicePose, imuTrgbPose, imuTdepthPose);
     }
 
     /**
@@ -389,7 +361,6 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
                     mRenderer.addWallMeasurement(wallMeasurement);
                     buildPlan(false);
                 }
-
             } catch (TangoException t) {
                 Toast.makeText(getApplicationContext(),
                         R.string.failed_measurement,
@@ -425,49 +396,53 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
                 xyzIj.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH);
 
         // Perform plane fitting with the latest available point cloud data.
-        IntersectionPointPlaneModelPair intersectionPointPlaneModelPair =
-                TangoSupport.fitPlaneModelNearClick(xyzIj, mIntrinsics,
-                        colorTdepthPose, u, v);
+        try {
+            IntersectionPointPlaneModelPair intersectionPointPlaneModelPair =
+                    TangoSupport.fitPlaneModelNearClick(xyzIj, mIntrinsics,
+                            colorTdepthPose, u, v);
 
-        // Get the device pose at the time the plane data was acquired.
-        TangoPoseData devicePose =
-                mTango.getPoseAtTime(xyzIj.timestamp, FRAME_PAIR);
+            // Get the depth camera transform at the time the plane data was acquired.
+            TangoSupport.TangoMatrixTransformData transform =
+                    TangoSupport.getMatrixTransformAtTime(xyzIj.timestamp,
+                            TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+                            TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
+                            TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO);
+            if (transform.statusCode == TangoPoseData.POSE_VALID) {
+                // Update the AR object location.
+                float[] planeFitTransform = calculatePlaneTransform(
+                        intersectionPointPlaneModelPair.intersectionPoint,
+                        intersectionPointPlaneModelPair.planeModel, transform.matrix);
 
-
-        // Update the AR object location.
-        TangoPoseData planeFitPose = calculatePlanePose(
-                intersectionPointPlaneModelPair.intersectionPoint,
-                intersectionPointPlaneModelPair.planeModel, devicePose);
-
-        return new WallMeasurement(planeFitPose, devicePose);
+                return new WallMeasurement(planeFitTransform, transform.matrix, xyzIj.timestamp);
+            } else {
+                Log.d(TAG, "Could not get a valid transform from depth to area description at time "
+                        + xyzIj.timestamp);
+            }
+        } catch (TangoException e) {
+            Log.d(TAG, "Failed to fit plane");
+        }
+        return null;
     }
 
     /**
      * Calculate the pose of the plane based on the position and normal orientation of the plane
      * and align it with gravity.
      */
-    private TangoPoseData calculatePlanePose(double[] point, double normal[],
-                                             TangoPoseData devicePose) {
-        Matrix4 adfTdevice = ScenePoseCalculator.tangoPoseToMatrix(devicePose);
+    private float[] calculatePlaneTransform(double[] point, double normal[],
+                                            float[] openGlTdepth) {
         // Vector aligned to gravity.
-        Vector3 depthUp = ScenePoseCalculator.TANGO_WORLD_UP.clone();
-        adfTdevice.clone().multiply(mExtrinsics.getDeviceTDepthCamera()).inverse().
-                rotateVector(depthUp);
+        float[] openGlUp = new float[]{0, 1, 0, 0};
+        float[] depthTOpenGl = new float[16];
+        Matrix.invertM(depthTOpenGl, 0, openGlTdepth, 0);
+        float[] depthUp = new float[4];
+        Matrix.multiplyMV(depthUp, 0, depthTOpenGl, 0, openGlUp, 0);
         // Create the plane matrix transform in depth frame from a point, the plane normal and the
         // up vector.
-        Matrix4 depthTplane = ScenePoseCalculator.matrixFromPointNormalUp(point, normal, depthUp);
-        // Plane matrix transform in adf frame.
-        Matrix4 adfTplane =
-                adfTdevice.multiply(mExtrinsics.getDeviceTDepthCamera()).multiply(depthTplane);
-
-        TangoPoseData planeFitPose = ScenePoseCalculator.matrixToTangoPose(adfTplane);
-        planeFitPose.baseFrame = TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION;
-        // NOTE: We need to set the target frame to COORDINATE_FRAME_DEVICE because that is the
-        // default target frame to place objects in the OpenGL world with
-        // TangoSupport.getPoseInEngineFrame.
-        planeFitPose.targetFrame = TangoPoseData.COORDINATE_FRAME_DEVICE;
-
-        return planeFitPose;
+        float[] depthTplane = matrixFromPointNormalUp(point, normal, depthUp);
+        float[] openGlTplane = new float[16];
+        Matrix.multiplyMM(openGlTplane, 0, openGlTdepth, 0, depthTplane, 0);
+        return openGlTplane;
     }
 
     /**
@@ -486,11 +461,22 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
      */
     public void updateMeasurements() {
         for (WallMeasurement wallMeasurement : mWallMeasurementList) {
-            // We need to re query the device pose when the measurements were taken.
-            TangoPoseData newDevicePose = mTango.getPoseAtTime(
-                    wallMeasurement.getDevicePoseTimeStamp(), FRAME_PAIR);
-            wallMeasurement.update(newDevicePose);
-            mRenderer.addWallMeasurement(wallMeasurement);
+            // We need to re query the depth transform when the measurements were taken.
+            TangoSupport.TangoMatrixTransformData transform =
+                    TangoSupport.getMatrixTransformAtTime(wallMeasurement
+                                    .getDepthTransformTimeStamp(),
+                            TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+                            TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
+                            TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO);
+            if (transform.statusCode == TangoPoseData.POSE_VALID) {
+                wallMeasurement.update(transform.matrix);
+                mRenderer.addWallMeasurement(wallMeasurement);
+            } else {
+                Log.d(TAG, "Could not get a valid transform from depth to area description at time "
+                        + wallMeasurement
+                        .getDepthTransformTimeStamp());
+            }
         }
     }
 
@@ -498,7 +484,20 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
      * Finish plan, save the adf, and show the final result.
      * Executed as an AsyncTask because saving the adf could be an expensive operation.
      */
-    private void finishPlan() {
+    public void finishPlan(View view) {
+        // Don't attempt to save if the service is not ready.
+        if (!canSaveAdf()) {
+            Toast.makeText(this, "Tango service not ready to save ADF", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // Only finish the plan if we have enough measurements.
+        if (mWallMeasurementList.size() < 3) {
+            Toast.makeText(this, "At least 3 measurements are needed to close the room",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+
         if (mFinishPlanTask != null) {
             Log.w(TAG, "Finish task already executing");
             return;
@@ -506,6 +505,77 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
 
         mFinishPlanTask = new FinishPlanTask();
         mFinishPlanTask.execute();
+    }
+
+    /**
+     * Verifies whether the Tango service is in a state where the ADF can be saved or not.
+     */
+    private boolean canSaveAdf() {
+        boolean canSaveAdf = false;
+        try {
+            synchronized (this) {
+                TangoPoseData poseData = mTango.getPoseAtTime(0, new TangoCoordinateFramePair(
+                        TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+                        TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE));
+                if (poseData.statusCode == TangoPoseData.POSE_VALID) {
+                    canSaveAdf = true;
+                } else {
+                    Log.w(TAG, "ADF pose unavailable");
+                }
+            }
+        } catch (TangoException e) {
+            Log.e(TAG, "Exception query Tango service before saving ADF.", e);
+        }
+        return canSaveAdf;
+    }
+
+    /**
+     * Calculates a transformation matrix based on a point, a normal and the up gravity vector.
+     * The coordinate frame of the target transformation will be Z forward, X left, Y up.
+     */
+    private float[] matrixFromPointNormalUp(double[] point, double[] normal, float[] up) {
+        float[] zAxis = new float[]{(float) normal[0], (float) normal[1], (float) normal[2]};
+        normalize(zAxis);
+        float[] xAxis = crossProduct(zAxis, up);
+        normalize(xAxis);
+        float[] yAxis = crossProduct(zAxis, xAxis);
+        normalize(yAxis);
+        float[] m = new float[16];
+        Matrix.setIdentityM(m, 0);
+        m[0] = xAxis[0];
+        m[1] = xAxis[1];
+        m[2] = xAxis[2];
+        m[4] = yAxis[0];
+        m[5] = yAxis[1];
+        m[6] = yAxis[2];
+        m[8] = zAxis[0];
+        m[9] = zAxis[1];
+        m[10] = zAxis[2];
+        m[12] = (float) point[0];
+        m[13] = (float) point[1];
+        m[14] = (float) point[2];
+        return m;
+    }
+
+    /**
+     * Normalize a vector.
+     */
+    private void normalize(float[] v) {
+        double norm = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+        v[0] /= norm;
+        v[1] /= norm;
+        v[2] /= norm;
+    }
+
+    /**
+     * Cross product between two vectors following the right hand rule.
+     */
+    private float[] crossProduct(float[] v1, float[] v2) {
+        float[] result = new float[3];
+        result[0] = v1[1] * v2[2] - v2[1] * v1[2];
+        result[1] = v1[2] * v2[0] - v2[2] * v1[0];
+        result[2] = v1[0] * v2[1] - v2[0] * v1[1];
+        return result;
     }
 
     /**
@@ -535,12 +605,32 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
         @Override
         protected void onPostExecute(Void v) {
             mProgressGroup.setVisibility(View.GONE);
+            RelativeLayout frameLayout = new RelativeLayout(FloorplanActivity.this);
             // Draw final result on Canvas.
             PlanView planView = new PlanView(FloorplanActivity.this);
-            planView.setLayoutParams(new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.MATCH_PARENT));
-            setContentView(planView);
+            planView.setLayoutParams(new RelativeLayout.LayoutParams(
+                    RelativeLayout.LayoutParams.MATCH_PARENT,
+                    RelativeLayout.LayoutParams.MATCH_PARENT));
+            frameLayout.addView(planView);
+            // Add 'Back' button.
+            Button backButton = new Button(FloorplanActivity.this);
+            backButton.setText("Back");
+            RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(RelativeLayout
+                    .LayoutParams.WRAP_CONTENT, RelativeLayout
+                    .LayoutParams.WRAP_CONTENT);
+            params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+            params.addRule(RelativeLayout.ALIGN_PARENT_END, RelativeLayout.TRUE);
+            backButton.setLayoutParams(params);
+            backButton.setPadding(100, 100, 100, 100);
+            backButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    // Recreate the Activity to start over.
+                    recreate();
+                }
+            });
+            frameLayout.addView(backButton);
+            setContentView(frameLayout);
             planView.invalidate();
             mFinishPlanTask = null;
         }

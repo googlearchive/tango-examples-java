@@ -31,6 +31,7 @@ import org.rajawali3d.materials.textures.ATexture;
 import org.rajawali3d.materials.textures.StreamingTexture;
 import org.rajawali3d.materials.textures.Texture;
 import org.rajawali3d.math.Matrix4;
+import org.rajawali3d.math.Quaternion;
 import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.primitives.Cube;
 import org.rajawali3d.primitives.ScreenQuad;
@@ -56,7 +57,7 @@ public class PlaneFittingRenderer extends RajawaliRenderer {
     private boolean mSceneCameraConfigured;
 
     private Object3D mObject;
-    private Pose mObjectPose;
+    private Matrix4 mObjectTransform;
     private boolean mObjectPoseUpdated = false;
 
     public PlaneFittingRenderer(Context context) {
@@ -118,8 +119,8 @@ public class PlaneFittingRenderer extends RajawaliRenderer {
         synchronized (this) {
             if (mObjectPoseUpdated) {
                 // Place the 3D object in the location of the detected plane.
-                mObject.setPosition(mObjectPose.getPosition());
-                mObject.setOrientation(mObjectPose.getOrientation());
+                mObject.setPosition(mObjectTransform.getTranslation());
+                mObject.setOrientation(new Quaternion().fromMatrix(mObjectTransform).conjugate());
                 // Move it forward by half of the size of the cube to make it
                 // flush with the plane surface.
                 mObject.moveForward(CUBE_SIDE_LENGTH / 2.0f);
@@ -134,22 +135,26 @@ public class PlaneFittingRenderer extends RajawaliRenderer {
      * Save the updated plane fit pose to update the AR object on the next render pass.
      * This is synchronized against concurrent access in the render loop above.
      */
-    public synchronized void updateObjectPose(TangoPoseData planeFitPose) {
-        mObjectPose = ScenePoseCalculator.toOpenGLPose(planeFitPose);
+    public synchronized void updateObjectPose(float[] planeFitTransform) {
+        mObjectTransform = new Matrix4(planeFitTransform);
         mObjectPoseUpdated = true;
     }
 
     /**
      * Update the scene camera based on the provided pose in Tango start of service frame.
-     * The device pose should match the pose of the device at the time the last rendered RGB
+     * The camera pose should match the pose of the camera color at the time the last rendered RGB
      * frame, which can be retrieved with this.getTimestamp();
      * <p/>
      * NOTE: This must be called from the OpenGL render thread - it is not thread safe.
      */
-    public void updateRenderCameraPose(TangoPoseData devicePose, DeviceExtrinsics extrinsics) {
-        Pose cameraPose = ScenePoseCalculator.toOpenGlCameraPose(devicePose, extrinsics);
-        getCurrentCamera().setRotation(cameraPose.getOrientation());
-        getCurrentCamera().setPosition(cameraPose.getPosition());
+    public void updateRenderCameraPose(TangoPoseData cameraPose) {
+        float[] rotation = cameraPose.getRotationAsFloats();
+        float[] translation = cameraPose.getTranslationAsFloats();
+        Quaternion quaternion = new Quaternion(rotation[3], rotation[0], rotation[1], rotation[2]);
+        // Conjugating the Quaternion is need because Rajawali uses left handed convention for
+        // quaternions.
+        getCurrentCamera().setRotation(quaternion.conjugate());
+        getCurrentCamera().setPosition(translation[0], translation[1], translation[2]);
     }
 
     /**
