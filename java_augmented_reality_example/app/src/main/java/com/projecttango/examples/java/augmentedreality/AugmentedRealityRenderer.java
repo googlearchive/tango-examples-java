@@ -58,10 +58,10 @@ import com.projecttango.rajawali.ScenePoseCalculator;
 public class AugmentedRealityRenderer extends RajawaliRenderer {
     private static final String TAG = AugmentedRealityRenderer.class.getSimpleName();
 
-    // Rajawali texture used to render the Tango color camera
+    // Rajawali texture used to render the Tango color camera.
     private ATexture mTangoCameraTexture;
 
-    // Keeps track of whether the scene camera has been configured
+    // Keeps track of whether the scene camera has been configured.
     private boolean mSceneCameraConfigured;
 
     public AugmentedRealityRenderer(Context context) {
@@ -94,7 +94,7 @@ public class AugmentedRealityRenderer extends RajawaliRenderer {
         light.setPosition(3, 2, 4);
         getCurrentScene().addLight(light);
 
-        // Create sphere with earth texture and place it in space 3m forward from the origin
+        // Create sphere with earth texture and place it in space 3m forward from the origin.
         Material earthMaterial = new Material();
         try {
             Texture t = new Texture("earth", R.drawable.earth);
@@ -119,7 +119,7 @@ public class AugmentedRealityRenderer extends RajawaliRenderer {
         getCurrentScene().registerAnimation(animEarth);
         animEarth.play();
 
-        // Create sphere with moon texture
+        // Create sphere with moon texture.
         Material moonMaterial = new Material();
         try {
             Texture t = new Texture("moon", R.drawable.moon);
@@ -145,7 +145,7 @@ public class AugmentedRealityRenderer extends RajawaliRenderer {
         animMoon.play();
 
         // Make the moon orbit around the earth, the first two parameters are the focal point and
-        // periapsis of the orbit
+        // periapsis of the orbit.
         Animation3D translationMoon =  new EllipticalOrbitAnimation3D(new Vector3(0, 0, -5),
                 new Vector3(0, 0, -1), Vector3.getAxisVector(Vector3.Axis.Y), 0,
                 360, EllipticalOrbitAnimation3D.OrbitDirection.COUNTERCLOCKWISE);

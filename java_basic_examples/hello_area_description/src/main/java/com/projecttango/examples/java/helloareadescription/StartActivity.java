@@ -99,7 +99,7 @@ public class StartActivity extends Activity {
      * Start the main area description activity and pass in user's configuration.
      */
     private void startAreaDescriptionActivity() {
-        Intent startAdIntent = new Intent(this, AreaDescriptionActivity.class);
+        Intent startAdIntent = new Intent(this, HelloAreaDescriptionActivity.class);
         startAdIntent.putExtra(USE_AREA_LEARNING, mIsUseAreaLearning);
         startAdIntent.putExtra(LOAD_ADF, mIsLoadAdf);
         startActivity(startAdIntent);
@@ -117,10 +117,9 @@ public class StartActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         // The result of the permission activity.
         //
-        // Note that when the permission activity is dismissed, the
-        // AreaDescriptionActivity's onResume() callback is called. As the
-        // TangoService is connected in the onResume() function, we do not call
-        // connect here.
+        // Note that when the permission activity is dismissed, the HelloAreaDescriptionActivity's
+        // onResume() callback is called. As the TangoService is connected in the onResume()
+        // function, we do not call connect here.
         //
         // Check which request we're responding to
         if (requestCode == REQUEST_CODE_TANGO_PERMISSION) {

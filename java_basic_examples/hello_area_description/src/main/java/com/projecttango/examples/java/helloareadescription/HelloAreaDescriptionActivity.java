@@ -44,10 +44,11 @@ import java.util.ArrayList;
  * Main Activity class for the Area Description example. Handles the connection to the Tango service
  * and propagation of Tango pose data to Layout view.
  */
-public class AreaDescriptionActivity extends Activity implements SetAdfNameDialog.CallbackListener,
+public class HelloAreaDescriptionActivity extends Activity implements
+        SetAdfNameDialog.CallbackListener,
         SaveAdfTask.SaveAdfListener {
 
-    private static final String TAG = AreaDescriptionActivity.class.getSimpleName();
+    private static final String TAG = HelloAreaDescriptionActivity.class.getSimpleName();
     private static final int SECS_TO_MILLISECS = 1000;
     private Tango mTango;
     private TangoConfig mConfig;
@@ -79,39 +80,6 @@ public class AreaDescriptionActivity extends Activity implements SetAdfNameDialo
         mIsConstantSpaceRelocalize = intent.getBooleanExtra(StartActivity.LOAD_ADF, false);
     }
 
-    /**
-     * Implements SetAdfNameDialog.CallbackListener.
-     */
-    @Override
-    public void onAdfNameOk(String name, String uuid) {
-        saveAdf(name);
-    }
-
-    /**
-     * Implements SetAdfNameDialog.CallbackListener.
-     */
-    @Override
-    public void onAdfNameCancelled() {
-        // Continue running.
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-
-        // Clear the relocalization state: we don't know where the device will be since our app
-        // will be paused.
-        mIsRelocalized = false;
-
-        try {
-            synchronized (this) {
-                mTango.disconnect();
-            }
-        } catch (TangoErrorException e) {
-            Log.e(TAG, getString(R.string.tango_error), e);
-        }
-    }
-
     @Override
     protected void onResume() {
         super.onResume();
@@ -119,16 +87,16 @@ public class AreaDescriptionActivity extends Activity implements SetAdfNameDialo
         // Initialize Tango Service as a normal Android Service, since we call
         // mTango.disconnect() in onPause, this will unbind Tango Service, so
         // everytime when onResume gets called, we should create a new Tango object.
-        mTango = new Tango(AreaDescriptionActivity.this, new Runnable() {
+        mTango = new Tango(HelloAreaDescriptionActivity.this, new Runnable() {
             // Pass in a Runnable to be called from UI thread when Tango is ready,
             // this Runnable will be running on a new thread.
             // When Tango is ready, we can call Tango functions safely here only
             // when there is no UI thread changes involved.
             @Override
             public void run() {
-                mConfig = setTangoConfig(mTango, mIsLearningMode, mIsConstantSpaceRelocalize);
+                synchronized (HelloAreaDescriptionActivity.this) {
+                    mConfig = setTangoConfig(mTango, mIsLearningMode, mIsConstantSpaceRelocalize);
 
-                synchronized (AreaDescriptionActivity.this) {
                     // Re-attach listeners.
                     try {
                         setUpTangoListeners();
@@ -153,7 +121,7 @@ public class AreaDescriptionActivity extends Activity implements SetAdfNameDialo
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        synchronized (AreaDescriptionActivity.this) {
+                        synchronized (HelloAreaDescriptionActivity.this) {
                             setupTextViewsAndButtons(mTango, mIsLearningMode,
                                     mIsConstantSpaceRelocalize);
                         }
@@ -164,16 +132,19 @@ public class AreaDescriptionActivity extends Activity implements SetAdfNameDialo
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
-    }
+    protected void onPause() {
+        super.onPause();
 
-    /**
-     * The "Save ADF" button has been clicked.
-     * Defined in {@code activity_area_description.xml}
-     */
-    public void saveAdfClicked(View view) {
-        showSetAdfNameDialog();
+        // Clear the relocalization state: we don't know where the device will be since our app
+        // will be paused.
+        mIsRelocalized = false;
+        synchronized (this) {
+            try {
+                mTango.disconnect();
+            } catch (TangoErrorException e) {
+                Log.e(TAG, getString(R.string.tango_error), e);
+            }
+        }
     }
 
     /**
@@ -222,10 +193,10 @@ public class AreaDescriptionActivity extends Activity implements SetAdfNameDialo
             config.putBoolean(TangoConfig.KEY_BOOLEAN_LEARNINGMODE, true);
 
         }
-        // Check for Load ADF/Constant Space relocalization mode
+        // Check for Load ADF/Constant Space relocalization mode.
         if (isLoadAdf) {
             ArrayList<String> fullUuidList;
-            // Returns a list of ADFs with their UUIDs
+            // Returns a list of ADFs with their UUIDs.
             fullUuidList = tango.listAreaDescriptions();
             // Load the latest ADF if ADFs are found.
             if (fullUuidList.size() > 0) {
@@ -242,7 +213,7 @@ public class AreaDescriptionActivity extends Activity implements SetAdfNameDialo
      */
     private void setUpTangoListeners() {
         // Set Tango Listeners for Poses Device wrt Start of Service, Device wrt
-        // ADF and Start of Service wrt ADF
+        // ADF and Start of Service wrt ADF.
         ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
         framePairs.add(new TangoCoordinateFramePair(
                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
@@ -255,25 +226,15 @@ public class AreaDescriptionActivity extends Activity implements SetAdfNameDialo
                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE));
 
         mTango.connectListener(framePairs, new OnTangoUpdateListener() {
-            @Override
-            public void onXyzIjAvailable(TangoXyzIjData xyzij) {
-                // Not using XyzIj data for this sample
-            }
-
-            // Listen to Tango Events
-            @Override
-            public void onTangoEvent(final TangoEvent event) {
-            }
 
             @Override
             public void onPoseAvailable(TangoPoseData pose) {
-                // Make sure to have atomic access to Tango Data so that
-                // UI loop doesn't interfere while Pose call back is updating
-                // the data.
+                // Make sure to have atomic access to Tango Data so that UI loop doesn't interfere
+                // while Pose call back is updating the data.
                 synchronized (mSharedLock) {
-                    // Check for Device wrt ADF pose, Device wrt Start of Service pose,
-                    // Start of Service wrt ADF pose (This pose determines if the device
-                    // is relocalized or not).
+                    // Check for Device wrt ADF pose, Device wrt Start of Service pose, Start of
+                    // Service wrt ADF pose (This pose determines if the device is relocalized or
+                    // not).
                     if (pose.baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
                             && pose.targetFrame == TangoPoseData
                             .COORDINATE_FRAME_START_OF_SERVICE) {
@@ -308,10 +269,44 @@ public class AreaDescriptionActivity extends Activity implements SetAdfNameDialo
             }
 
             @Override
+            public void onXyzIjAvailable(TangoXyzIjData xyzij) {
+                // We are not using TangoXyzIjData for this application.
+            }
+
+            @Override
+            public void onTangoEvent(final TangoEvent event) {
+                // Ignoring TangoEvents.
+            }
+
+            @Override
             public void onFrameAvailable(int cameraId) {
                 // We are not using onFrameAvailable for this application.
             }
         });
+    }
+
+    /**
+     * Implements SetAdfNameDialog.CallbackListener.
+     */
+    @Override
+    public void onAdfNameOk(String name, String uuid) {
+        saveAdf(name);
+    }
+
+    /**
+     * Implements SetAdfNameDialog.CallbackListener.
+     */
+    @Override
+    public void onAdfNameCancelled() {
+        // Continue running.
+    }
+
+    /**
+     * The "Save ADF" button has been clicked.
+     * Defined in {@code activity_area_description.xml}
+     */
+    public void saveAdfClicked(View view) {
+        showSetAdfNameDialog();
     }
 
     /**

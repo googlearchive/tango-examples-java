@@ -77,7 +77,8 @@
         android:layout_marginBottom="5dp"
         android:layout_marginRight="5dp"
         android:paddingRight="5dp"
-        android:text="@string/first_person" />
+        android:text="@string/first_person"
+        android:onClick="onFirstPersonClicked"/>
 
     <Button
         android:id="@+id/top_down_button"
@@ -87,7 +88,8 @@
         android:layout_alignParentRight="true"
         android:layout_marginRight="5dp"
         android:paddingRight="5dp"
-        android:text="@string/top_down" />
+        android:text="@string/top_down"
+        android:onClick="onTopDownClicked"/>
 
     <Button
         android:id="@+id/third_person_button"
@@ -98,7 +100,8 @@
         android:layout_marginBottom="5dp"
         android:layout_marginRight="5dp"
         android:paddingRight="5dp"
-        android:text="@string/third_person" />
+        android:text="@string/third_person"
+        android:onClick="onThirdPersonClicked"/>
 
     <com.google.atap.tango.ux.TangoUxLayout
         android:id="@+id/layout_tango"
