@@ -56,7 +56,6 @@ import com.projecttango.tangosupport.TangoSupport;
  * delegated to the {@link PointCloudRajawaliRenderer} class.
  */
 public class PointCloudActivity extends Activity {
-
     private static final String TAG = PointCloudActivity.class.getSimpleName();
     private static final int SECS_TO_MILLISECS = 1000;
 
@@ -96,7 +95,7 @@ public class PointCloudActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        mSurfaceView.onResume();
+
         mTangoUx.start(new StartParams());
         // Initialize Tango Service as a normal Android Service, since we call
         // mTango.disconnect() in onPause, this will unbind Tango Service, so
@@ -138,7 +137,7 @@ public class PointCloudActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
-        mSurfaceView.onPause();
+
         // Synchronize against disconnecting while the service is being used in the OpenGL
         // thread or in the UI thread.
         // NOTE: DO NOT lock against this same object in the Tango callback thread.
