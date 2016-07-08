@@ -37,9 +37,9 @@ import java.util.ArrayList;
  * Main Activity class for the Depth Perception Sample. Handles the connection to the {@link Tango}
  * service and propagation of Tango XyzIj data to Layout view.
  */
-public class DepthPerceptionActivity extends Activity {
+public class HelloDepthPerceptionActivity extends Activity {
 
-    private static final String TAG = DepthPerceptionActivity.class.getSimpleName();
+    private static final String TAG = HelloDepthPerceptionActivity.class.getSimpleName();
 
     private Tango mTango;
     private TangoConfig mConfig;
@@ -50,12 +50,60 @@ public class DepthPerceptionActivity extends Activity {
         setContentView(R.layout.activity_depth_perception);
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
+        // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
+        // should create a new Tango object.
+        mTango = new Tango(HelloDepthPerceptionActivity.this, new Runnable() {
+            // Pass in a Runnable to be called from UI thread when Tango is ready,
+            // this Runnable will be running on a new thread.
+            // When Tango is ready, we can call Tango functions safely here only
+            // when there is no UI thread changes involved.
+            @Override
+            public void run() {
+                synchronized (HelloDepthPerceptionActivity.this) {
+                    mConfig = setupTangoConfig(mTango);
+
+                    try {
+                        setTangoListeners();
+                    } catch (TangoErrorException e) {
+                        Log.e(TAG, getString(R.string.exception_tango_error), e);
+                    } catch (SecurityException e) {
+                        Log.e(TAG, getString(R.string.permission_motion_tracking), e);
+                    }
+                    try {
+                        mTango.connect(mConfig);
+                    } catch (TangoOutOfDateException e) {
+                        Log.e(TAG, getString(R.string.exception_out_of_date), e);
+                    } catch (TangoErrorException e) {
+                        Log.e(TAG, getString(R.string.exception_tango_error), e);
+                    }
+                }
+            }
+        });
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        synchronized (this) {
+            try {
+                mTango.disconnect();
+            } catch (TangoErrorException e) {
+                Log.e(TAG, getString(R.string.exception_tango_error), e);
+            }
+        }
+    }
+
     /**
      * Sets up the tango configuration object. Make sure mTango object is initialized before
      * making this call.
      */
     private TangoConfig setupTangoConfig(Tango tango) {
-        // Create a new Tango Configuration and enable the Depth Sensing API
+        // Create a new Tango Configuration and enable the Depth Sensing API.
         TangoConfig config = new TangoConfig();
         config = tango.getConfig(config.CONFIG_TYPE_DEFAULT);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
@@ -67,8 +115,8 @@ public class DepthPerceptionActivity extends Activity {
      * Tracking API. This is called in response to the user clicking the 'Start' Button.
      */
     private void setTangoListeners() {
-        // Lock configuration and connect to Tango
-        // Select coordinate frame pair
+        // Lock configuration and connect to Tango.
+        // Select coordinate frame pair.
         final ArrayList<TangoCoordinateFramePair> framePairs =
                 new ArrayList<TangoCoordinateFramePair>();
         framePairs.add(new TangoCoordinateFramePair(
@@ -79,7 +127,7 @@ public class DepthPerceptionActivity extends Activity {
         mTango.connectListener(framePairs, new OnTangoUpdateListener() {
             @Override
             public void onPoseAvailable(final TangoPoseData pose) {
-                // We are not using TangoPoseData for this application
+                // We are not using TangoPoseData for this application.
             }
 
             @Override
@@ -89,11 +137,12 @@ public class DepthPerceptionActivity extends Activity {
 
             @Override
             public void onTangoEvent(final TangoEvent event) {
+                // Ignoring TangoEvents.
             }
 
             @Override
             public void onFrameAvailable(int cameraId) {
-                // We are not using onFrameAvailable for this application
+                // We are not using onFrameAvailable for this application.
             }
         });
     }
@@ -123,54 +172,5 @@ public class DepthPerceptionActivity extends Activity {
             averageZ = totalZ / pointCount;
         }
         return averageZ;
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        try {
-            mTango.disconnect();
-        } catch (TangoErrorException e) {
-            Log.e(TAG, getString(R.string.exception_tango_error), e);
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        // Initialize Tango Service as a normal Android Service, since we call
-        // mTango.disconnect() in onPause, this will unbind Tango Service, so
-        // every time when onResume gets called, we should create a new Tango object.
-        mTango = new Tango(DepthPerceptionActivity.this, new Runnable() {
-            // Pass in a Runnable to be called from UI thread when Tango is ready,
-            // this Runnable will be running on a new thread.
-            // When Tango is ready, we can call Tango functions safely here only
-            // when there is no UI thread changes involved.
-            @Override
-            public void run() {
-                mConfig = setupTangoConfig(mTango);
-
-                try {
-                    setTangoListeners();
-                } catch (TangoErrorException e) {
-                    Log.e(TAG, getString(R.string.exception_tango_error), e);
-                } catch (SecurityException e) {
-                    Log.e(TAG, getString(R.string.permission_motion_tracking), e);
-                }
-                try {
-                    mTango.connect(mConfig);
-                } catch (TangoOutOfDateException e) {
-                    Log.e(TAG, getString(R.string.exception_out_of_date), e);
-                } catch (TangoErrorException e) {
-                    Log.e(TAG, getString(R.string.exception_tango_error), e);
-                }
-            }
-        });
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
     }
 }

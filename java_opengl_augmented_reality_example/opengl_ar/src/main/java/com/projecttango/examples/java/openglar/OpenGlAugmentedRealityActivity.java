@@ -32,7 +32,6 @@ import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Bundle;
 import android.util.Log;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -67,11 +66,17 @@ public class OpenGlAugmentedRealityActivity extends Activity {
 
     private GLSurfaceView mSurfaceView;
     private OpenGlAugmentedRealityRenderer mRenderer;
+    private TangoCameraIntrinsics mIntrinsics;
     private Tango mTango;
+    private TangoConfig mConfig;
     private boolean mIsConnected = false;
+
+    // Texture rendering related fields.
     // NOTE: Naming indicates which thread is in charge of updating this variable
     private int mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
     private AtomicBoolean mIsFrameAvailableTangoThread = new AtomicBoolean(false);
+    private double mRgbTimestampGlThread;
+
     // Transform from the Earth and Moon center to OpenGL frame. This is a fixed transform.
     private float[] mOpenGLTEarthMoonCenter = new float[16];
     // Transform from Earth to Earth and Moon center. This will change over time, as the Earth is
@@ -99,92 +104,118 @@ public class OpenGlAugmentedRealityActivity extends Activity {
         // Set render mode to RENDERMODE_CONTINUOUSLY to force getting onDraw callbacks until the
         // Tango service is properly set-up and we start getting onFrameAvailable callbacks.
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
-        if (!mIsConnected) {
-            // Initialize Tango Service as a normal Android Service, since we call
-            // mTango.disconnect() in onPause, this will unbind Tango Service, so
-            // everytime when onResume get called, we should create a new Tango object.
-            mTango = new Tango(OpenGlAugmentedRealityActivity.this, new Runnable() {
-                // Pass in a Runnable to be called from UI thread when Tango is ready,
-                // this Runnable will be running on a new thread.
-                // When Tango is ready, we can call Tango functions safely here only
-                // when there is no UI thread changes involved.
-                @Override
-                public void run() {
-                    synchronized (OpenGlAugmentedRealityActivity.this) {
-                        try {
-                            TangoSupport.initialize();
-                            connectTango();
-                            mIsConnected = true;
-                        } catch (TangoOutOfDateException e) {
-                            Log.e(TAG, getString(R.string.exception_out_of_date), e);
-                        }
+
+        // Initialize Tango Service as a normal Android Service, since we call
+        // mTango.disconnect() in onPause, this will unbind Tango Service, so
+        // everytime when onResume get called, we should create a new Tango object.
+        mTango = new Tango(OpenGlAugmentedRealityActivity.this, new Runnable() {
+            // Pass in a Runnable to be called from UI thread when Tango is ready,
+            // this Runnable will be running on a new thread.
+            // When Tango is ready, we can call Tango functions safely here only
+            // when there is no UI thread changes involved.
+            @Override
+            public void run() {
+                synchronized (OpenGlAugmentedRealityActivity.this) {
+                    TangoSupport.initialize();
+                    mConfig = setupTangoConfig(mTango);
+
+                    try {
+                        setTangoListeners();
+                    } catch (TangoErrorException e) {
+                        Log.e(TAG, getString(R.string.exception_tango_error), e);
+                    } catch (SecurityException e) {
+                        Log.e(TAG, getString(R.string.permission_camera), e);
+                    }
+                    try {
+                        mTango.connect(mConfig);
+                        mIsConnected = true;
+                    } catch (TangoOutOfDateException e) {
+                        Log.e(TAG, getString(R.string.exception_out_of_date), e);
+                    } catch (TangoErrorException e) {
+                        Log.e(TAG, getString(R.string.exception_tango_error), e);
                     }
                 }
-            });
-        }
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        synchronized (OpenGlAugmentedRealityActivity.this) {
+                            mIntrinsics = mTango.getCameraIntrinsics(
+                                    TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
+                        }
+                    }
+                });
+            }
+        });
+
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         mSurfaceView.onPause();
-        try {
-            // Synchronize against disconnecting while the service is being used in the OpenGL
-            // thread or in the UI thread.
-            // NOTE: DO NOT lock against this same object in the Tango callback thread.
-            // Tango.disconnect will block here until all Tango callback calls are finished.
-            // If you lock against this object in a Tango callback thread it will cause a deadlock.
-            synchronized (this) {
-                if (mIsConnected) {
-                    mIsConnected = false;
-                    mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
-                    // We need to invalidate the connected texture ID so that we cause a
-                    // re-connection in the OpenGL thread after resume
-                    mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
-                    mTango.disconnect();
-                }
+        // Synchronize against disconnecting while the service is being used in the OpenGL thread or
+        // in the UI thread.
+        // NOTE: DO NOT lock against this same object in the Tango callback thread. Tango.disconnect
+        // will block here until all Tango callback calls are finished. If you lock against this
+        // object in a Tango callback thread it will cause a deadlock.
+        synchronized (this) {
+            try {
+                mIsConnected = false;
+                mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
+                // We need to invalidate the connected texture ID so that we cause a
+                // re-connection in the OpenGL thread after resume
+                mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
+                mTango.disconnect();
+            } catch (TangoErrorException e) {
+                Log.e(TAG, getString(R.string.exception_tango_error), e);
             }
-        } catch (TangoErrorException e) {
-            Toast.makeText(getApplicationContext(), "Tango Error!", Toast.LENGTH_SHORT).show();
-            Log.e(TAG, "Exception disconnecting from Tango service", e);
         }
     }
 
     /**
-     * Performs the necessary Tango configuration, connection and callback logic.
+     * Sets up the tango configuration object. Make sure mTango object is initialized before
+     * making this call.
      */
-    private void connectTango() {
-        // Configure the Tango device to generate (RGB image) frame callbacks.
-        TangoConfig tangoConfig = mTango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
-        tangoConfig.putBoolean(TangoConfig.KEY_BOOLEAN_COLORCAMERA, true);
+    private TangoConfig setupTangoConfig(Tango tango) {
+        // Use default configuration for Tango Service, plus color camera and
+        // low latency IMU integration.
+        TangoConfig config = tango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
+        config.putBoolean(TangoConfig.KEY_BOOLEAN_COLORCAMERA, true);
         // NOTE: Low latency integration is necessary to achieve a precise alignment of
         // virtual objects with the RBG image and produce a good AR effect.
-        tangoConfig.putBoolean(TangoConfig.KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION, true);
-        mTango.connect(tangoConfig);
-        // No need to add any coordinate frame pairs since we are not using pose data from callbacks
-        ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
-        // Add a listener for Tango pose data
-        mTango.connectListener(framePairs, new OnTangoUpdateListener() {
+        config.putBoolean(TangoConfig.KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION, true);
+        return config;
+    }
 
+    /**
+     * Set up the callback listeners for the Tango service, then begin using the Motion
+     * Tracking API. This is called in response to the user clicking the 'Start' Button.
+     */
+    private void setTangoListeners() {
+        // No need to add any coordinate frame pairs since we aren't using pose data from callbacks.
+        ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
+
+        mTango.connectListener(framePairs, new OnTangoUpdateListener() {
             @Override
             public void onPoseAvailable(TangoPoseData pose) {
-                // Ignoring pose data
+                // We are not using onPoseAvailable for this app.
             }
 
             @Override
-            public void onXyzIjAvailable(TangoXyzIjData arg0) {
-                // Ignoring XyzIj data
+            public void onXyzIjAvailable(TangoXyzIjData xyzIj) {
+                // We are not using onXyzIjAvailable for this app.
             }
 
             @Override
-            public void onTangoEvent(TangoEvent arg0) {
-                // Ignoring TangoEvents
+            public void onTangoEvent(TangoEvent event) {
+                // We are not using onTangoEvent for this app.
             }
 
             @Override
             public void onFrameAvailable(int cameraId) {
-                // This will get called every time a new RGB camera frame is available to be
-                // rendered.
+                // Check if the frame available is for the camera we want and update its frame
+                // on the view.
                 if (cameraId == TangoCameraIntrinsics.TANGO_CAMERA_COLOR) {
                     // Now that we are receiving onFrameAvailable callbacks, we can switch
                     // to RENDERMODE_WHEN_DIRTY to drive the render loop from this callback.
@@ -235,30 +266,26 @@ public class OpenGlAugmentedRealityActivity extends Activity {
                             // going to render the camera.
                             // NOTE: This must be done after both the texture is generated
                             // and the Tango service is connected.
-                            if (mConnectedTextureIdGlThread == 0) {
-                                mConnectedTextureIdGlThread = mRenderer.getTextureId();
-                                mTango.connectTextureId(
-                                        TangoCameraIntrinsics.TANGO_CAMERA_COLOR,
+                            if (mConnectedTextureIdGlThread != mRenderer.getTextureId()) {
+                                mTango.connectTextureId(TangoCameraIntrinsics.TANGO_CAMERA_COLOR,
                                         mRenderer.getTextureId());
-                                Log.d(TAG, "connected to texture id: " + mRenderer
-                                        .getTextureId());
-                                // Query the intrinsics and set the projection matrix.
-                                TangoCameraIntrinsics intrinsics = mTango.getCameraIntrinsics
-                                        (TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
-                                mRenderer.setProjectionMatrix(intrinsics);
+                                mConnectedTextureIdGlThread = mRenderer.getTextureId();
+                                Log.d(TAG, "connected to texture id: " + mRenderer.getTextureId());
+                                mRenderer.setProjectionMatrix(mIntrinsics);
                             }
-                            // If there is a new RGB camera frame available, update the
-                            // texture and scene camera pose.
+                            // If there is a new RGB camera frame available, update the texture and
+                            // scene camera pose.
                             if (mIsFrameAvailableTangoThread.compareAndSet(true, false)) {
-                                double rgbTimestamp =
-                                        mTango.updateTexture(TangoCameraIntrinsics
-                                                .TANGO_CAMERA_COLOR);
-                                // {@code rgbTimestamp} contains the exact timestamp at which
-                                // the rendered RGB frame was acquired
+                                // {@code mRgbTimestampGlThread} contains the exact timestamp at
+                                // which the rendered RGB frame was acquired.
+                                mRgbTimestampGlThread =
+                                        mTango.updateTexture(TangoCameraIntrinsics.
+                                                TANGO_CAMERA_COLOR);
+
                                 // Get the transform from color camera to Start of Service
                                 // at the timestamp of the RGB image in OpenGL coordinates.
                                 TangoSupport.TangoMatrixTransformData transform =
-                                        TangoSupport.getMatrixTransformAtTime(rgbTimestamp,
+                                        TangoSupport.getMatrixTransformAtTime(mRgbTimestampGlThread,
                                                 TangoPoseData
                                                         .COORDINATE_FRAME_START_OF_SERVICE,
                                                 TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
@@ -267,9 +294,9 @@ public class OpenGlAugmentedRealityActivity extends Activity {
                                 if (transform.statusCode == TangoPoseData.POSE_VALID) {
 
                                     mRenderer.updateViewMatrix(transform.matrix);
-
-                                    double deltaTime = rgbTimestamp - lastRenderedTimeStamp;
-                                    lastRenderedTimeStamp = rgbTimestamp;
+                                    double deltaTime = mRgbTimestampGlThread
+                                            - lastRenderedTimeStamp;
+                                    lastRenderedTimeStamp = mRgbTimestampGlThread;
 
                                     // Set the earth rotation around itself.
                                     float[] openGlTEarth = new float[16];
@@ -293,8 +320,8 @@ public class OpenGlAugmentedRealityActivity extends Activity {
                                     mRenderer.setEarthTransform(openGlTEarth);
                                     mRenderer.setMoonTransform(openGlTMoon);
                                 } else {
-                                    Log.d(TAG, "Could not get a valid transform at time " +
-                                            rgbTimestamp);
+                                    Log.w(TAG, "Could not get a valid transform at time " +
+                                            mRgbTimestampGlThread);
                                 }
                             }
                         }

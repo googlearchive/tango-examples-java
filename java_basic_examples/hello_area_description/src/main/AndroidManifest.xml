@@ -46,7 +46,7 @@
             </intent-filter>
         </activity>
        <activity
-            android:name=".AreaDescriptionActivity"
+            android:name=".HelloAreaDescriptionActivity"
             android:label="@string/app_name_long"
             android:screenOrientation="nosensor">
         </activity>

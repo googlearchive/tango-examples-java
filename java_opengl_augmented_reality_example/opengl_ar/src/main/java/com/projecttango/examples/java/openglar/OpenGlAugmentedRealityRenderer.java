@@ -99,8 +99,13 @@ public class OpenGlAugmentedRealityRenderer implements GLSurfaceView.Renderer {
         mMoonSphere.drawSphere();
     }
 
+    /**
+     * It returns the ID currently assigned to the texture where the Tango color camera contents
+     * should be rendered.
+     * NOTE: This must be called from the OpenGL render thread - it is not thread safe.
+     */
     public int getTextureId() {
-        return mOpenGlCameraPreview.getTextureId();
+        return mOpenGlCameraPreview == null ? -1 : mOpenGlCameraPreview.getTextureId();
     }
 
     /**

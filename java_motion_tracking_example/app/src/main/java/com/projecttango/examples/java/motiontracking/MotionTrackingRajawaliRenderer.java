@@ -16,7 +16,6 @@
 
 package com.projecttango.examples.java.motiontracking;
 
-import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoPoseData;
 
 import android.content.Context;
@@ -36,10 +35,6 @@ import org.rajawali3d.primitives.Cube;
 import org.rajawali3d.primitives.Plane;
 import org.rajawali3d.renderer.RajawaliRenderer;
 
-import com.projecttango.rajawali.Pose;
-
-import com.projecttango.tangosupport.TangoSupport;
-
 /**
  * This class implements the rendering logic for the Motion Tracking application using Rajawali.
  */
@@ -49,30 +44,18 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
     private static final float CAMERA_NEAR = 0.01f;
     private static final float CAMERA_FAR = 200f;
 
-    // Latest available device pose;
-    private Pose mDevicePose = new Pose(Vector3.ZERO, Quaternion.getIdentity());
-    private boolean mPoseUpdated = false;
-  
-    // The current screen rotation index. The index value follow the Android surface rotation enum:
-    // http://developer.android.com/reference/android/view/Surface.html#ROTATION_0
-    private int mCurrentScreenRotation = 0;
-
     public MotionTrackingRajawaliRenderer(Context context) {
         super(context);
     }
 
-    public void setCurrentScreenRotation(int currentRotation) {
-        mCurrentScreenRotation = currentRotation;
-    }
-  
     @Override
     protected void initScene() {
 
-        getCurrentScene().setBackgroundColor(0x7EC0EE); // Sky color
+        getCurrentScene().setBackgroundColor(0x7EC0EE); // Sky color.
         getCurrentCamera().setNearPlane(CAMERA_NEAR);
         getCurrentCamera().setFarPlane(CAMERA_FAR);
 
-        // We add a grass floor to the scene for a more comfortable walk
+        // We add a grass floor to the scene for a more comfortable walk.
         Material floorMaterial = new Material();
         floorMaterial.setColorInfluence(0);
 
@@ -101,7 +84,7 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
         }
 
         Cube logo = new Cube(0.5f);
-        // Change the texture coordinates to be in the right position for the viewer
+        // Change the texture coordinates to be in the right position for the viewer.
         logo.getGeometry().setTextureCoords(new float[]
                 {
                         1, 0, 0, 0, 0, 1, 1, 1, // THIRD
@@ -112,7 +95,7 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
                         0, 1, 1, 1, 1, 0, 0, 0, // BOTTOM
 
                 });
-        // Update the buffers after changing the geometry
+        // Update the buffers after changing the geometry.
         logo.getGeometry().changeBufferData(logo.getGeometry().getTexCoordBufferInfo(),
                 logo.getGeometry().getTextureCoords(), 0);
         logo.rotate(Vector3.Axis.Y, 180);
@@ -120,7 +103,7 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
         logo.setMaterial(logoMaterial);
         getCurrentScene().addChild(logo);
 
-        // Rotate around its Y axis
+        // Rotate around its Y axis.
         Animation3D animLogo = new RotateOnAxisAnimation(Vector3.Axis.Y, 0, -360);
         animLogo.setInterpolator(new LinearInterpolator());
         animLogo.setDurationMilliseconds(6000);
@@ -128,49 +111,32 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
         animLogo.setTransformable3D(logo);
         getCurrentScene().registerAnimation(animLogo);
         animLogo.play();
-
     }
 
-    @Override
-    protected void onRender(long ellapsedRealtime, double deltaTime) {
-        // Update the scene objects with the latest device position and orientation information.
-        // Synchronize to avoid concurrent access from the Tango callback thread below.
-        try {
-            TangoPoseData pose =
-                TangoSupport.getPoseAtTime(0.0, TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
-                                     TangoPoseData.COORDINATE_FRAME_DEVICE,
-                                     TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                     mCurrentScreenRotation);
-            if (pose.statusCode == TangoPoseData.POSE_VALID) {
-                getCurrentCamera().setPosition((float) pose.translation[0],
-                                               (float) pose.translation[1],
-                                               (float) pose.translation[2]);
-            
-        
-                Quaternion invOrientation = new Quaternion((float) pose.rotation[3],
-                                                            (float) pose.rotation[0],
-                                                            (float) pose.rotation[1],
-                                                            (float) pose.rotation[2]);
-
-                // For some reason, rajawalli's orientation is inversed.
-                Quaternion orientation = invOrientation.inverse();
-                getCurrentCamera().setOrientation(orientation);   
-            }
-        } catch (TangoErrorException e) {
-            Log.e(TAG, "TangoSupport.getPoseAtTime error", e);
-        }
-
-        // Perform the actual OpenGL rendering of the updated objects
-        super.onRender(ellapsedRealtime, deltaTime);
+    /**
+     * Update the scene camera based on the provided pose in Tango start of service frame.
+     * The camera pose should match the pose of the camera color at the time the last rendered RGB
+     * frame, which can be retrieved with this.getTimestamp();
+     * <p/>
+     * NOTE: This must be called from the OpenGL render thread - it is not thread safe.
+     */
+    public void updateRenderCameraPose(TangoPoseData cameraPose) {
+        float[] rotation = cameraPose.getRotationAsFloats();
+        float[] translation = cameraPose.getTranslationAsFloats();
+        Quaternion quaternion = new Quaternion(rotation[3], rotation[0], rotation[1], rotation[2]);
+        // Conjugating the Quaternion is need because Rajawali uses left handed convention for
+        // quaternions.
+        getCurrentCamera().setRotation(quaternion.conjugate());
+        getCurrentCamera().setPosition(translation[0], translation[1], translation[2]);
     }
 
     @Override
     public void onOffsetsChanged(float v, float v1, float v2, float v3, int i, int i1) {
-      // Unused, but needs to be declared to adhere to the IRajawaliSurfaceRenderer interface.
+        // Unused, but needs to be declared to adhere to the IRajawaliSurfaceRenderer interface.
     }
 
     @Override
     public void onTouchEvent(MotionEvent motionEvent) {
-      // Unused, but needs to be declared to adhere to the IRajawaliSurfaceRenderer interface.
+        // Unused, but needs to be declared to adhere to the IRajawaliSurfaceRenderer interface.
     }
 }

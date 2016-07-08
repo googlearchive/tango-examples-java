@@ -27,9 +27,6 @@ import org.rajawali3d.math.Quaternion;
 import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.renderer.RajawaliRenderer;
 
-import com.projecttango.rajawali.DeviceExtrinsics;
-import com.projecttango.rajawali.Pose;
-import com.projecttango.rajawali.ScenePoseCalculator;
 import com.projecttango.rajawali.TouchViewHandler;
 import com.projecttango.rajawali.renderables.FrustumAxes;
 import com.projecttango.rajawali.renderables.Grid;
@@ -46,7 +43,7 @@ public class PointCloudRajawaliRenderer extends RajawaliRenderer {
 
     private TouchViewHandler mTouchViewHandler;
 
-    // Objects rendered in the scene
+    // Objects rendered in the scene.
     private PointCloud mPointCloud;
     private FrustumAxes mFrustumAxes;
     private Grid mGrid;
