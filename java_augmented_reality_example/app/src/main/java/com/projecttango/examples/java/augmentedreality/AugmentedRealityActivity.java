@@ -122,6 +122,8 @@ public class AugmentedRealityActivity extends Activity {
                     }
                     try {
                         mTango.connect(mConfig);
+                        mIntrinsics = mTango.getCameraIntrinsics(
+                                TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
                         mIsConnected = true;
                     } catch (TangoOutOfDateException e) {
                         Log.e(TAG, getString(R.string.exception_out_of_date), e);
@@ -129,16 +131,6 @@ public class AugmentedRealityActivity extends Activity {
                         Log.e(TAG, getString(R.string.exception_tango_error), e);
                     }
                 }
-
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        synchronized (AugmentedRealityActivity.this) {
-                            mIntrinsics = mTango.getCameraIntrinsics(
-                                    TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
-                        }
-                    }
-                });
             }
         });
     }
