@@ -20,8 +20,10 @@ import com.google.atap.tangoservice.TangoPoseData;
 
 import android.content.Context;
 
+import android.graphics.Bitmap;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.widget.Toast;
 
 import org.rajawali3d.Object3D;
 import org.rajawali3d.lights.DirectionalLight;
@@ -37,11 +39,14 @@ import org.rajawali3d.primitives.Cube;
 import org.rajawali3d.primitives.ScreenQuad;
 import org.rajawali3d.renderer.RajawaliRenderer;
 
+import javax.microedition.khronos.opengles.GL;
 import javax.microedition.khronos.opengles.GL10;
 
 import com.projecttango.rajawali.DeviceExtrinsics;
 import com.projecttango.rajawali.Pose;
 import com.projecttango.rajawali.ScenePoseCalculator;
+
+import java.io.File;
 
 /**
  * Very simple example augmented reality renderer which displays a cube fixed in place.
@@ -59,6 +64,28 @@ public class PlaneFittingRenderer extends RajawaliRenderer {
     private Object3D mObject;
     private Matrix4 mObjectTransform;
     private boolean mObjectPoseUpdated = false;
+
+    private boolean mTakeScreenshot = false;
+    private int mScreenWidth = 1920;
+    private int mScreenHeight = 1080;
+    private GL10 mGlContext;
+
+    private SaveBitmapToFileAsync.OnBitmapSaveListener mOnScreenShotSavedListener =
+            new SaveBitmapToFileAsync.OnBitmapSaveListener() {
+                @Override
+                public void onBitmapSaved(boolean success, String filePath) {
+                    if (success) {
+                        String[] filePaths = new String[1];
+                        filePaths[0] = filePath;
+                        ScreenshotHelper.
+                                triggerMediaScan(getContext(), filePaths);
+                    } else {
+                        Toast.makeText(getContext(), "screenshot saving error", Toast.LENGTH_SHORT);
+                    }
+                    Toast.makeText(getContext(), "save screenshot", Toast.LENGTH_SHORT);
+                }
+            };
+
 
     public PlaneFittingRenderer(Context context) {
         super(context);
@@ -114,6 +141,16 @@ public class PlaneFittingRenderer extends RajawaliRenderer {
 
     @Override
     protected void onRender(long elapsedRealTime, double deltaTime) {
+        if (mTakeScreenshot)
+        {
+            mTakeScreenshot = false;
+            Bitmap screenshot = ScreenshotHelper.getBitmap(0, 0,
+                    mScreenWidth, mScreenHeight, mGlContext);
+            SaveBitmapToFileAsync saveTask = new SaveBitmapToFileAsync
+                    (mOnScreenShotSavedListener);
+            saveTask.execute(screenshot);
+        }
+
         // Update the AR object if necessary
         // Synchronize against concurrent access with the setter below.
         synchronized (this) {
@@ -174,10 +211,17 @@ public class PlaneFittingRenderer extends RajawaliRenderer {
     public void onRenderSurfaceSizeChanged(GL10 gl, int width, int height) {
         super.onRenderSurfaceSizeChanged(gl, width, height);
         mSceneCameraConfigured = false;
+        mScreenWidth = width;
+        mScreenHeight = height;
+        mGlContext = gl;
     }
 
     public boolean isSceneCameraConfigured() {
         return mSceneCameraConfigured;
+    }
+
+    public void takeScreenshot() {
+        mTakeScreenshot = true;
     }
 
     /**

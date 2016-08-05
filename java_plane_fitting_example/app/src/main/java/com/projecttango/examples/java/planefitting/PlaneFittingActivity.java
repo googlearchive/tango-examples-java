@@ -91,12 +91,13 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mSurfaceView = new RajawaliSurfaceView(this);
+        setContentView(R.layout.activity_main);
+//        mSurfaceView = new RajawaliSurfaceView(this);
+        mSurfaceView = (RajawaliSurfaceView) findViewById(R.id.gl_surface_view);
         mRenderer = new PlaneFittingRenderer(this);
         mSurfaceView.setSurfaceRenderer(mRenderer);
         mSurfaceView.setOnTouchListener(this);
         mPointCloudManager = new TangoPointCloudManager();
-        setContentView(mSurfaceView);
     }
 
     @Override
@@ -144,6 +145,10 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
                 }
             });
         }
+    }
+
+    public void takeScreenshot(View v) {
+        mRenderer.takeScreenshot();
     }
 
     /**
