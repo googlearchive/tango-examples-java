@@ -39,10 +39,6 @@ import java.util.Stack;
 
 import javax.microedition.khronos.opengles.GL10;
 
-import com.projecttango.rajawali.DeviceExtrinsics;
-import com.projecttango.rajawali.Pose;
-import com.projecttango.rajawali.ScenePoseCalculator;
-
 /**
  * Very simple example point to point renderer which displays a line fixed in place.
  * Whenever the user clicks on the screen, the line is re-rendered with an endpoint
@@ -165,11 +161,8 @@ public class PointToPointRenderer extends RajawaliRenderer {
      * Sets the projection matrix for the scen camera to match the parameters of the color camera,
      * provided by the {@code TangoCameraIntrinsics}.
      */
-    public void setProjectionMatrix(TangoCameraIntrinsics intrinsics) {
-        Matrix4 projectionMatrix = ScenePoseCalculator.calculateProjectionMatrix(
-                intrinsics.width, intrinsics.height,
-                intrinsics.fx, intrinsics.fy, intrinsics.cx, intrinsics.cy);
-        getCurrentCamera().setProjectionMatrix(projectionMatrix);
+    public void setProjectionMatrix(float[] matrixFloats) {
+        getCurrentCamera().setProjectionMatrix(new Matrix4(matrixFloats));
     }
 
     @Override

@@ -45,10 +45,6 @@ import org.rajawali3d.renderer.RajawaliRenderer;
 
 import javax.microedition.khronos.opengles.GL10;
 
-import com.projecttango.rajawali.DeviceExtrinsics;
-import com.projecttango.rajawali.Pose;
-import com.projecttango.rajawali.ScenePoseCalculator;
-
 /**
  * Renderer that implements a basic augmented reality scene using Rajawali.
  * It creates a scene with a background quad taking the whole screen, where the color camera is
@@ -197,14 +193,11 @@ public class AugmentedRealityRenderer extends RajawaliRenderer {
     }
 
     /**
-     * Sets the projection matrix for the scen camera to match the parameters of the color camera,
+     * Sets the projection matrix for the scene camera to match the parameters of the color camera,
      * provided by the {@code TangoCameraIntrinsics}.
      */
-    public void setProjectionMatrix(TangoCameraIntrinsics intrinsics) {
-        Matrix4 projectionMatrix = ScenePoseCalculator.calculateProjectionMatrix(
-                intrinsics.width, intrinsics.height,
-                intrinsics.fx, intrinsics.fy, intrinsics.cx, intrinsics.cy);
-        getCurrentCamera().setProjectionMatrix(projectionMatrix);
+    public void setProjectionMatrix(float[] matrixFloats) {
+        getCurrentCamera().setProjectionMatrix(new Matrix4(matrixFloats));
     }
 
     @Override
