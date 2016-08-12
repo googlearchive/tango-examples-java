@@ -36,15 +36,12 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
 
-import org.rajawali3d.math.Matrix4;
-import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.scene.ASceneFrameCallback;
 import org.rajawali3d.surface.RajawaliSurfaceView;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.projecttango.rajawali.ScenePoseCalculator;
 import com.projecttango.tangosupport.TangoPointCloudManager;
 import com.projecttango.tangosupport.TangoSupport;
 import com.projecttango.tangosupport.TangoSupport.IntersectionPointPlaneModelPair;
@@ -158,6 +155,13 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
         config.putBoolean(TangoConfig.KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION, true);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_COLORCAMERA, true);
+
+        // Drift correction allows motion tracking to recover after it loses tracking.
+        //
+        // The drift corrected pose is is available through the frame pair with
+        // base frame AREA_DESCRIPTION and target frame DEVICE.
+        config.putBoolean(TangoConfig.KEY_BOOLEAN_DRIFT_CORRECTION, true);
+
         mTango.connect(config);
 
         // No need to add any coordinate frame pairs since we are not
@@ -209,50 +213,71 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
                 // onRender callbacks had a chance to run and before scene objects are rendered
                 // into the scene.
 
-                synchronized (PlaneFittingActivity.this) {
-                    // Don't execute any tango API actions if we're not connected to the service
-                    if (!mIsConnected) {
-                        return;
-                    }
+                try {
+                    synchronized (PlaneFittingActivity.this) {
+                        // Don't execute any tango API actions if we're not connected to the service
+                        if (!mIsConnected) {
+                            return;
+                        }
 
-                    // Set-up scene camera projection to match RGB camera intrinsics
-                    if (!mRenderer.isSceneCameraConfigured()) {
-                        mRenderer.setProjectionMatrix(mIntrinsics);
-                    }
+                        // Set-up scene camera projection to match RGB camera intrinsics
+                        if (!mRenderer.isSceneCameraConfigured()) {
+                            mRenderer.setProjectionMatrix(
+                                    projectionMatrixFromCameraIntrinsics(mIntrinsics));
+                        }
 
-                    // Connect the camera texture to the OpenGL Texture if necessary
-                    // NOTE: When the OpenGL context is recycled, Rajawali may re-generate the
-                    // texture with a different ID.
-                    if (mConnectedTextureIdGlThread != mRenderer.getTextureId()) {
-                        mTango.connectTextureId(TangoCameraIntrinsics.TANGO_CAMERA_COLOR,
-                                mRenderer.getTextureId());
-                        mConnectedTextureIdGlThread = mRenderer.getTextureId();
-                        Log.d(TAG, "connected to texture id: " + mRenderer.getTextureId());
-                    }
+                        // Connect the camera texture to the OpenGL Texture if necessary
+                        // NOTE: When the OpenGL context is recycled, Rajawali may re-generate the
+                        // texture with a different ID.
+                        if (mConnectedTextureIdGlThread != mRenderer.getTextureId()) {
+                            mTango.connectTextureId(TangoCameraIntrinsics.TANGO_CAMERA_COLOR,
+                                    mRenderer.getTextureId());
+                            mConnectedTextureIdGlThread = mRenderer.getTextureId();
+                            Log.d(TAG, "connected to texture id: " + mRenderer.getTextureId());
+                        }
 
-                    // If there is a new RGB camera frame available, update the texture with it
-                    if (mIsFrameAvailableTangoThread.compareAndSet(true, false)) {
-                        mRgbTimestampGlThread =
-                                mTango.updateTexture(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
-                    }
+                        // If there is a new RGB camera frame available, update the texture with it
+                        if (mIsFrameAvailableTangoThread.compareAndSet(true, false)) {
+                            mRgbTimestampGlThread =
+                                    mTango.updateTexture(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
+                        }
 
-                    if (mRgbTimestampGlThread > mCameraPoseTimestamp) {
-                        // Calculate the camera color pose at the camera frame update time in
-                        // OpenGL engine.
-                        TangoPoseData lastFramePose = TangoSupport.getPoseAtTime(
-                                mRgbTimestampGlThread,
-                                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
-                                TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                                TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL, 0);
-                        if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
-                            // Update the camera pose from the renderer
-                            mRenderer.updateRenderCameraPose(lastFramePose);
-                            mCameraPoseTimestamp = lastFramePose.timestamp;
-                        } else {
-                            Log.w(TAG, "Can't get device pose at time: " +
-                                    mRgbTimestampGlThread);
+                        if (mRgbTimestampGlThread > mCameraPoseTimestamp) {
+                            // Calculate the camera color pose at the camera frame update time in
+                            // OpenGL engine.
+                            //
+                            // When drift correction mode is enabled in config file, we need
+                            // to query the device with respect to Area Description pose in
+                            // order to use the drift corrected pose.
+                            //
+                            // Note that if you don't want to use the drift corrected pose, the
+                            // normal device with respect to start of service pose is still
+                            // available.
+                            TangoPoseData lastFramePose = TangoSupport.getPoseAtTime(
+                                    mRgbTimestampGlThread,
+                                    TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+                                    TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
+                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL, 0);
+                            if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
+                                // Update the camera pose from the renderer
+                                mRenderer.updateRenderCameraPose(lastFramePose);
+                                mCameraPoseTimestamp = lastFramePose.timestamp;
+                            } else {
+                                // When the pose status is not valid, it indicates the tracking has
+                                // been lost. In this case, we simply stop rendering.
+                                //
+                                // This is also the place to display UI to suggest the user walk
+                                // to recover tracking.
+                                Log.w(TAG, "Can't get device pose at time: " +
+                                        mRgbTimestampGlThread);
+                            }
                         }
                     }
+                    // Avoid crashing the application due to unhandled exceptions
+                } catch (TangoErrorException e) {
+                    Log.e(TAG, "Tango API call error within the OpenGL render thread", e);
+                } catch (Throwable t) {
+                    Log.e(TAG, "Exception on the OpenGL thread", t);
                 }
             }
 
@@ -271,6 +296,32 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
                 return true;
             }
         });
+    }
+
+    /**
+     * Use Tango camera intrinsics to calculate the projection Matrix for the Rajawali scene.
+     */
+    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics) {
+        // Uses frustumM to create a projection matrix taking into account calibrated camera
+        // intrinsic parameter.
+        // Reference: http://ksimek.github.io/2013/06/03/calibrated_cameras_in_opengl/
+        float near = 0.1f;
+        float far = 100;
+
+        float xScale = near / (float) intrinsics.fx;
+        float yScale = near / (float) intrinsics.fy;
+        float xOffset = (float) (intrinsics.cx - (intrinsics.width / 2.0)) * xScale;
+        // Color camera's coordinates has y pointing downwards so we negate this term.
+        float yOffset = (float) -(intrinsics.cy - (intrinsics.height / 2.0)) * yScale;
+
+        float m[] = new float[16];
+        Matrix.frustumM(m, 0,
+                xScale * (float) -intrinsics.width / 2.0f - xOffset,
+                xScale * (float) intrinsics.width / 2.0f - xOffset,
+                yScale * (float) -intrinsics.height / 2.0f - yOffset,
+                yScale * (float) intrinsics.height / 2.0f - yOffset,
+                near, far);
+        return m;
     }
 
     @Override
@@ -337,7 +388,7 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
         // Get the transform from depth camera to OpenGL world at the timestamp of the cloud.
         TangoSupport.TangoMatrixTransformData transform =
                 TangoSupport.getMatrixTransformAtTime(xyzIj.timestamp,
-                        TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+                        TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                         TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
                         TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
                         TangoSupport.TANGO_SUPPORT_ENGINE_TANGO);

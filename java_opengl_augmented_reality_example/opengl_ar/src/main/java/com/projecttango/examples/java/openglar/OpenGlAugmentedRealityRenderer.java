@@ -109,16 +109,12 @@ public class OpenGlAugmentedRealityRenderer implements GLSurfaceView.Renderer {
     }
 
     /**
-     * Create the Projection matrix matching the Tango RGB camera in order to be able to do
+     * Set the Projection matrix matching the Tango RGB camera in order to be able to do
      * Augmented Reality.
      */
-    public void setProjectionMatrix(TangoCameraIntrinsics intrinsics) {
-        float[] projectionMatrix = new float[16];
-        double vFov = 2 * Math.atan(intrinsics.height / (2 * intrinsics.fy));
-        Matrix.perspectiveM(projectionMatrix, 0, (float) Math.toDegrees(vFov), (float)
-                intrinsics.width / intrinsics.height, 0.1f, 1000);
-        mEarthSphere.setProjectionMatrix(projectionMatrix);
-        mMoonSphere.setProjectionMatrix(projectionMatrix);
+    public void setProjectionMatrix(float[] matrixFloats) {
+        mEarthSphere.setProjectionMatrix(matrixFloats);
+        mMoonSphere.setProjectionMatrix(matrixFloats);
     }
 
     /**

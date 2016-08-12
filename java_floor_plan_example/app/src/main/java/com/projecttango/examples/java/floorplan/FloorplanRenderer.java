@@ -46,11 +46,6 @@ import java.util.Stack;
 
 import javax.microedition.khronos.opengles.GL10;
 
-import com.projecttango.rajawali.Pose;
-import com.projecttango.rajawali.ScenePoseCalculator;
-import com.projecttango.tangosupport.TangoSupport;
-
-
 /**
  * Very simple augmented reality example which displays cubes fixed in place for every
  * WallMeasurement and a continuous line for the perimeter of the floor plan.
@@ -72,6 +67,18 @@ public class FloorplanRenderer extends RajawaliRenderer {
     // Augmented reality related fields
     private ATexture mTangoCameraTexture;
     private boolean mSceneCameraConfigured;
+
+    /**
+     * Small utility class to hold a position and orientation pair.
+     */
+    class Pose {
+        public Pose(Vector3 p, Quaternion q) {
+            position = p;
+            orientation = q;
+        }
+        public Quaternion orientation;
+        public Vector3 position;
+    }
 
     public FloorplanRenderer(Context context) {
         super(context);
@@ -136,8 +143,8 @@ public class FloorplanRenderer extends RajawaliRenderer {
                     object3D.setDoubleSided(true);
                     object3D.rotate(Vector3.Axis.X, 180);
                     // Place the 3D object in the location of the detected plane.
-                    object3D.setPosition(pose.getPosition());
-                    object3D.rotate(pose.getOrientation());
+                    object3D.setPosition(pose.position);
+                    object3D.rotate(pose.orientation);
 
                     getCurrentScene().addChild(object3D);
                     mMeasurementObjectList.add(object3D);
@@ -207,14 +214,11 @@ public class FloorplanRenderer extends RajawaliRenderer {
     }
 
     /**
-     * Sets the projection matrix for the scen camera to match the parameters of the color camera,
+     * Sets the projection matrix for the scene camera to match the parameters of the color camera,
      * provided by the {@code TangoCameraIntrinsics}.
      */
-    public void setProjectionMatrix(TangoCameraIntrinsics intrinsics) {
-        Matrix4 projectionMatrix = ScenePoseCalculator.calculateProjectionMatrix(
-                intrinsics.width, intrinsics.height,
-                intrinsics.fx, intrinsics.fy, intrinsics.cx, intrinsics.cy);
-        getCurrentCamera().setProjectionMatrix(projectionMatrix);
+    public void setProjectionMatrix(float[] matrix) {
+        getCurrentCamera().setProjectionMatrix(new Matrix4(matrix));
     }
 
     @Override

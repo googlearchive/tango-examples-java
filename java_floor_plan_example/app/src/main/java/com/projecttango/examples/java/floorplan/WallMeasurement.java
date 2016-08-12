@@ -17,11 +17,6 @@ package com.projecttango.examples.java.floorplan;
 
 import android.opengl.Matrix;
 
-import org.rajawali3d.math.Matrix4;
-import org.rajawali3d.math.vector.Vector3;
-
-import com.projecttango.rajawali.ScenePoseCalculator;
-
 /**
  * Representation of wall as a measured plane.
  */

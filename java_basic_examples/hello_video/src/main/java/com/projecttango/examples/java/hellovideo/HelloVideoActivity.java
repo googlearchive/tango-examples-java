@@ -234,47 +234,53 @@ public class HelloVideoActivity extends Activity {
                     return;
                 }
 
-                // Synchronize against concurrently disconnecting the service triggered from the
-                // UI thread.
-                synchronized (HelloVideoActivity.this) {
-                    // Connect the Tango SDK to the OpenGL texture ID where we are going to
-                    // render the camera.
-                    // NOTE: This must be done after both the texture is generated and the Tango
-                    // service is connected.
-                    if (mConnectedTextureIdGlThread == INVALID_TEXTURE_ID) {
-                        mConnectedTextureIdGlThread = mRenderer.getTextureId();
-                        mTango.connectTextureId(TangoCameraIntrinsics.TANGO_CAMERA_COLOR,
-                                mRenderer.getTextureId());
-                        Log.d(TAG, "connected to texture id: " + mRenderer.getTextureId());
+                try {
+                    // Synchronize against concurrently disconnecting the service triggered from the
+                    // UI thread.
+                    synchronized (HelloVideoActivity.this) {
+                        // Connect the Tango SDK to the OpenGL texture ID where we are going to
+                        // render the camera.
+                        // NOTE: This must be done after both the texture is generated and the Tango
+                        // service is connected.
+                        if (mConnectedTextureIdGlThread == INVALID_TEXTURE_ID) {
+                            mConnectedTextureIdGlThread = mRenderer.getTextureId();
+                            mTango.connectTextureId(TangoCameraIntrinsics.TANGO_CAMERA_COLOR,
+                                    mRenderer.getTextureId());
+                            Log.d(TAG, "connected to texture id: " + mRenderer.getTextureId());
+                        }
+
+                        // If there is a new RGB camera frame available, update the texture and
+                        // scene camera pose.
+                        if (mIsFrameAvailableTangoThread.compareAndSet(true, false)) {
+                            double rgbTimestamp =
+                                    mTango.updateTexture(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
+                            // {@code rgbTimestamp} contains the exact timestamp at which the
+                            // rendered RGB frame was acquired.
+
+                            // In order to see more details on how to use this timestamp to modify
+                            // the scene camera and achieve an augmented reality effect, please
+                            // refer to java_augmented_reality_example and/or
+                            // java_augmented_reality_opengl_example projects.
+
+                            // Log and display timestamp for informational purposes
+                            Log.d(TAG, "Frame updated. Timestamp: " + rgbTimestamp);
+
+                            // Updating the UI needs to be in a separate thread. Do it through a
+                            // final local variable to avoid concurrency issues.
+                            final String timestampText = String.format(sTimestampFormat,
+                                    rgbTimestamp);
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    mTimestampTextView.setText(timestampText);
+                                }
+                            });
+                        }
                     }
-
-                    // If there is a new RGB camera frame available, update the texture and
-                    // scene camera pose.
-                    if (mIsFrameAvailableTangoThread.compareAndSet(true, false)) {
-                        double rgbTimestamp =
-                                mTango.updateTexture(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
-                        // {@code rgbTimestamp} contains the exact timestamp at which the
-                        // rendered RGB frame was acquired.
-
-                        // In order to see more details on how to use this timestamp to modify
-                        // the scene camera and achieve an augmented reality effect, please
-                        // refer to java_augmented_reality_example and/or
-                        // java_augmented_reality_opengl_example projects.
-
-                        // Log and display timestamp for informational purposes
-                        Log.d(TAG, "Frame updated. Timestamp: " + rgbTimestamp);
-
-                        // Updating the UI needs to be in a separate thread. Do it through a
-                        // final local variable to avoid concurrency issues.
-                        final String timestampText = String.format(sTimestampFormat,
-                                rgbTimestamp);
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                mTimestampTextView.setText(timestampText);
-                            }
-                        });
-                    }
+                } catch (TangoErrorException e) {
+                    Log.e(TAG, "Tango API call error within the OpenGL thread", e);
+                } catch (Throwable t) {
+                    Log.e(TAG, "Exception on the OpenGL thread", t);
                 }
             }
         });

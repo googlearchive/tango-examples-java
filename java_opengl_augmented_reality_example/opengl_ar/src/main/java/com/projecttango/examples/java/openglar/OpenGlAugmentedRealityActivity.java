@@ -182,9 +182,17 @@ public class OpenGlAugmentedRealityActivity extends Activity {
         // low latency IMU integration.
         TangoConfig config = tango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_COLORCAMERA, true);
+
         // NOTE: Low latency integration is necessary to achieve a precise alignment of
         // virtual objects with the RBG image and produce a good AR effect.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION, true);
+
+        // Drift correction allows motion tracking to recover after it loses tracking.
+        //
+        // The drift corrected pose is is available through the frame pair with
+        // base frame AREA_DESCRIPTION and target frame DEVICE.
+        config.putBoolean(TangoConfig.KEY_BOOLEAN_DRIFT_CORRECTION, true);
+
         return config;
     }
 
@@ -252,78 +260,104 @@ public class OpenGlAugmentedRealityActivity extends Activity {
                     public void preRender() {
                         // This is the work that you would do on your main OpenGL render thread.
 
-                        // We need to be careful to not run any Tango-dependent code in the
-                        // OpenGL thread unless we know the Tango service to be properly set-up
-                        // and connected.
-                        if (!mIsConnected) {
-                            return;
-                        }
+                        try {
+                            // Synchronize against concurrently disconnecting the service triggered
+                            // from the UI thread.
+                            synchronized (OpenGlAugmentedRealityActivity.this) {
+                                // We need to be careful to not run any Tango-dependent code in the
+                                // OpenGL thread unless we know the Tango service to be properly
+                                // set-up and connected.
+                                if (!mIsConnected) {
+                                    return;
+                                }
 
-                        // Synchronize against concurrently disconnecting the service triggered
-                        // from the UI thread.
-                        synchronized (OpenGlAugmentedRealityActivity.this) {
-                            // Connect the Tango SDK to the OpenGL texture ID where we are
-                            // going to render the camera.
-                            // NOTE: This must be done after both the texture is generated
-                            // and the Tango service is connected.
-                            if (mConnectedTextureIdGlThread != mRenderer.getTextureId()) {
-                                mTango.connectTextureId(TangoCameraIntrinsics.TANGO_CAMERA_COLOR,
-                                        mRenderer.getTextureId());
-                                mConnectedTextureIdGlThread = mRenderer.getTextureId();
-                                Log.d(TAG, "connected to texture id: " + mRenderer.getTextureId());
-                                mRenderer.setProjectionMatrix(mIntrinsics);
-                            }
-                            // If there is a new RGB camera frame available, update the texture and
-                            // scene camera pose.
-                            if (mIsFrameAvailableTangoThread.compareAndSet(true, false)) {
-                                // {@code mRgbTimestampGlThread} contains the exact timestamp at
-                                // which the rendered RGB frame was acquired.
-                                mRgbTimestampGlThread =
-                                        mTango.updateTexture(TangoCameraIntrinsics.
-                                                TANGO_CAMERA_COLOR);
+                                // Connect the Tango SDK to the OpenGL texture ID where we are
+                                // going to render the camera.
+                                // NOTE: This must be done after both the texture is generated
+                                // and the Tango service is connected.
+                                if (mConnectedTextureIdGlThread != mRenderer.getTextureId()) {
+                                    mTango.connectTextureId(
+                                            TangoCameraIntrinsics.TANGO_CAMERA_COLOR,
+                                            mRenderer.getTextureId());
+                                    mConnectedTextureIdGlThread = mRenderer.getTextureId();
+                                    Log.d(TAG, "connected to texture id: " +
+                                            mRenderer.getTextureId());
 
-                                // Get the transform from color camera to Start of Service
-                                // at the timestamp of the RGB image in OpenGL coordinates.
-                                TangoSupport.TangoMatrixTransformData transform =
-                                        TangoSupport.getMatrixTransformAtTime(mRgbTimestampGlThread,
-                                                TangoPoseData
-                                                        .COORDINATE_FRAME_START_OF_SERVICE,
-                                                TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                                                TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                                TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL);
-                                if (transform.statusCode == TangoPoseData.POSE_VALID) {
+                                    // Set-up scene camera projection to match RGB camera intrinsics
+                                    mRenderer.setProjectionMatrix(
+                                            projectionMatrixFromCameraIntrinsics(mIntrinsics));
+                                }
+                                // If there is a new RGB camera frame available, update the texture
+                                // and scene camera pose.
+                                if (mIsFrameAvailableTangoThread.compareAndSet(true, false)) {
+                                    // {@code mRgbTimestampGlThread} contains the exact timestamp at
+                                    // which the rendered RGB frame was acquired.
+                                    mRgbTimestampGlThread =
+                                            mTango.updateTexture(TangoCameraIntrinsics.
+                                                    TANGO_CAMERA_COLOR);
 
-                                    mRenderer.updateViewMatrix(transform.matrix);
-                                    double deltaTime = mRgbTimestampGlThread
-                                            - lastRenderedTimeStamp;
-                                    lastRenderedTimeStamp = mRgbTimestampGlThread;
+                                    // Get the transform from color camera to Start of Service
+                                    // at the timestamp of the RGB image in OpenGL coordinates.
+                                    //
+                                    // When drift correction mode is enabled in config file, we need
+                                    // to query the device with respect to Area Description pose in
+                                    // order to use the drift corrected pose.
+                                    //
+                                    // Note that if you don't want to use the drift corrected pose,
+                                    // the normal device with respect to start of service pose is
+                                    // still available.
+                                    TangoSupport.TangoMatrixTransformData transform =
+                                            TangoSupport.getMatrixTransformAtTime(
+                                                    mRgbTimestampGlThread,
+                                                    TangoPoseData
+                                                            .COORDINATE_FRAME_AREA_DESCRIPTION,
+                                                    TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
+                                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL);
+                                    if (transform.statusCode == TangoPoseData.POSE_VALID) {
 
-                                    // Set the earth rotation around itself.
-                                    float[] openGlTEarth = new float[16];
-                                    Matrix.rotateM(mEarthMoonCenterTEarth, 0, (float)
-                                            deltaTime * 360 / 10, 0, 1, 0);
-                                    Matrix.multiplyMM(openGlTEarth, 0, mOpenGLTEarthMoonCenter,
-                                            0, mEarthMoonCenterTEarth, 0);
+                                        mRenderer.updateViewMatrix(transform.matrix);
+                                        double deltaTime = mRgbTimestampGlThread
+                                                - lastRenderedTimeStamp;
+                                        lastRenderedTimeStamp = mRgbTimestampGlThread;
 
-                                    // Set moon rotation around the earth and moon center.
-                                    float[] openGlTMoon = new float[16];
-                                    Matrix.rotateM(mEarthMoonCenterTMoonRotation, 0, (float)
-                                            deltaTime * 360 / 50, 0, 1, 0);
-                                    float[] mEarthTMoon = new float[16];
-                                    Matrix.multiplyMM(mEarthTMoon, 0,
-                                            mEarthMoonCenterTMoonRotation, 0,
-                                            mEarthMoonCenterTTranslation, 0);
-                                    Matrix.multiplyMM(openGlTMoon, 0,
-                                            mOpenGLTEarthMoonCenter,
-                                            0, mEarthTMoon, 0);
+                                        // Set the earth rotation around itself.
+                                        float[] openGlTEarth = new float[16];
+                                        Matrix.rotateM(mEarthMoonCenterTEarth, 0, (float)
+                                                deltaTime * 360 / 10, 0, 1, 0);
+                                        Matrix.multiplyMM(openGlTEarth, 0, mOpenGLTEarthMoonCenter,
+                                                0, mEarthMoonCenterTEarth, 0);
 
-                                    mRenderer.setEarthTransform(openGlTEarth);
-                                    mRenderer.setMoonTransform(openGlTMoon);
-                                } else {
-                                    Log.w(TAG, "Could not get a valid transform at time " +
-                                            mRgbTimestampGlThread);
+                                        // Set moon rotation around the earth and moon center.
+                                        float[] openGlTMoon = new float[16];
+                                        Matrix.rotateM(mEarthMoonCenterTMoonRotation, 0, (float)
+                                                deltaTime * 360 / 50, 0, 1, 0);
+                                        float[] mEarthTMoon = new float[16];
+                                        Matrix.multiplyMM(mEarthTMoon, 0,
+                                                mEarthMoonCenterTMoonRotation, 0,
+                                                mEarthMoonCenterTTranslation, 0);
+                                        Matrix.multiplyMM(openGlTMoon, 0,
+                                                mOpenGLTEarthMoonCenter,
+                                                0, mEarthTMoon, 0);
+
+                                        mRenderer.setEarthTransform(openGlTEarth);
+                                        mRenderer.setMoonTransform(openGlTMoon);
+                                    } else {
+                                        // When the pose status is not valid, it indicates tracking
+                                        // has been lost. In this case, we simply stop rendering.
+                                        //
+                                        // This is also the place to display UI to suggest the user
+                                        // walk to recover tracking.
+                                        Log.w(TAG, "Could not get a valid transform at time " +
+                                                mRgbTimestampGlThread);
+                                    }
                                 }
                             }
+                            // Avoid crashing the application due to unhandled exceptions
+                        } catch (TangoErrorException e) {
+                            Log.e(TAG, "Tango API call error within the OpenGL render thread", e);
+                        } catch (Throwable t) {
+                            Log.e(TAG, "Exception on the OpenGL thread", t);
                         }
                     }
                 });
@@ -337,5 +371,31 @@ public class OpenGlAugmentedRealityActivity extends Activity {
         Matrix.translateM(mEarthMoonCenterTTranslation, 0, 0.5f, 0, 0);
 
         mSurfaceView.setRenderer(mRenderer);
+    }
+
+    /**
+     * Use Tango camera intrinsics to calculate the projection Matrix for the OpenGL scene.
+     */
+    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics) {
+        // Uses frustumM to create a projection matrix taking into account calibrated camera
+        // intrinsic parameter.
+        // Reference: http://ksimek.github.io/2013/06/03/calibrated_cameras_in_opengl/
+        float near = 0.1f;
+        float far = 100;
+
+        float xScale = near / (float) intrinsics.fx;
+        float yScale = near / (float) intrinsics.fy;
+        float xOffset = (float) (intrinsics.cx - (intrinsics.width / 2.0)) * xScale;
+        // Color camera's coordinates has y pointing downwards so we negate this term.
+        float yOffset = (float) -(intrinsics.cy - (intrinsics.height / 2.0)) * yScale;
+
+        float m[] = new float[16];
+        Matrix.frustumM(m, 0,
+                xScale * (float) -intrinsics.width / 2.0f - xOffset,
+                xScale * (float) intrinsics.width / 2.0f - xOffset,
+                yScale * (float) -intrinsics.height / 2.0f - yOffset,
+                yScale * (float) intrinsics.height / 2.0f - yOffset,
+                near, far);
+        return m;
     }
 }
