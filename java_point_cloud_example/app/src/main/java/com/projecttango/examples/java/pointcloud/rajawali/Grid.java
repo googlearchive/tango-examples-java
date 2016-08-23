@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.projecttango.rajawali.renderables;
+package com.projecttango.examples.java.pointcloud.rajawali;
 
 import android.opengl.GLES20;
 

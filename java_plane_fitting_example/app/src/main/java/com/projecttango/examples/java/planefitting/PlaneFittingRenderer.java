@@ -100,11 +100,10 @@ public class PlaneFittingRenderer extends RajawaliRenderer {
         material.enableLighting(true);
         material.setDiffuseMethod(new DiffuseMethod.Lambert());
 
-        // Build a Cube and place it initially in the origin.
+        // Build a Cube and place it initially three meters forward from the origin.
         mObject = new Cube(CUBE_SIDE_LENGTH);
         mObject.setMaterial(material);
         mObject.setPosition(0, 0, -3);
-        mObject.setRotation(Vector3.Axis.Z, 180);
         getCurrentScene().addChild(mObject);
     }
 
@@ -116,6 +115,8 @@ public class PlaneFittingRenderer extends RajawaliRenderer {
             if (mObjectPoseUpdated) {
                 // Place the 3D object in the location of the detected plane.
                 mObject.setPosition(mObjectTransform.getTranslation());
+                // Note that Rajawali uses left-hand convetion for Quaternions so we need to
+                // specify a quaternion with rotation in the opposite direction.
                 mObject.setOrientation(new Quaternion().fromMatrix(mObjectTransform).conjugate());
                 // Move it forward by half of the size of the cube to make it
                 // flush with the plane surface.

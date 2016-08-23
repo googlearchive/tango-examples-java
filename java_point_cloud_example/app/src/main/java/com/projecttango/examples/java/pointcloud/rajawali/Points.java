@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.projecttango.rajawali.renderables.primitives;
+package com.projecttango.examples.java.pointcloud.rajawali;
 
 import android.opengl.GLES10;
 import android.opengl.GLES20;
@@ -76,6 +76,7 @@ public class Points extends Object3D {
                 pointCount * 4);
     }
 
+    @Override
     public void preRender() {
         super.preRender();
         setDrawingMode(GLES20.GL_POINTS);

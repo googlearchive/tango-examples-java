@@ -566,12 +566,13 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
 
     /**
      * Calculates a transformation matrix based on a point, a normal and the up gravity vector.
-     * The coordinate frame of the target transformation will be Z forward, X left, Y up.
+     * The coordinate frame of the target transformation will a right handed system with Z+ in
+     * the direction of the normal and Y+ up.
      */
     private float[] matrixFromPointNormalUp(double[] point, double[] normal, float[] up) {
         float[] zAxis = new float[]{(float) normal[0], (float) normal[1], (float) normal[2]};
         normalize(zAxis);
-        float[] xAxis = crossProduct(zAxis, up);
+        float[] xAxis = crossProduct(up, zAxis);
         normalize(xAxis);
         float[] yAxis = crossProduct(zAxis, xAxis);
         normalize(yAxis);

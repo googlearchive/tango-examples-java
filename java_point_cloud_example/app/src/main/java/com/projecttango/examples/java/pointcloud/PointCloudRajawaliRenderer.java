@@ -27,11 +27,9 @@ import org.rajawali3d.math.Quaternion;
 import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.renderer.RajawaliRenderer;
 
-import com.projecttango.rajawali.TouchViewHandler;
-import com.projecttango.rajawali.renderables.FrustumAxes;
-import com.projecttango.rajawali.renderables.Grid;
-import com.projecttango.rajawali.renderables.PointCloud;
-
+import com.projecttango.examples.java.pointcloud.rajawali.FrustumAxes;
+import com.projecttango.examples.java.pointcloud.rajawali.Grid;
+import com.projecttango.examples.java.pointcloud.rajawali.PointCloud;
 /**
  * Renderer for Point Cloud data.
  */

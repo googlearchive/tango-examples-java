@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Google Inc. All Rights Reserved.
+ * Copyright 2014 Google Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,19 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package com.projecttango.examples.java.helloareadescription;
-
 /**
- * Contains an ADF Name and its UUID.
+ * A sample application to show hwo to get Point Cloud Data from Project Tango API
+ * and display in world coordinates of Opengl ES2.0.
  */
-class AdfData {
-    public final String uuid;
-    public final String name;
-
-    public AdfData(String uuid, String name) {
-        this.uuid = uuid;
-        this.name = name;
-    }
-}
-
+package com.projecttango.examples.java.pointcloud.rajawali;
