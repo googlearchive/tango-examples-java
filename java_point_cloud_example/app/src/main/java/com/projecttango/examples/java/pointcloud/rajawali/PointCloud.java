@@ -13,15 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.projecttango.rajawali.renderables;
+package com.projecttango.examples.java.pointcloud.rajawali;
 
 import android.graphics.Color;
 
 import org.rajawali3d.materials.Material;
 
 import java.nio.FloatBuffer;
-
-import com.projecttango.rajawali.renderables.primitives.Points;
 
 /**
  * Renders a point cloud using colors to indicate distance to the depth sensor.
@@ -44,6 +42,14 @@ public class PointCloud extends Points {
         Material m = new Material();
         m.useVertexColors(true);
         setMaterial(m);
+    }
+
+    /**
+     * Update the points and colors in the point cloud.
+     */
+    public void updateCloud(int pointCount, FloatBuffer pointBuffer) {
+        calculateColors(pointCount, pointBuffer);
+        updatePoints(pointCount, pointBuffer, mColorArray);
     }
 
     /**
@@ -82,13 +88,5 @@ public class PointCloud extends Points {
             mColorArray[i * 4 + 2] = Color.blue(color) / 255f;
             mColorArray[i * 4 + 3] = Color.alpha(color) / 255f;
         }
-    }
-
-    /**
-     * Update the points and colors in the point cloud.
-     */
-    public void updateCloud(int pointCount, FloatBuffer pointBuffer) {
-        calculateColors(pointCount, pointBuffer);
-        updatePoints(pointCount, pointBuffer, mColorArray);
     }
 }

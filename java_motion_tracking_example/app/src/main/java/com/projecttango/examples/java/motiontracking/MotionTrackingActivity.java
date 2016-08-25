@@ -29,7 +29,9 @@ import android.app.Activity;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Display;
 import android.view.Surface;
+import android.view.WindowManager;
 
 import org.rajawali3d.scene.ASceneFrameCallback;
 import org.rajawali3d.surface.RajawaliSurfaceView;
@@ -55,6 +57,8 @@ public class MotionTrackingActivity extends Activity {
 
     private AtomicBoolean mIsTangoPoseReady = new AtomicBoolean(false);
 
+    private int mCurrentDisplayOrientation = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -62,6 +66,13 @@ public class MotionTrackingActivity extends Activity {
         // OpenGL view where all of the graphics are drawn.
         mSurfaceView = (RajawaliSurfaceView) findViewById(R.id.gl_surface_view);
         mRenderer = new MotionTrackingRajawaliRenderer(this);
+        
+        // Get current display orientation, note that each time display orientation
+        // changes, the onCreate function will be called again.
+        WindowManager mWindowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        Display mDisplay = mWindowManager.getDefaultDisplay();
+        mCurrentDisplayOrientation = mDisplay.getOrientation();
+
         // Configure OpenGL renderer.
         setupRenderer();
     }
@@ -202,7 +213,7 @@ public class MotionTrackingActivity extends Activity {
                                         TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                         TangoPoseData.COORDINATE_FRAME_DEVICE,
                                         TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                        Surface.ROTATION_0);
+                                        mCurrentDisplayOrientation);
 
                         if (pose.statusCode == TangoPoseData.POSE_VALID) {
                             // Update the camera pose from the renderer
