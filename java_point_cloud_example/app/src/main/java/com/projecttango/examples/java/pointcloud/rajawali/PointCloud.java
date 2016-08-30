@@ -70,7 +70,7 @@ public class PointCloud extends Points {
      * Calculate the right color for each point in the point cloud.
      */
     private void calculateColors(int pointCount, FloatBuffer pointCloudBuffer) {
-        float[] points = new float[pointCount * 3];
+        float[] points = new float[pointCount * 4];
         pointCloudBuffer.rewind();
         pointCloudBuffer.get(points);
         pointCloudBuffer.rewind();
@@ -79,7 +79,7 @@ public class PointCloud extends Points {
         int colorIndex;
         float z;
         for (int i = 0; i < pointCount; i++) {
-            z = points[i * 3 + 2];
+            z = points[i * 4 + 2];
             colorIndex = (int) Math.min(z / CLOUD_MAX_Z * mPalette.length, mPalette.length - 1);
             colorIndex = Math.max(colorIndex, 0);
             color = mPalette[colorIndex];

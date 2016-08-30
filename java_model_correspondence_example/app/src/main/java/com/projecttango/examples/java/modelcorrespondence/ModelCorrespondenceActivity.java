@@ -25,6 +25,7 @@ import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoException;
 import com.google.atap.tangoservice.TangoOutOfDateException;
+import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
@@ -200,6 +201,7 @@ public class ModelCorrespondenceActivity extends Activity {
         // produce a good AR effect.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION, true);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
+        config.putInt(TangoConfig.KEY_INT_DEPTH_MODE, TangoConfig.TANGO_DEPTH_MODE_POINT_CLOUD);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_COLORCAMERA, true);
         mTango.connect(config);
 
@@ -226,8 +228,13 @@ public class ModelCorrespondenceActivity extends Activity {
 
             @Override
             public void onXyzIjAvailable(TangoXyzIjData xyzIj) {
+                // We are not using onXyzIjAvailable for this app.
+            }
+
+            @Override
+            public void onPointCloudAvailable(TangoPointCloudData pointCloud) {
                 // Save the cloud and point data for later use.
-                mPointCloudManager.updateXyzIj(xyzIj);
+                mPointCloudManager.updatePointCloud(pointCloud);
             }
 
             @Override
@@ -461,9 +468,9 @@ public class ModelCorrespondenceActivity extends Activity {
      * pointed at the location the crosshair is aiming.
      */
     private float[] doPointMeasurement(float u, float v, double rgbTimestamp) {
-        TangoXyzIjData xyzIj = mPointCloudManager.getLatestXyzIj();
+        TangoPointCloudData pointCloud = mPointCloudManager.getLatestPointCloud();
 
-        if (xyzIj == null) {
+        if (pointCloud == null) {
             return null;
         }
 
@@ -472,15 +479,15 @@ public class ModelCorrespondenceActivity extends Activity {
         // cloud was acquired.
         TangoPoseData colorTdepthPose = TangoSupport.calculateRelativePose(
                 rgbTimestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                xyzIj.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH);
+                pointCloud.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH);
 
         // Get depth point with the latest available point cloud data.
-        float[] point = TangoSupport.getDepthAtPointNearestNeighbor(xyzIj, mIntrinsics,
+        float[] point = TangoSupport.getDepthAtPointNearestNeighbor(pointCloud,
                 colorTdepthPose, u, v);
 
         // Get the transform from depth camera to OpenGL world at the timestamp of the cloud.
         TangoSupport.TangoMatrixTransformData transform =
-                TangoSupport.getMatrixTransformAtTime(xyzIj.timestamp,
+                TangoSupport.getMatrixTransformAtTime(pointCloud.timestamp,
                         TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                         TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
                         TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
@@ -496,7 +503,7 @@ public class ModelCorrespondenceActivity extends Activity {
 
             return openGlPoint;
         } else {
-            Log.w(TAG, "Can't get depth camera transform at time: " + xyzIj.timestamp);
+            Log.w(TAG, "Can't get depth camera transform at time: " + pointCloud.timestamp);
             return null;
         }
     }

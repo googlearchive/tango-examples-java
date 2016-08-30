@@ -25,6 +25,7 @@ import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoException;
 import com.google.atap.tangoservice.TangoOutOfDateException;
+import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
@@ -154,6 +155,7 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
         // virtual objects with the RBG image and produce a good AR effect.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION, true);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
+        config.putInt(TangoConfig.KEY_INT_DEPTH_MODE, TangoConfig.TANGO_DEPTH_MODE_POINT_CLOUD);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_COLORCAMERA, true);
 
         // Drift correction allows motion tracking to recover after it loses tracking.
@@ -186,8 +188,13 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
 
             @Override
             public void onXyzIjAvailable(TangoXyzIjData xyzIj) {
+                // We are not using onXyzIjAvailable for this app.
+            }
+
+            @Override
+            public void onPointCloudAvailable(TangoPointCloudData pointCloud) {
                 // Save the cloud and point data for later use.
-                mPointCloudManager.updateXyzIj(xyzIj);
+                mPointCloudManager.updatePointCloud(pointCloud);
             }
 
             @Override
@@ -367,9 +374,9 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
      * It returns the transform of the fitted plane in a double array.
      */
     private float[] doFitPlane(float u, float v, double rgbTimestamp) {
-        TangoXyzIjData xyzIj = mPointCloudManager.getLatestXyzIj();
+        TangoPointCloudData pointCloud = mPointCloudManager.getLatestPointCloud();
 
-        if (xyzIj == null) {
+        if (pointCloud == null) {
             return null;
         }
 
@@ -378,16 +385,16 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
         // cloud was acquired.
         TangoPoseData colorTdepthPose = TangoSupport.calculateRelativePose(
                 rgbTimestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                xyzIj.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH);
+                pointCloud.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH);
 
         // Perform plane fitting with the latest available point cloud data.
         IntersectionPointPlaneModelPair intersectionPointPlaneModelPair =
-                TangoSupport.fitPlaneModelNearClick(xyzIj, mIntrinsics,
+                TangoSupport.fitPlaneModelNearPoint(pointCloud,
                         colorTdepthPose, u, v);
 
         // Get the transform from depth camera to OpenGL world at the timestamp of the cloud.
         TangoSupport.TangoMatrixTransformData transform =
-                TangoSupport.getMatrixTransformAtTime(xyzIj.timestamp,
+                TangoSupport.getMatrixTransformAtTime(pointCloud.timestamp,
                         TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                         TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
                         TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
@@ -399,7 +406,7 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
 
             return openGlTPlane;
         } else {
-            Log.w(TAG, "Can't get depth camera transform at time " + xyzIj.timestamp);
+            Log.w(TAG, "Can't get depth camera transform at time " + pointCloud.timestamp);
             return null;
         }
     }

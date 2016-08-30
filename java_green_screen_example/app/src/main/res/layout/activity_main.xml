@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Copyright 2016 Google Inc.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:app="http://schemas.android.com/apk/res-auto"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+    <android.opengl.GLSurfaceView
+        android:id="@+id/surfaceview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <SeekBar
+        android:layout_width="250dp"
+        android:layout_height="wrap_content"
+        android:id="@+id/depth_seekbar"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentStart="true"
+        android:max="100"
+        android:progress="50"
+        android:indeterminate="false" />
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/btn_screenshot"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:fabSize="normal"
+        android:src="@drawable/ic_add_a_photo_black_48dp"
+        android:clickable="true"
+        android:onClick="takeScreenshot"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"/>
+
+    <!-- White screen only to show a fade in/out animation when taking a screenshot -->
+    <FrameLayout
+        android:id="@+id/panel_flash"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#FFFFFFFF"
+        android:visibility="gone" />
+
+</RelativeLayout>

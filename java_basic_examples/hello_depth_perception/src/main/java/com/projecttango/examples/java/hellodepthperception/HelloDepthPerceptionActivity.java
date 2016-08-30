@@ -23,6 +23,7 @@ import com.google.atap.tangoservice.TangoCoordinateFramePair;
 import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoOutOfDateException;
+import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
@@ -35,7 +36,7 @@ import java.util.ArrayList;
 
 /**
  * Main Activity class for the Depth Perception Sample. Handles the connection to the {@link Tango}
- * service and propagation of Tango XyzIj data to Layout view.
+ * service and propagation of Tango PointCloud data to Layout view.
  */
 public class HelloDepthPerceptionActivity extends Activity {
 
@@ -107,6 +108,7 @@ public class HelloDepthPerceptionActivity extends Activity {
         TangoConfig config = new TangoConfig();
         config = tango.getConfig(config.CONFIG_TYPE_DEFAULT);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
+        config.putInt(TangoConfig.KEY_INT_DEPTH_MODE, TangoConfig.TANGO_DEPTH_MODE_POINT_CLOUD);
         return config;
     }
 
@@ -131,8 +133,13 @@ public class HelloDepthPerceptionActivity extends Activity {
             }
 
             @Override
-            public void onXyzIjAvailable(final TangoXyzIjData xyzIjData) {
-                logXyzIj(xyzIjData);
+            public void onXyzIjAvailable(TangoXyzIjData xyzIj) {
+                // We are not using onXyzIjAvailable for this app.
+            }
+
+            @Override
+            public void onPointCloudAvailable(final TangoPointCloudData pointCloudData) {
+                logPointCloud(pointCloudData);
             }
 
             @Override
@@ -148,28 +155,29 @@ public class HelloDepthPerceptionActivity extends Activity {
     }
 
     /**
-     * Log the point count and the average depth of the given XyzIj data
+     * Log the point count and the average depth of the given PointCloud data
      * in the Logcat as information.
      */
-    private void logXyzIj(TangoXyzIjData xyzIjData) {
+    private void logPointCloud(TangoPointCloudData pointCloudData) {
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("Point count: " + xyzIjData.xyzCount);
-        stringBuilder.append(". Average depth (m): " + calculateAveragedDepth(xyzIjData.xyz));
+        stringBuilder.append("Point count: " + pointCloudData.numPoints);
+        stringBuilder.append(". Average depth (m): " +
+            calculateAveragedDepth(pointCloudData.points, pointCloudData.numPoints));
         Log.i(TAG, stringBuilder.toString());
     }
 
     /**
      * Calculates the average depth from a point cloud buffer.
      */
-    private float calculateAveragedDepth(FloatBuffer pointCloudBuffer) {
-        int pointCount = pointCloudBuffer.capacity() / 3;
+    private float calculateAveragedDepth(FloatBuffer pointCloudBuffer, int numPoints) {
         float totalZ = 0;
         float averageZ = 0;
-        for (int i = 0; i < pointCloudBuffer.capacity() - 3; i = i + 3) {
-            totalZ = totalZ + pointCloudBuffer.get(i + 2);
-        }
-        if (pointCount != 0) {
-            averageZ = totalZ / pointCount;
+        if (numPoints != 0) {
+            int numFloats = 4 * numPoints;
+            for (int i = 2; i < numFloats; i = i + 4) {
+                totalZ = totalZ + pointCloudBuffer.get(i);
+            }
+            averageZ = totalZ / numPoints;
         }
         return averageZ;
     }
