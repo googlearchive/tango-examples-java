@@ -27,11 +27,18 @@ import java.nio.FloatBuffer;
  * Intended to be contributed and PR'ed to Rajawali.
  */
 public class Points extends Object3D {
-    private int mMaxNumberOfVertices;
+    private static final int BYTES_PER_FLOAT = 4;
 
-    public Points(int numberOfPoints, boolean isCreateColors) {
+    private int mMaxNumberOfVertices;
+    // Float values per point to expect in points FloatBuffer. XYZ format = 3, XYZC format = 4.
+    protected int mFloatsPerPoint = 3;
+    // Float values per color = 4 (RGBA).
+    protected int mFloatsPerColor = 4;
+
+    public Points(int numberOfPoints, int floatsPerPoint, boolean isCreateColors) {
         super();
         mMaxNumberOfVertices = numberOfPoints;
+        mFloatsPerPoint = floatsPerPoint;
         init(true, isCreateColors);
     }
 
@@ -39,28 +46,33 @@ public class Points extends Object3D {
     // Since only vertex, index and color buffers are used,
     // we only initialize them using setData call.
     protected void init(boolean createVBOs, boolean createColors) {
-        float[] vertices = new float[mMaxNumberOfVertices * 3];
+        float[] vertices = new float[mMaxNumberOfVertices * mFloatsPerPoint];
         int[] indices = new int[mMaxNumberOfVertices];
         for (int i = 0; i < indices.length; ++i) {
             indices[i] = i;
         }
         float[] colors = null;
         if (createColors) {
-            colors = new float[mMaxNumberOfVertices * 4];
+            colors = new float[mMaxNumberOfVertices * mFloatsPerColor];
         }
+        mGeometry.getVertexBufferInfo().stride = mFloatsPerPoint * BYTES_PER_FLOAT;
         setData(vertices, null, null, colors, indices, true);
     }
 
-    // Update the geometry of the points based on the provided points float buffer.
+    /**
+     * Update the geometry of the points based on the provided points float buffer.
+     */
     public void updatePoints(int pointCount, FloatBuffer pointCloudBuffer) {
         mGeometry.setNumIndices(pointCount);
         mGeometry.setVertices(pointCloudBuffer);
         mGeometry.changeBufferData(mGeometry.getVertexBufferInfo(), mGeometry.getVertices(), 0,
-                pointCount * 3);
+                pointCount * mFloatsPerPoint);
     }
 
-    // Update the geometry of the points based on the provided points float buffer and corresponding
-    // colors based on the provided float array.
+    /**
+     * Update the geometry of the points based on the provided points float buffer and corresponding
+     * colors based on the provided float array.
+     */
     public void updatePoints(int pointCount, FloatBuffer points, float[] colors) {
         if (pointCount > mMaxNumberOfVertices) {
             throw new RuntimeException(
@@ -70,10 +82,10 @@ public class Points extends Object3D {
         mGeometry.setNumIndices(pointCount);
         mGeometry.setVertices(points);
         mGeometry.changeBufferData(mGeometry.getVertexBufferInfo(), mGeometry.getVertices(), 0,
-                pointCount * 3);
+                pointCount * mFloatsPerPoint);
         mGeometry.setColors(colors);
         mGeometry.changeBufferData(mGeometry.getColorBufferInfo(), mGeometry.getColors(), 0,
-                pointCount * 4);
+                pointCount * mFloatsPerColor);
     }
 
     @Override

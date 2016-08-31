@@ -35,8 +35,8 @@ public class PointCloud extends Points {
     public static final float HUE_BEGIN = 0;
     public static final float HUE_END = 320;
 
-    public PointCloud(int maxPoints) {
-        super(maxPoints, true);
+    public PointCloud(int maxPoints, int floatsPerPoint) {
+        super(maxPoints, floatsPerPoint, true);
         mPalette = createPalette();
         mColorArray = new float[maxPoints * 4];
         Material m = new Material();
@@ -79,7 +79,7 @@ public class PointCloud extends Points {
         int colorIndex;
         float z;
         for (int i = 0; i < pointCount; i++) {
-            z = points[i * 4 + 2];
+            z = points[i * mFloatsPerPoint + 2];
             colorIndex = (int) Math.min(z / CLOUD_MAX_Z * mPalette.length, mPalette.length - 1);
             colorIndex = Math.max(colorIndex, 0);
             color = mPalette[colorIndex];

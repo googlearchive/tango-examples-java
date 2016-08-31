@@ -61,7 +61,9 @@ public class PointCloudRajawaliRenderer extends RajawaliRenderer {
         mFrustumAxes = new FrustumAxes(3);
         getCurrentScene().addChild(mFrustumAxes);
 
-        mPointCloud = new PointCloud(MAX_NUMBER_OF_POINTS);
+        // Indicate 4 floats per point since the point cloud data comes
+        // in XYZC format.
+        mPointCloud = new PointCloud(MAX_NUMBER_OF_POINTS, 4);
         getCurrentScene().addChild(mPointCloud);
         getCurrentScene().setBackgroundColor(Color.WHITE);
         getCurrentCamera().setNearPlane(CAMERA_NEAR);
