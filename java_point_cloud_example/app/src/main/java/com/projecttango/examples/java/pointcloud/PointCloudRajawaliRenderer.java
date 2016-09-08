@@ -15,6 +15,7 @@
  */
 package com.projecttango.examples.java.pointcloud;
 
+import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
@@ -60,21 +61,24 @@ public class PointCloudRajawaliRenderer extends RajawaliRenderer {
         mFrustumAxes = new FrustumAxes(3);
         getCurrentScene().addChild(mFrustumAxes);
 
-        mPointCloud = new PointCloud(MAX_NUMBER_OF_POINTS);
+        // Indicate 4 floats per point since the point cloud data comes
+        // in XYZC format.
+        mPointCloud = new PointCloud(MAX_NUMBER_OF_POINTS, 4);
         getCurrentScene().addChild(mPointCloud);
         getCurrentScene().setBackgroundColor(Color.WHITE);
         getCurrentCamera().setNearPlane(CAMERA_NEAR);
         getCurrentCamera().setFarPlane(CAMERA_FAR);
         getCurrentCamera().setFieldOfView(37.5);
     }
+    
 
     /**
      * Updates the rendered point cloud. For this, we need the point cloud data and the device pose
      * at the time the cloud data was acquired.
      * NOTE: This needs to be called from the OpenGL rendering thread.
      */
-    public void updatePointCloud(TangoXyzIjData xyzIjData, float[] openGlTdepth) {
-        mPointCloud.updateCloud(xyzIjData.xyzCount, xyzIjData.xyz);
+    public void updatePointCloud(TangoPointCloudData pointCloudData, float[] openGlTdepth) {
+        mPointCloud.updateCloud(pointCloudData.numPoints, pointCloudData.points);
         Matrix4 openGlTdepthMatrix = new Matrix4(openGlTdepth);
         mPointCloud.setPosition(openGlTdepthMatrix.getTranslation());
         // Conjugating the Quaternion is need because Rajawali uses left handed convention.

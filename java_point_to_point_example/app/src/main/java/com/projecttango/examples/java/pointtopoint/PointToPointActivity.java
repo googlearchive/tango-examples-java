@@ -25,6 +25,7 @@ import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoException;
 import com.google.atap.tangoservice.TangoOutOfDateException;
+import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
@@ -182,6 +183,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
         // The drift corrected pose is is available through the frame pair with
         // base frame AREA_DESCRIPTION and target frame DEVICE.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DRIFT_CORRECTION, true);
+        config.putInt(TangoConfig.KEY_INT_DEPTH_MODE, TangoConfig.TANGO_DEPTH_MODE_POINT_CLOUD);
 
         mTango.connect(config);
 
@@ -208,8 +210,13 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
 
             @Override
             public void onXyzIjAvailable(TangoXyzIjData xyzIj) {
+                // We are not using onXyzIjAvailable for this app.
+            }
+
+            @Override
+            public void onPointCloudAvailable(TangoPointCloudData pointCloud) {
                 // Save the cloud and point data for later use.
-                mPointCloudManager.updateXyzIj(xyzIj);
+                mPointCloudManager.updatePointCloud(pointCloud);
             }
 
             @Override
@@ -394,8 +401,8 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
      * Vector3 in openGL world space.
      */
     private float[] getDepthAtTouchPosition(float u, float v, double rgbTimestamp) {
-        TangoXyzIjData xyzIj = mPointCloudManager.getLatestXyzIj();
-        if (xyzIj == null) {
+        TangoPointCloudData pointCloud = mPointCloudManager.getLatestPointCloud();
+        if (pointCloud == null) {
             return null;
         }
 
@@ -404,9 +411,9 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
         // cloud was acquired.
         TangoPoseData colorTdepthPose = TangoSupport.calculateRelativePose(
                 rgbTimestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                xyzIj.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH);
+                pointCloud.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH);
 
-        float[] point = TangoSupport.getDepthAtPointNearestNeighbor(xyzIj, mIntrinsics,
+        float[] point = TangoSupport.getDepthAtPointNearestNeighbor(pointCloud,
                 colorTdepthPose, u, v);
         if (point == null) {
             return null;
@@ -414,7 +421,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
 
         // Get the transform from depth camera to OpenGL world at the timestamp of the cloud.
         TangoSupport.TangoMatrixTransformData transform =
-                TangoSupport.getMatrixTransformAtTime(xyzIj.timestamp,
+                TangoSupport.getMatrixTransformAtTime(pointCloud.timestamp,
                         TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                         TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
                         TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
@@ -425,7 +432,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
             Matrix.multiplyMV(openGlPoint, 0, transform.matrix, 0, dephtPoint, 0);
             return openGlPoint;
         } else {
-            Log.w(TAG, "Could not get depth camera transform at time " + xyzIj.timestamp);
+            Log.w(TAG, "Could not get depth camera transform at time " + pointCloud.timestamp);
         }
         return null;
     }

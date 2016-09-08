@@ -25,6 +25,7 @@ import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoInvalidException;
 import com.google.atap.tangoservice.TangoOutOfDateException;
+import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
@@ -269,8 +270,13 @@ public class HelloAreaDescriptionActivity extends Activity implements
             }
 
             @Override
-            public void onXyzIjAvailable(TangoXyzIjData xyzij) {
-                // We are not using TangoXyzIjData for this application.
+            public void onXyzIjAvailable(TangoXyzIjData xyzIj) {
+                // We are not using onXyzIjAvailable for this app.
+            }
+
+            @Override
+            public void onPointCloudAvailable(TangoPointCloudData xyzij) {
+                // We are not using onPointCloudAvailable for this app.
             }
 
             @Override

@@ -28,6 +28,7 @@ import com.google.atap.tangoservice.TangoCoordinateFramePair;
 import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoOutOfDateException;
+import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
@@ -52,8 +53,8 @@ import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * Main Activity class for the Point Cloud Sample. Handles the connection to the {@link Tango}
- * service and propagation of Tango XyzIj data to OpenGL and Layout views. OpenGL rendering logic is
- * delegated to the {@link PointCloudRajawaliRenderer} class.
+ * service and propagation of Tango PointCloud data to OpenGL and Layout views. OpenGL rendering
+ * logic is delegated to the {@link PointCloudRajawaliRenderer} class.
  */
 public class PointCloudActivity extends Activity {
     private static final String TAG = PointCloudActivity.class.getSimpleName();
@@ -69,13 +70,13 @@ public class PointCloudActivity extends Activity {
     private TextView mPointCountTextView;
     private TextView mAverageZTextView;
 
-    private double mXyIjPreviousTimeStamp;
+    private double mPointCloudPreviousTimeStamp;
     private boolean mIsConnected = false;
 
     private static final DecimalFormat FORMAT_THREE_DECIMAL = new DecimalFormat("0.000");
     private static final double UPDATE_INTERVAL_MS = 100.0;
 
-    private double mXyzIjTimeToNextUpdate = UPDATE_INTERVAL_MS;
+    private double mPointCloudTimeToNextUpdate = UPDATE_INTERVAL_MS;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -158,6 +159,7 @@ public class PointCloudActivity extends Activity {
         // Use the default configuration plus add depth sensing.
         TangoConfig config = tango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
+        config.putInt(TangoConfig.KEY_INT_DEPTH_MODE, TangoConfig.TANGO_DEPTH_MODE_POINT_CLOUD);
         return config;
     }
 
@@ -182,22 +184,28 @@ public class PointCloudActivity extends Activity {
 
             @Override
             public void onXyzIjAvailable(TangoXyzIjData xyzIj) {
+                // We are not using onXyzIjAvailable for this app.
+            }
+
+            @Override
+            public void onPointCloudAvailable(TangoPointCloudData pointCloud) {
                 if (mTangoUx != null) {
-                    mTangoUx.updateXyzCount(xyzIj.xyzCount);
+                    mTangoUx.updateXyzCount(pointCloud.numPoints);
                 }
-                mPointCloudManager.updateXyzIj(xyzIj);
+                mPointCloudManager.updatePointCloud(pointCloud);
 
-                final double currentTimeStamp = xyzIj.timestamp;
-                final double pointCloudFrameDelta = (currentTimeStamp - mXyIjPreviousTimeStamp)
-                        * SECS_TO_MILLISECS;
-                mXyIjPreviousTimeStamp = currentTimeStamp;
-                final double averageDepth = getAveragedDepth(xyzIj.xyz);
+                final double currentTimeStamp = pointCloud.timestamp;
+                final double pointCloudFrameDelta =
+                        (currentTimeStamp - mPointCloudPreviousTimeStamp) * SECS_TO_MILLISECS;
+                mPointCloudPreviousTimeStamp = currentTimeStamp;
+                final double averageDepth = getAveragedDepth(pointCloud.points,
+                                                             pointCloud.numPoints);
 
-                mXyzIjTimeToNextUpdate -= pointCloudFrameDelta;
+                mPointCloudTimeToNextUpdate -= pointCloudFrameDelta;
 
-                if (mXyzIjTimeToNextUpdate < 0.0) {
-                    mXyzIjTimeToNextUpdate = UPDATE_INTERVAL_MS;
-                    final String pointCountString = Integer.toString(xyzIj.xyzCount);
+                if (mPointCloudTimeToNextUpdate < 0.0) {
+                    mPointCloudTimeToNextUpdate = UPDATE_INTERVAL_MS;
+                    final String pointCountString = Integer.toString(pointCloud.numPoints);
 
                     runOnUiThread(new Runnable() {
                         @Override
@@ -242,7 +250,7 @@ public class PointCloudActivity extends Activity {
                     }
 
                     // Update point cloud data.
-                    TangoXyzIjData pointCloud = mPointCloudManager.getLatestXyzIj();
+                    TangoPointCloudData pointCloud = mPointCloudManager.getLatestPointCloud();
                     if (pointCloud != null) {
                         // Calculate the camera color pose at the camera frame update time in
                         // OpenGL engine.
@@ -376,17 +384,18 @@ public class PointCloudActivity extends Activity {
      * Calculates the average depth from a point cloud buffer.
      *
      * @param pointCloudBuffer
+     * @param numPoints
      * @return Average depth.
      */
-    private float getAveragedDepth(FloatBuffer pointCloudBuffer) {
-        int pointCount = pointCloudBuffer.capacity() / 3;
+    private float getAveragedDepth(FloatBuffer pointCloudBuffer, int numPoints) {
         float totalZ = 0;
         float averageZ = 0;
-        for (int i = 0; i < pointCloudBuffer.capacity() - 3; i = i + 3) {
-            totalZ = totalZ + pointCloudBuffer.get(i + 2);
-        }
-        if (pointCount != 0) {
-            averageZ = totalZ / pointCount;
+        if (numPoints != 0) {
+            int numFloats = 4 * numPoints;
+            for (int i = 2; i < numFloats; i = i + 4) {
+                totalZ = totalZ + pointCloudBuffer.get(i);
+            }
+            averageZ = totalZ / numPoints;
         }
         return averageZ;
     }

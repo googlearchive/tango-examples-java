@@ -25,6 +25,7 @@ import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoException;
 import com.google.atap.tangoservice.TangoOutOfDateException;
+import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
@@ -212,6 +213,7 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
         // objects with the RBG image and produce a good AR effect.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION, true);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
+        config.putInt(TangoConfig.KEY_INT_DEPTH_MODE, TangoConfig.TANGO_DEPTH_MODE_POINT_CLOUD);
         // NOTE: Area learning is necessary to achieve better precision is pose estimation
         config.putBoolean(TangoConfig.KEY_BOOLEAN_LEARNINGMODE, true);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_COLORCAMERA, true);
@@ -239,8 +241,13 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
 
             @Override
             public void onXyzIjAvailable(TangoXyzIjData xyzIj) {
+                // We are not using onXyzIjAvailable for this app.
+            }
+
+            @Override
+            public void onPointCloudAvailable(TangoPointCloudData pointCloud) {
                 // Save the cloud and point data for later use.
-                mPointCloudManager.updateXyzIj(xyzIj);
+                mPointCloudManager.updatePointCloud(pointCloud);
             }
 
             @Override
@@ -417,9 +424,9 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
      * It returns the pose of the fitted plane in a TangoPoseData structure.
      */
     private WallMeasurement doWallMeasurement(float u, float v, double rgbTimestamp) {
-        TangoXyzIjData xyzIj = mPointCloudManager.getLatestXyzIj();
+        TangoPointCloudData pointCloud = mPointCloudManager.getLatestPointCloud();
 
-        if (xyzIj == null) {
+        if (pointCloud == null) {
             return null;
         }
 
@@ -428,17 +435,17 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
         // cloud was acquired.
         TangoPoseData colorTdepthPose = TangoSupport.calculateRelativePose(
                 rgbTimestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                xyzIj.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH);
+                pointCloud.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH);
 
         // Perform plane fitting with the latest available point cloud data.
         try {
             IntersectionPointPlaneModelPair intersectionPointPlaneModelPair =
-                    TangoSupport.fitPlaneModelNearClick(xyzIj, mIntrinsics,
+                    TangoSupport.fitPlaneModelNearPoint(pointCloud,
                             colorTdepthPose, u, v);
 
             // Get the depth camera transform at the time the plane data was acquired.
             TangoSupport.TangoMatrixTransformData transform =
-                    TangoSupport.getMatrixTransformAtTime(xyzIj.timestamp,
+                    TangoSupport.getMatrixTransformAtTime(pointCloud.timestamp,
                             TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                             TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
                             TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
@@ -449,10 +456,12 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
                         intersectionPointPlaneModelPair.intersectionPoint,
                         intersectionPointPlaneModelPair.planeModel, transform.matrix);
 
-                return new WallMeasurement(planeFitTransform, transform.matrix, xyzIj.timestamp);
+                return new WallMeasurement(planeFitTransform,
+                                           transform.matrix,
+                                           pointCloud.timestamp);
             } else {
                 Log.d(TAG, "Could not get a valid transform from depth to area description at time "
-                        + xyzIj.timestamp);
+                        + pointCloud.timestamp);
             }
         } catch (TangoException e) {
             Log.d(TAG, "Failed to fit plane");
