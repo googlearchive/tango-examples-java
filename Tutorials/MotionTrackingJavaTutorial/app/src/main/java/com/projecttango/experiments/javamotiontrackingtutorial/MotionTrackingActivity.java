@@ -23,6 +23,7 @@ import com.google.atap.tangoservice.TangoCoordinateFramePair;
 import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoOutOfDateException;
+import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
@@ -78,7 +79,11 @@ public class MotionTrackingActivity extends Activity {
             }
 
             @Override
-            public void onXyzIjAvailable(TangoXyzIjData arg0) {
+            public void onXyzIjAvailable(TangoXyzIjData xyzIj) {
+            }
+
+            @Override
+            public void onPointCloudAvailable(TangoPointCloudData pointCloud) {
             }
 
             @Override
