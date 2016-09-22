@@ -26,6 +26,6 @@ if (project.hasProperty("Tango.catkin_devel_prefix")) {
 }
 
 dependencies {
-    compile fileTree(dir: external_lib_prefix + '/jar', include: ['**/*.jar'])
+    compile fileTree(dir: external_lib_prefix + '/jar', include: ['*.jar'])
     compile 'org.rajawali3d:rajawali:1.0.325@aar'
 }
