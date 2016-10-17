@@ -24,6 +24,7 @@ import com.google.atap.tangoservice.TangoCoordinateFramePair;
 import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoException;
+import com.google.atap.tangoservice.TangoInvalidException;
 import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
@@ -88,6 +89,7 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
     private TangoCameraIntrinsics mIntrinsics;
     private TangoPointCloudManager mPointCloudManager;
     private Tango mTango;
+    private TangoConfig mConfig;
     private boolean mIsConnected = false;
     private double mCameraPoseTimestamp = 0;
     private List<WallMeasurement> mWallMeasurementList;
@@ -119,39 +121,72 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
-        // Synchronize against disconnecting while the service is being used in the OpenGL thread or
-        // in the UI thread.
-        synchronized (this) {
-            if (mIsConnected) {
-                mRenderer.getCurrentScene().clearFrameCallbacks();
-                mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
-                // We need to invalidate the connected texture ID so that we cause a re-connection
-                // in the OpenGL thread after resume
-                mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
-                mTango.disconnect();
-                mIsConnected = false;
-            }
-        }
-    }
-
-    @Override
     protected void onResume() {
         super.onResume();
         // Check if it has permissions.
         // Area learning permissions are needed in order to save the adf.
         if (Tango.hasPermission(this, Tango.PERMISSIONTYPE_ADF_LOAD_SAVE)) {
-            // Reset the status every time we connect to the service. The old measurements don't
-            // make sense.
-            mWallMeasurementList = new ArrayList<WallMeasurement>();
-            mRenderer.removeMeasurements();
-            mRenderer.updatePlan(new Floorplan(new ArrayList<float[]>()));
-            connectAndStart();
+            // When connecting, reset the plan. The old measurements don't make sense.
+            resetRenderer();
+            // Initialize Tango Service as a normal Android Service, since we call
+            // mTango.disconnect() in onPause, this will unbind Tango Service, so
+            // every time when onResume get called, we should create a new Tango object.
+            mTango = new Tango(FloorplanActivity.this, new Runnable() {
+                // Pass in a Runnable to be called from UI thread when Tango is ready,
+                // this Runnable will be running on a new thread.
+                // When Tango is ready, we can call Tango functions safely here only
+                // when there is no UI thread changes involved.
+                @Override
+                public void run() {
+                    synchronized (FloorplanActivity.this) {
+                        try {
+                            TangoSupport.initialize();
+                            mConfig = setupTangoConfig(mTango);
+                            mTango.connect(mConfig);
+                            startupTango();
+                            connectRenderer();
+                            mIsConnected = true;
+                        } catch (TangoOutOfDateException e) {
+                            Log.e(TAG, getString(R.string.exception_out_of_date), e);
+                        } catch (TangoErrorException e) {
+                            Log.e(TAG, getString(R.string.exception_tango_error), e);
+                        } catch (TangoInvalidException e) {
+                            Log.e(TAG, getString(R.string.exception_tango_invalid), e);
+                        } catch (SecurityException e) {
+                            // Area Learning permissions are required. If they are not available,
+                            // SecurityException is thrown.
+                            Log.e(TAG, getString(R.string.failed_permissions), e);
+                        }
+                    }
+                }
+            });
         } else {
             startActivityForResult(
                     Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_ADF_LOAD_SAVE),
                     Tango.TANGO_INTENT_ACTIVITYCODE);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Synchronize against disconnecting while the service is being used in the OpenGL thread or
+        // in the UI thread.
+        synchronized (this) {
+            try {
+                if (mIsConnected) {
+                    mRenderer.getCurrentScene().clearFrameCallbacks();
+                    mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
+                    // We need to invalidate the connected texture ID so that we cause a
+                    // re-connection
+                    // in the OpenGL thread after resume
+                    mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
+                    mTango.disconnect();
+                    mIsConnected = false;
+                }
+            } catch (TangoErrorException e) {
+                Log.e(TAG, getString(R.string.exception_tango_error), e);
+            }
         }
     }
 
@@ -169,45 +204,12 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
     }
 
     /**
-     * Connect to Tango service and connect the camera to the renderer.
+     * Sets up the tango configuration object. Make sure mTango object is initialized before
+     * making this call.
      */
-    private void connectAndStart() {
-        // Synchronize against disconnecting while the service is being used in the OpenGL thread or
-        // in the UI thread.
-
-        if (!mIsConnected) {
-            // Initialize Tango Service as a normal Android Service, since we call
-            // mTango.disconnect() in onPause, this will unbind Tango Service, so
-            // everytime when onResume get called, we should create a new Tango object.
-            mTango = new Tango(FloorplanActivity.this, new Runnable() {
-                // Pass in a Runnable to be called from UI thread when Tango is ready,
-                // this Runnable will be running on a new thread.
-                // When Tango is ready, we can call Tango functions safely here only
-                // when there is no UI thread changes involved.
-                @Override
-                public void run() {
-                    try {
-                        synchronized (FloorplanActivity.this) {
-                            TangoSupport.initialize();
-                            connectTango();
-                            connectRenderer();
-                            mIsConnected = true;
-                        }
-                    } catch (TangoOutOfDateException e) {
-                        Log.e(TAG, getString(R.string.exception_out_of_date), e);
-                    }
-                }
-            });
-        }
-
-    }
-
-    /**
-     * Configure the Tango service and connect it to callbacks.
-     */
-    private void connectTango() {
+    private TangoConfig setupTangoConfig(Tango tango) {
         // Use default configuration for Tango Service, plus low latency
-        // IMU integration and area learning.
+        // IMU integration, depth, color camera and area learning.
         TangoConfig config = mTango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
         // NOTE: Low latency integration is necessary to achieve a precise alignment of virtual
         // objects with the RBG image and produce a good AR effect.
@@ -217,8 +219,15 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
         // NOTE: Area learning is necessary to achieve better precision is pose estimation
         config.putBoolean(TangoConfig.KEY_BOOLEAN_LEARNINGMODE, true);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_COLORCAMERA, true);
-        mTango.connect(config);
+        return config;
+    }
 
+    /**
+     * Set up the callback listeners for the Tango service and obtain other parameters required
+     * after Tango connection.
+     * Listen to updates from the RGB camera and Point Cloud.
+     */
+    private void startupTango() {
         // No need to add any coordinate frame pairs since we are not
         // using pose data. So just initialize.
         ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
@@ -256,7 +265,18 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
             }
         });
 
+        // Obtain the intrinsic parameters of the color camera.
         mIntrinsics = mTango.getCameraIntrinsics(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
+    }
+
+    /**
+     * Resets the status every time we connect to the service. The old measurements
+     * don't make sense.
+     */
+    private void resetRenderer() {
+        mWallMeasurementList = new ArrayList<WallMeasurement>();
+        mRenderer.removeMeasurements();
+        mRenderer.updatePlan(new Floorplan(new ArrayList<float[]>()));
     }
 
     /**

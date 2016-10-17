@@ -26,7 +26,6 @@ import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 
-import java.util.Collection;
 import java.util.HashMap;
 
 import javax.microedition.khronos.egl.EGLConfig;

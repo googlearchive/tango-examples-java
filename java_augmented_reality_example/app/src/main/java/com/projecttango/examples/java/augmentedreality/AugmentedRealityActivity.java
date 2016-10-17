@@ -23,16 +23,20 @@ import com.google.atap.tangoservice.TangoConfig;
 import com.google.atap.tangoservice.TangoCoordinateFramePair;
 import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
+import com.google.atap.tangoservice.TangoInvalidException;
 import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
 import android.app.Activity;
+import android.hardware.Camera;
+import android.hardware.display.DisplayManager;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Display;
 import android.view.Surface;
 
 import org.rajawali3d.scene.ASceneFrameCallback;
@@ -68,6 +72,9 @@ public class AugmentedRealityActivity extends Activity {
     private static final String TAG = AugmentedRealityActivity.class.getSimpleName();
     private static final int INVALID_TEXTURE_ID = 0;
 
+    // For all current Tango devices, color camera is in the camera id 0.
+    private static final int COLOR_CAMERA_ID = 0;
+
     private RajawaliSurfaceView mSurfaceView;
     private AugmentedRealityRenderer mRenderer;
     private TangoCameraIntrinsics mIntrinsics;
@@ -82,12 +89,40 @@ public class AugmentedRealityActivity extends Activity {
     private AtomicBoolean mIsFrameAvailableTangoThread = new AtomicBoolean(false);
     private double mRgbTimestampGlThread;
 
+    private int mColorCameraToDisplayAndroidRotation = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mSurfaceView = (RajawaliSurfaceView) findViewById(R.id.surfaceview);
         mRenderer = new AugmentedRealityRenderer(this);
+
+        DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+        if (displayManager != null) {
+            displayManager.registerDisplayListener(new DisplayManager.DisplayListener() {
+                @Override
+                public void onDisplayAdded(int displayId) {}
+
+                @Override
+                public void onDisplayChanged(int displayId) {
+                    synchronized (this) {
+                        Display display = getWindowManager().getDefaultDisplay();
+                        Camera.CameraInfo colorCameraInfo = new Camera.CameraInfo();
+                        Camera.getCameraInfo(COLOR_CAMERA_ID, colorCameraInfo);
+
+                        mColorCameraToDisplayAndroidRotation =
+                                getColorCameraToDisplayAndroidRotation(display.getRotation(),
+                                        colorCameraInfo.orientation);
+                        mRenderer.updateColorCameraTextureUv(mColorCameraToDisplayAndroidRotation);
+                    }
+                }
+
+                @Override
+                public void onDisplayRemoved(int displayId) {}
+            }, null);
+        }
+
         setupRenderer();
     }
 
@@ -99,48 +134,33 @@ public class AugmentedRealityActivity extends Activity {
         // Tango service is properly set-up and we start getting onFrameAvailable callbacks.
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
 
-        // Initialize Tango Service as a normal Android Service, since we call
-        // mTango.disconnect() in onPause, this will unbind Tango Service, so
-        // everytime when onResume get called, we should create a new Tango object.
+        // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
+        // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
+        // should create a new Tango object.
         mTango = new Tango(AugmentedRealityActivity.this, new Runnable() {
-            // Pass in a Runnable to be called from UI thread when Tango is ready,
-            // this Runnable will be running on a new thread.
-            // When Tango is ready, we can call Tango functions safely here only
-            // when there is no UI thread changes involved.
+            // Pass in a Runnable to be called from UI thread when Tango is ready, this Runnable
+            // will be running on a new thread.
+            // When Tango is ready, we can call Tango functions safely here only when there is no UI
+            // thread changes involved.
             @Override
             public void run() {
                 // Synchronize against disconnecting while the service is being used in the OpenGL
                 // thread or in the UI thread.
                 synchronized (AugmentedRealityActivity.this) {
-                    TangoSupport.initialize();
-                    mConfig = setupTangoConfig(mTango);
-
                     try {
-                        setTangoListeners();
-                    } catch (TangoErrorException e) {
-                        Log.e(TAG, getString(R.string.exception_tango_error), e);
-                    } catch (SecurityException e) {
-                        Log.e(TAG, getString(R.string.permission_camera), e);
-                    }
-                    try {
+                        TangoSupport.initialize();
+                        mConfig = setupTangoConfig(mTango);
                         mTango.connect(mConfig);
+                        startupTango();
                         mIsConnected = true;
                     } catch (TangoOutOfDateException e) {
                         Log.e(TAG, getString(R.string.exception_out_of_date), e);
                     } catch (TangoErrorException e) {
                         Log.e(TAG, getString(R.string.exception_tango_error), e);
+                    } catch (TangoInvalidException e) {
+                        Log.e(TAG, getString(R.string.exception_tango_invalid), e);
                     }
                 }
-
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        synchronized (AugmentedRealityActivity.this) {
-                            mIntrinsics = mTango.getCameraIntrinsics(
-                                    TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
-                        }
-                    }
-                });
             }
         });
     }
@@ -173,17 +193,14 @@ public class AugmentedRealityActivity extends Activity {
      * making this call.
      */
     private TangoConfig setupTangoConfig(Tango tango) {
-        // Use default configuration for Tango Service, plus color camera and
-        // low latency IMU integration.
+        // Use default configuration for Tango Service, plus color camera, low latency
+        // IMU integration and drift correction.
         TangoConfig config = tango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_COLORCAMERA, true);
-
         // NOTE: Low latency integration is necessary to achieve a precise alignment of
         // virtual objects with the RBG image and produce a good AR effect.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION, true);
-
         // Drift correction allows motion tracking to recover after it loses tracking.
-        //
         // The drift corrected pose is is available through the frame pair with
         // base frame AREA_DESCRIPTION and target frame DEVICE.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DRIFT_CORRECTION, true);
@@ -191,10 +208,11 @@ public class AugmentedRealityActivity extends Activity {
     }
 
     /**
-     * Set up the callback listeners for the Tango service, then begin using the Motion
-     * Tracking API. This is called in response to the user clicking the 'Start' Button.
+     * Set up the callback listeners for the Tango service and obtain other parameters required
+     * after Tango connection.
+     * Listen to updates from the RGB camera.
      */
-    private void setTangoListeners() {
+    private void startupTango() {
         // No need to add any coordinate frame pairs since we aren't using pose data from callbacks.
         ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
 
@@ -242,6 +260,9 @@ public class AugmentedRealityActivity extends Activity {
                 }
             }
         });
+
+        // Obtain the intrinsic parameters of the color camera.
+        mIntrinsics = mTango.getCameraIntrinsics(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
     }
 
     /**
@@ -270,7 +291,8 @@ public class AugmentedRealityActivity extends Activity {
                         // Set-up scene camera projection to match RGB camera intrinsics.
                         if (!mRenderer.isSceneCameraConfigured()) {
                             mRenderer.setProjectionMatrix(
-                                    projectionMatrixFromCameraIntrinsics(mIntrinsics));
+                                    projectionMatrixFromCameraIntrinsics(mIntrinsics,
+                                            mColorCameraToDisplayAndroidRotation));
                         }
                         // Connect the camera texture to the OpenGL Texture if necessary
                         // NOTE: When the OpenGL context is recycled, Rajawali may re-generate the
@@ -304,7 +326,7 @@ public class AugmentedRealityActivity extends Activity {
                                     TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                                     TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                    Surface.ROTATION_0);
+                                    mColorCameraToDisplayAndroidRotation);
                             if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
                                 // Update the camera pose from the renderer
                                 mRenderer.updateRenderCameraPose(lastFramePose);
@@ -348,28 +370,88 @@ public class AugmentedRealityActivity extends Activity {
         mSurfaceView.setSurfaceRenderer(mRenderer);
     }
 
+    private static int getColorCameraToDisplayAndroidRotation(int displayRotation,
+                                                              int cameraRotation) {
+        int cameraRotationNormalized = 0;
+        switch (cameraRotation) {
+            case 90:
+                cameraRotationNormalized = 1;
+                break;
+            case 180:
+                cameraRotationNormalized = 2;
+                break;
+            case 270:
+                cameraRotationNormalized = 3;
+                break;
+            default:
+                cameraRotationNormalized = 0;
+                break;
+        }
+        int ret = displayRotation - cameraRotationNormalized;
+        if (ret < 0) {
+            ret += 4;
+        }
+        return ret;
+    }
+
     /**
      * Use Tango camera intrinsics to calculate the projection Matrix for the Rajawali scene.
+     * @param intrinsics camera instrinsics for computing the project matrix.
+     * @param rotation the relative rotation between the camera intrinsics and display glContext.
      */
-    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics) {
+    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics,
+                                                                int rotation) {
+        // Adjust camera intrinsics according to rotation
+        float cx = (float) intrinsics.cx;
+        float cy = (float) intrinsics.cy;
+        float width = (float) intrinsics.width;
+        float height = (float) intrinsics.height;
+        float fx = (float) intrinsics.fx;
+        float fy = (float) intrinsics.fy;
+
+        switch (rotation) {
+            case Surface.ROTATION_90:
+                cx = (float) intrinsics.cy;
+                cy = (float) intrinsics.width - (float) intrinsics.cx;
+                width = (float) intrinsics.height;
+                height = (float) intrinsics.width;
+                fx = (float) intrinsics.fy;
+                fy = (float) intrinsics.fx;
+                break;
+            case Surface.ROTATION_180:
+                cx = (float) intrinsics.width - cx;
+                cy = (float) intrinsics.height - cy;
+                break;
+            case Surface.ROTATION_270:
+                cx = (float) intrinsics.height - (float) intrinsics.cy;
+                cy = (float) intrinsics.cx;
+                width = (float) intrinsics.height;
+                height = (float) intrinsics.width;
+                fx = (float) intrinsics.fy;
+                fy = (float) intrinsics.fx;
+                break;
+            default:
+                break;
+        }
+
         // Uses frustumM to create a projection matrix taking into account calibrated camera
         // intrinsic parameter.
         // Reference: http://ksimek.github.io/2013/06/03/calibrated_cameras_in_opengl/
         float near = 0.1f;
         float far = 100;
 
-        float xScale = near / (float) intrinsics.fx;
-        float yScale = near / (float) intrinsics.fy;
-        float xOffset = (float) (intrinsics.cx - (intrinsics.width / 2.0)) * xScale;
+        float xScale = near / fx;
+        float yScale = near / fy;
+        float xOffset = (cx - (width / 2.0f)) * xScale;
         // Color camera's coordinates has y pointing downwards so we negate this term.
-        float yOffset = (float) -(intrinsics.cy - (intrinsics.height / 2.0)) * yScale;
+        float yOffset = -(cy - (height / 2.0f)) * yScale;
 
         float m[] = new float[16];
         Matrix.frustumM(m, 0,
-                xScale * (float) -intrinsics.width / 2.0f - xOffset,
-                xScale * (float) intrinsics.width / 2.0f - xOffset,
-                yScale * (float) -intrinsics.height / 2.0f - yOffset,
-                yScale * (float) intrinsics.height / 2.0f - yOffset,
+                xScale * (float) -width / 2.0f - xOffset,
+                xScale * (float) width / 2.0f - xOffset,
+                yScale * (float) -height / 2.0f - yOffset,
+                yScale * (float) height / 2.0f - yOffset,
                 near, far);
         return m;
     }

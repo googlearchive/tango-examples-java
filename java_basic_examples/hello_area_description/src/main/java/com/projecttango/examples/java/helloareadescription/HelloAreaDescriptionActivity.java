@@ -85,37 +85,32 @@ public class HelloAreaDescriptionActivity extends Activity implements
     protected void onResume() {
         super.onResume();
 
-        // Initialize Tango Service as a normal Android Service, since we call
-        // mTango.disconnect() in onPause, this will unbind Tango Service, so
-        // everytime when onResume gets called, we should create a new Tango object.
+        // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
+        // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
+        // should create a new Tango object.
         mTango = new Tango(HelloAreaDescriptionActivity.this, new Runnable() {
-            // Pass in a Runnable to be called from UI thread when Tango is ready,
-            // this Runnable will be running on a new thread.
-            // When Tango is ready, we can call Tango functions safely here only
-            // when there is no UI thread changes involved.
+            // Pass in a Runnable to be called from UI thread when Tango is ready, this Runnable
+            // will be running on a new thread.
+            // When Tango is ready, we can call Tango functions safely here only when there is no UI
+            // thread changes involved.
             @Override
             public void run() {
                 synchronized (HelloAreaDescriptionActivity.this) {
-                    mConfig = setTangoConfig(mTango, mIsLearningMode, mIsConstantSpaceRelocalize);
-
-                    // Re-attach listeners.
                     try {
-                        setUpTangoListeners();
-                    } catch (TangoErrorException e) {
-                        Log.e(TAG, getString(R.string.tango_error), e);
-                    } catch (SecurityException e) {
-                        Log.e(TAG, getString(R.string.no_permissions), e);
-                    }
-
-                    // Connect to the tango service (start receiving pose updates).
-                    try {
+                        mConfig = setTangoConfig(
+                                mTango, mIsLearningMode, mIsConstantSpaceRelocalize);
                         mTango.connect(mConfig);
+                        startupTango();
                     } catch (TangoOutOfDateException e) {
                         Log.e(TAG, getString(R.string.tango_out_of_date_exception), e);
                     } catch (TangoErrorException e) {
                         Log.e(TAG, getString(R.string.tango_error), e);
                     } catch (TangoInvalidException e) {
                         Log.e(TAG, getString(R.string.tango_invalid), e);
+                    } catch (SecurityException e) {
+                        // Area Learning permissions are required. If they are not available,
+                        // SecurityException is thrown.
+                        Log.e(TAG, getString(R.string.no_permissions), e);
                     }
                 }
 
@@ -186,8 +181,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
      * making this call.
      */
     private TangoConfig setTangoConfig(Tango tango, boolean isLearningMode, boolean isLoadAdf) {
-        TangoConfig config;
-        config = tango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
+        // Use default configuration for Tango Service.
+        TangoConfig config = tango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
         // Check if learning mode
         if (isLearningMode) {
             // Set learning mode to config.
@@ -209,10 +204,10 @@ public class HelloAreaDescriptionActivity extends Activity implements
     }
 
     /**
-     * Set up the callback listeners for the Tango service, then begin using the Motion
-     * Tracking API. This is called in response to the user clicking the 'Start' Button.
+     * Set up the callback listeners for the Tango service and obtain other parameters required
+     * after Tango connection.
      */
-    private void setUpTangoListeners() {
+    private void startupTango() {
         // Set Tango Listeners for Poses Device wrt Start of Service, Device wrt
         // ADF and Start of Service wrt ADF.
         ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();

@@ -22,6 +22,7 @@ import com.google.atap.tangoservice.TangoConfig;
 import com.google.atap.tangoservice.TangoCoordinateFramePair;
 import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
+import com.google.atap.tangoservice.TangoInvalidException;
 import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
@@ -65,21 +66,16 @@ public class HelloMotionTrackingActivity extends Activity {
             @Override
             public void run() {
                 synchronized (HelloMotionTrackingActivity.this) {
-                    mConfig = setupTangoConfig(mTango);
-
                     try {
-                        setTangoListeners();
-                    } catch (TangoErrorException e) {
-                        Log.e(TAG, getString(R.string.exception_tango_error), e);
-                    } catch (SecurityException e) {
-                        Log.e(TAG, getString(R.string.permission_motion_tracking), e);
-                    }
-                    try {
+                        mConfig = setupTangoConfig(mTango);
                         mTango.connect(mConfig);
+                        startupTango();
                     } catch (TangoOutOfDateException e) {
                         Log.e(TAG, getString(R.string.exception_out_of_date), e);
                     } catch (TangoErrorException e) {
                         Log.e(TAG, getString(R.string.exception_tango_error), e);
+                    } catch (TangoInvalidException e) {
+                        Log.e(TAG, getString(R.string.exception_tango_invalid), e);
                     }
                 }
             }
@@ -104,8 +100,7 @@ public class HelloMotionTrackingActivity extends Activity {
      */
     private TangoConfig setupTangoConfig(Tango tango) {
         // Create a new Tango Configuration and enable the HelloMotionTrackingActivity API.
-        TangoConfig config = new TangoConfig();
-        config = tango.getConfig(config.CONFIG_TYPE_DEFAULT);
+        TangoConfig config = tango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
 
         // Tango service should automatically attempt to recover when it enters an invalid state.
@@ -114,10 +109,11 @@ public class HelloMotionTrackingActivity extends Activity {
     }
 
     /**
-     * Set up the callback listeners for the Tango service, then begin using the Motion
-     * Tracking API. This is called in response to the user clicking the 'Start' Button.
+     * Set up the callback listeners for the Tango service and obtain other parameters required
+     * after Tango connection.
+     * Listen to new Pose data.
      */
-    private void setTangoListeners() {
+    private void startupTango() {
         // Lock configuration and connect to Tango
         // Select coordinate frame pair
         final ArrayList<TangoCoordinateFramePair> framePairs =

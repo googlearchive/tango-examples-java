@@ -23,6 +23,7 @@ import com.google.atap.tangoservice.TangoConfig;
 import com.google.atap.tangoservice.TangoCoordinateFramePair;
 import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
+import com.google.atap.tangoservice.TangoInvalidException;
 import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
@@ -106,49 +107,35 @@ public class OpenGlAugmentedRealityActivity extends Activity {
         // Tango service is properly set-up and we start getting onFrameAvailable callbacks.
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
 
-        // Initialize Tango Service as a normal Android Service, since we call
-        // mTango.disconnect() in onPause, this will unbind Tango Service, so
-        // everytime when onResume get called, we should create a new Tango object.
+        // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
+        // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
+        // should create a new Tango object.
         mTango = new Tango(OpenGlAugmentedRealityActivity.this, new Runnable() {
-            // Pass in a Runnable to be called from UI thread when Tango is ready,
-            // this Runnable will be running on a new thread.
-            // When Tango is ready, we can call Tango functions safely here only
-            // when there is no UI thread changes involved.
+            // Pass in a Runnable to be called from UI thread when Tango is ready, this Runnable
+            // will be running on a new thread.
+            // When Tango is ready, we can call Tango functions safely here only when there is no UI
+            // thread changes involved.
             @Override
             public void run() {
+                // Synchronize against disconnecting while the service is being used in the OpenGL
+                // thread or in the UI thread.
                 synchronized (OpenGlAugmentedRealityActivity.this) {
-                    TangoSupport.initialize();
-                    mConfig = setupTangoConfig(mTango);
-
                     try {
-                        setTangoListeners();
-                    } catch (TangoErrorException e) {
-                        Log.e(TAG, getString(R.string.exception_tango_error), e);
-                    } catch (SecurityException e) {
-                        Log.e(TAG, getString(R.string.permission_camera), e);
-                    }
-                    try {
+                        TangoSupport.initialize();
+                        mConfig = setupTangoConfig(mTango);
                         mTango.connect(mConfig);
+                        startupTango();
                         mIsConnected = true;
                     } catch (TangoOutOfDateException e) {
                         Log.e(TAG, getString(R.string.exception_out_of_date), e);
                     } catch (TangoErrorException e) {
                         Log.e(TAG, getString(R.string.exception_tango_error), e);
+                    } catch (TangoInvalidException e) {
+                        Log.e(TAG, getString(R.string.exception_tango_invalid), e);
                     }
                 }
-
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        synchronized (OpenGlAugmentedRealityActivity.this) {
-                            mIntrinsics = mTango.getCameraIntrinsics(
-                                    TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
-                        }
-                    }
-                });
             }
         });
-
     }
 
     @Override
@@ -179,17 +166,14 @@ public class OpenGlAugmentedRealityActivity extends Activity {
      * making this call.
      */
     private TangoConfig setupTangoConfig(Tango tango) {
-        // Use default configuration for Tango Service, plus color camera and
-        // low latency IMU integration.
+        // Use default configuration for Tango Service, plus color camera, low latency
+        // IMU integration and drift correction.
         TangoConfig config = tango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_COLORCAMERA, true);
-
         // NOTE: Low latency integration is necessary to achieve a precise alignment of
         // virtual objects with the RBG image and produce a good AR effect.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION, true);
-
         // Drift correction allows motion tracking to recover after it loses tracking.
-        //
         // The drift corrected pose is is available through the frame pair with
         // base frame AREA_DESCRIPTION and target frame DEVICE.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DRIFT_CORRECTION, true);
@@ -198,10 +182,11 @@ public class OpenGlAugmentedRealityActivity extends Activity {
     }
 
     /**
-     * Set up the callback listeners for the Tango service, then begin using the Motion
-     * Tracking API. This is called in response to the user clicking the 'Start' Button.
+     * Set up the callback listeners for the Tango service and obtain other parameters required
+     * after Tango connection.
+     * Listen to updates from the RGB camera.
      */
-    private void setTangoListeners() {
+    private void startupTango() {
         // No need to add any coordinate frame pairs since we aren't using pose data from callbacks.
         ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
 
@@ -249,6 +234,9 @@ public class OpenGlAugmentedRealityActivity extends Activity {
                 }
             }
         });
+
+        // Obtain the intrinsic parameters of the color camera.
+        mIntrinsics = mTango.getCameraIntrinsics(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
     }
 
     /**

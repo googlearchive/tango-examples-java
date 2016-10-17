@@ -3,7 +3,9 @@
 
     <string name="app_name">Java Point To Point Measurement</string>
     <string name="app_name_long">Java Point To Point Measurement Example</string>
-    <string name="tango_out_of_date_exception">"Tango service outdated!"</string>
+    <string name="exception_out_of_date">"Tango service outdated!"</string>
+    <string name="exception_tango_error">"Tango exception!"</string>
+    <string name="exception_tango_invalid">"Tango invalid exception! Try again!"</string>
     <string name="failed_measurement">Failed to place point</string>
     <string name="failed_permissions">Permissions required!</string>
     <string name="measurement">DISTANCE: </string>
