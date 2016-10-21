@@ -137,11 +137,11 @@ public class FloorplanRenderer extends RajawaliRenderer {
                     Pose pose = poseIterator.next();
                     object3D = new Plane(CUBE_SIDE_LENGTH, CUBE_SIDE_LENGTH, 2, 2);
                     object3D.setMaterial(mPlaneMaterial);
-                    // Rotate around X axis so the texture is applied correctly.
+                    // Rotate around Y axis so the texture is applied correctly.
                     // NOTE: This may be a Rajawali bug.
                     // https://github.com/Rajawali/Rajawali/issues/1561
                     object3D.setDoubleSided(true);
-                    object3D.rotate(Vector3.Axis.X, 180);
+                    object3D.rotate(Vector3.Axis.Y, 180);
                     // Place the 3D object in the location of the detected plane.
                     object3D.setPosition(pose.position);
                     object3D.rotate(pose.orientation);

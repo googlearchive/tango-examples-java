@@ -24,6 +24,7 @@ import com.google.atap.tangoservice.TangoCoordinateFramePair;
 import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoException;
+import com.google.atap.tangoservice.TangoInvalidException;
 import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
@@ -37,6 +38,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
 
+import org.rajawali3d.math.Plane;
 import org.rajawali3d.scene.ASceneFrameCallback;
 import org.rajawali3d.surface.RajawaliSurfaceView;
 
@@ -77,6 +79,7 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
     private TangoCameraIntrinsics mIntrinsics;
     private TangoPointCloudManager mPointCloudManager;
     private Tango mTango;
+    private TangoConfig mConfig;
     private boolean mIsConnected = false;
     private double mCameraPoseTimestamp = 0;
 
@@ -98,12 +101,47 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
+        // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
+        // should create a new Tango object.
+        mTango = new Tango(PlaneFittingActivity.this, new Runnable() {
+            // Pass in a Runnable to be called from UI thread when Tango is ready, this Runnable
+            // will be running on a new thread.
+            // When Tango is ready, we can call Tango functions safely here only when there is no UI
+            // thread changes involved.
+            @Override
+            public void run() {
+                // Synchronize against disconnecting while the service is being used in the OpenGL
+                // thread or in the UI thread.
+                synchronized (PlaneFittingActivity.this) {
+                    try {
+                        TangoSupport.initialize();
+                        mConfig = setupTangoConfig(mTango);
+                        mTango.connect(mConfig);
+                        startupTango();
+                        connectRenderer();
+                        mIsConnected = true;
+                    } catch (TangoOutOfDateException e) {
+                        Log.e(TAG, getString(R.string.exception_out_of_date), e);
+                    } catch (TangoErrorException e) {
+                        Log.e(TAG, getString(R.string.exception_tango_error), e);
+                    } catch (TangoInvalidException e) {
+                        Log.e(TAG, getString(R.string.exception_tango_invalid), e);
+                    }
+                }
+            }
+        });
+    }
+
+    @Override
     protected void onPause() {
         super.onPause();
         // Synchronize against disconnecting while the service is being used in the OpenGL thread or
         // in the UI thread.
         synchronized (this) {
-            if (mIsConnected) {
+            try {
                 mRenderer.getCurrentScene().clearFrameCallbacks();
                 mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
                 // We need to invalidate the connected texture ID so that we cause a re-connection
@@ -111,61 +149,40 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
                 mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
                 mTango.disconnect();
                 mIsConnected = false;
+            } catch (TangoErrorException e) {
+                Log.e(TAG, getString(R.string.exception_tango_error), e);
             }
         }
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        // Synchronize against disconnecting while the service is being used in the OpenGL thread or
-        // in the UI thread.
-        if (!mIsConnected) {
-            // Initialize Tango Service as a normal Android Service, since we call 
-            // mTango.disconnect() in onPause, this will unbind Tango Service, so
-            // everytime when onResume get called, we should create a new Tango object.
-            mTango = new Tango(PlaneFittingActivity.this, new Runnable() {
-                // Pass in a Runnable to be called from UI thread when Tango is ready,
-                // this Runnable will be running on a new thread.
-                // When Tango is ready, we can call Tango functions safely here only
-                // when there is no UI thread changes involved.
-                @Override
-                public void run() {
-                    try {
-                        TangoSupport.initialize();
-                        connectTango();
-                        connectRenderer();
-                        mIsConnected = true;
-                    } catch (TangoOutOfDateException e) {
-                        Log.e(TAG, getString(R.string.exception_out_of_date), e);
-                    }
-                }
-            });
-        }
-    }
-
     /**
-     * Configures the Tango service and connect it to callbacks.
+     * Sets up the tango configuration object. Make sure mTango object is initialized before
+     * making this call.
      */
-    private void connectTango() {
-        // Use default configuration for Tango Service, plus low latency
-        // IMU integration.
-        TangoConfig config = mTango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
+    private TangoConfig setupTangoConfig(Tango tango) {
+        // Use default configuration for Tango Service (motion tracking), plus low latency
+        // IMU integration, color camera, depth and drift correction.
+        TangoConfig config = tango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
         // NOTE: Low latency integration is necessary to achieve a precise alignment of
         // virtual objects with the RBG image and produce a good AR effect.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION, true);
+        config.putBoolean(TangoConfig.KEY_BOOLEAN_COLORCAMERA, true);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
         config.putInt(TangoConfig.KEY_INT_DEPTH_MODE, TangoConfig.TANGO_DEPTH_MODE_POINT_CLOUD);
-        config.putBoolean(TangoConfig.KEY_BOOLEAN_COLORCAMERA, true);
-
         // Drift correction allows motion tracking to recover after it loses tracking.
-        //
         // The drift corrected pose is is available through the frame pair with
         // base frame AREA_DESCRIPTION and target frame DEVICE.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DRIFT_CORRECTION, true);
 
-        mTango.connect(config);
+        return config;
+    }
 
+    /**
+     * Set up the callback listeners for the Tango service and obtain other parameters required
+     * after Tango connection.
+     * Listen to updates from the RGB camera and Point Cloud.
+     */
+    private void startupTango() {
         // No need to add any coordinate frame pairs since we are not
         // using pose data. So just initialize.
         ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
@@ -203,6 +220,7 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
             }
         });
 
+        // Obtain the intrinsic parameters of the color camera.
         mIntrinsics = mTango.getCameraIntrinsics(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
     }
 

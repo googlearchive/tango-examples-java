@@ -27,6 +27,7 @@ import com.google.atap.tangoservice.TangoConfig;
 import com.google.atap.tangoservice.TangoCoordinateFramePair;
 import com.google.atap.tangoservice.TangoErrorException;
 import com.google.atap.tangoservice.TangoEvent;
+import com.google.atap.tangoservice.TangoInvalidException;
 import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
@@ -98,39 +99,36 @@ public class PointCloudActivity extends Activity {
         super.onResume();
 
         mTangoUx.start(new StartParams());
-        // Initialize Tango Service as a normal Android Service, since we call
-        // mTango.disconnect() in onPause, this will unbind Tango Service, so
-        // every time when onResume get called, we should create a new Tango object.
+        // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
+        // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
+        // should create a new Tango object.
         mTango = new Tango(PointCloudActivity.this, new Runnable() {
-            // Pass in a Runnable to be called from UI thread when Tango is ready,
-            // this Runnable will be running on a new thread.
-            // When Tango is ready, we can call Tango functions safely here only
-            // when there is no UI thread changes involved.
+            // Pass in a Runnable to be called from UI thread when Tango is ready, this Runnable
+            // will be running on a new thread.
+            // When Tango is ready, we can call Tango functions safely here only when there is no UI
+            // thread changes involved.
             @Override
             public void run() {
-            // Synchronize against disconnecting while the service is being used in the
-            // OpenGL thread or in the UI thread.
-            synchronized (PointCloudActivity.this) {
-                TangoSupport.initialize();
-                mConfig = setupTangoConfig(mTango);
-
-                try {
-                    setTangoListeners();
-                } catch (TangoErrorException e) {
-                    Log.e(TAG, getString(R.string.exception_tango_error), e);
-                }
-                try {
-                    mTango.connect(mConfig);
-                    mIsConnected = true;
-                } catch (TangoOutOfDateException e) {
-                    if (mTangoUx != null) {
-                        mTangoUx.showTangoOutOfDate();
+                // Synchronize against disconnecting while the service is being used in the OpenGL
+                // thread or in the UI thread.
+                synchronized (PointCloudActivity.this) {
+                    try {
+                        TangoSupport.initialize();
+                        mConfig = setupTangoConfig(mTango);
+                        mTango.connect(mConfig);
+                        startupTango();
+                        mIsConnected = true;
+                    } catch (TangoOutOfDateException e) {
+                        if (mTangoUx != null) {
+                            mTangoUx.showTangoOutOfDate();
+                        }
+                        Log.e(TAG, getString(R.string.exception_out_of_date), e);
+                    } catch (TangoErrorException e) {
+                        Log.e(TAG, getString(R.string.exception_tango_error), e);
+                    } catch (TangoInvalidException e) {
+                        Log.e(TAG, getString(R.string.exception_tango_invalid), e);
                     }
-                    Log.e(TAG, getString(R.string.exception_out_of_date), e);
-                } catch (TangoErrorException e) {
-                    Log.e(TAG, getString(R.string.exception_tango_error), e);
                 }
-            }
             }
         });
     }
@@ -145,9 +143,13 @@ public class PointCloudActivity extends Activity {
         // Tango.disconnect will block here until all Tango callback calls are finished.
         // If you lock against this object in a Tango callback thread it will cause a deadlock.
         synchronized (this) {
-            mTangoUx.stop();
-            mTango.disconnect();
-            mIsConnected = false;
+            try {
+                mTangoUx.stop();
+                mTango.disconnect();
+                mIsConnected = false;
+            } catch (TangoErrorException e) {
+                Log.e(TAG, getString(R.string.exception_tango_error), e);
+            }
         }
     }
 
@@ -164,10 +166,11 @@ public class PointCloudActivity extends Activity {
     }
 
     /**
-     * Set up the callback listeners for the Tango service, then begin using the Point
-     * Cloud API.
+     * Set up the callback listeners for the Tango service and obtain other parameters required
+     * after Tango connection.
+     * Listen to updates from the Point Cloud and Tango Events and Pose.
      */
-    private void setTangoListeners() {
+    private void startupTango() {
         ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
 
         framePairs.add(new TangoCoordinateFramePair(TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
@@ -199,7 +202,7 @@ public class PointCloudActivity extends Activity {
                         (currentTimeStamp - mPointCloudPreviousTimeStamp) * SECS_TO_MILLISECS;
                 mPointCloudPreviousTimeStamp = currentTimeStamp;
                 final double averageDepth = getAveragedDepth(pointCloud.points,
-                                                             pointCloud.numPoints);
+                        pointCloud.numPoints);
 
                 mPointCloudTimeToNextUpdate -= pointCloudFrameDelta;
 

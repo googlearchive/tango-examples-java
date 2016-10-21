@@ -28,6 +28,7 @@
     <string name="point_count">"Point count: "</string>
 
     <string name="exception_tango_error">"Tango Exception! Try again!"</string>
+    <string name="exception_tango_invalid">"Tango invalid exception! Try again!"</string>
     <string name="exception_out_of_date">"Tango Service outdated!"</string>
     <string name="motiontrackingpermission">"Motion Tracking permission needed!"</string>
     <string name="na">"N/A"</string>

@@ -22,6 +22,7 @@ import android.content.Context;
 
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.Surface;
 import android.view.animation.LinearInterpolator;
 
 import org.rajawali3d.Object3D;
@@ -54,11 +55,18 @@ import javax.microedition.khronos.opengles.GL10;
 public class AugmentedRealityRenderer extends RajawaliRenderer {
     private static final String TAG = AugmentedRealityRenderer.class.getSimpleName();
 
+    private float[] textureCoords0 = new float[]{0.0F, 0.0F, 1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 1.0F};
+    private float[] textureCoords270 = new float[]{0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 0.0F, 1.0F, 1.0F};
+    private float[] textureCoords180 = new float[]{1.0F, 1.0F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 0.0F};
+    private float[] textureCoords90  = new float[]{1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 1.0F, 0.0F, 0.0F};
+
     // Rajawali texture used to render the Tango color camera.
     private ATexture mTangoCameraTexture;
 
     // Keeps track of whether the scene camera has been configured.
     private boolean mSceneCameraConfigured;
+
+    private ScreenQuad mBackgroundQuad = new ScreenQuad();
 
     public AugmentedRealityRenderer(Context context) {
         super(context);
@@ -68,20 +76,21 @@ public class AugmentedRealityRenderer extends RajawaliRenderer {
     protected void initScene() {
         // Create a quad covering the whole background and assign a texture to it where the
         // Tango color camera contents will be rendered.
-        ScreenQuad backgroundQuad = new ScreenQuad();
         Material tangoCameraMaterial = new Material();
         tangoCameraMaterial.setColorInfluence(0);
+
+        mBackgroundQuad.getGeometry().setTextureCoords(textureCoords0);
         // We need to use Rajawali's {@code StreamingTexture} since it sets up the texture
         // for GL_TEXTURE_EXTERNAL_OES rendering
         mTangoCameraTexture =
                 new StreamingTexture("camera", (StreamingTexture.ISurfaceListener) null);
         try {
             tangoCameraMaterial.addTexture(mTangoCameraTexture);
-            backgroundQuad.setMaterial(tangoCameraMaterial);
+            mBackgroundQuad.setMaterial(tangoCameraMaterial);
         } catch (ATexture.TextureException e) {
             Log.e(TAG, "Exception creating texture for RGB camera contents", e);
         }
-        getCurrentScene().addChildAt(backgroundQuad, 0);
+        getCurrentScene().addChildAt(mBackgroundQuad, 0);
 
         // Add a directional light in an arbitrary direction.
         DirectionalLight light = new DirectionalLight(1, 0.2, -1);
@@ -150,6 +159,27 @@ public class AugmentedRealityRenderer extends RajawaliRenderer {
         translationMoon.setTransformable3D(moon);
         getCurrentScene().registerAnimation(translationMoon);
         translationMoon.play();
+    }
+
+    /**
+     * Update background texture's UV coordinates when device orientation is changed. i.e change
+     * between landscape and portrait mode.
+     */
+    public void updateColorCameraTextureUv(int rotation){
+        switch (rotation) {
+            case Surface.ROTATION_90:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords90);
+                break;
+            case Surface.ROTATION_180:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords180);
+                break;
+            case Surface.ROTATION_270:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords270);
+                break;
+            default:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords0);
+                break;
+        }
     }
 
     /**
