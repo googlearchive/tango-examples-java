@@ -469,7 +469,7 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
                             TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                             TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
                             TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO);
+                            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO, 0);
             if (transform.statusCode == TangoPoseData.POSE_VALID) {
                 // Update the AR object location.
                 float[] planeFitTransform = calculatePlaneTransform(
@@ -532,7 +532,7 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
                             TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                             TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
                             TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO);
+                            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO, 0);
             if (transform.statusCode == TangoPoseData.POSE_VALID) {
                 wallMeasurement.update(transform.matrix);
                 mRenderer.addWallMeasurement(wallMeasurement);

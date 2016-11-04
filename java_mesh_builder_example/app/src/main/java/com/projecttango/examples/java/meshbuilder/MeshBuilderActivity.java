@@ -38,6 +38,7 @@ import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Display;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
@@ -68,6 +69,8 @@ public class MeshBuilderActivity extends Activity {
     private boolean mIsPaused;
     private boolean mClearMeshes;
 
+    private int mDeviceToDisplayRotation = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -83,6 +86,10 @@ public class MeshBuilderActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+
+        Display display = getWindowManager().getDefaultDisplay();
+        mDeviceToDisplayRotation = display.getRotation();
+
         mSurfaceView.onResume();
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
         // Check if it has permissions.
@@ -257,37 +264,44 @@ public class MeshBuilderActivity extends Activity {
                 // onRender callbacks had a chance to run and before scene objects are rendered
                 // into the scene.
 
-                // Synchronize against disconnecting while using the service.
-                synchronized (MeshBuilderActivity.this) {
-                    // Don't execute any tango API actions if we're not connected to the service
-                    if (!mIsConnected) {
-                        return;
-                    }
+                try {
+                    // Synchronize against disconnecting while using the service.
+                    synchronized (MeshBuilderActivity.this) {
+                        // Don't execute any tango API actions if we're not connected to the service
+                        if (!mIsConnected) {
+                            return;
+                        }
 
-                    // Set-up scene camera projection to match RGB camera intrinsics
-                    if (!mRenderer.isSceneCameraConfigured()) {
-                        mRenderer.setProjectionMatrix(
-                                projectionMatrixFromCameraIntrinsics(mIntrinsics));
-                    }
+                        // Set-up scene camera projection to match RGB camera intrinsics
+                        if (!mRenderer.isSceneCameraConfigured()) {
+                            mRenderer.setProjectionMatrix(
+                                    projectionMatrixFromCameraIntrinsics(mIntrinsics));
+                        }
 
-                    // Calculate the camera color pose at the camera frame update time in
-                    // OpenGL engine.
-                    TangoSupport.TangoMatrixTransformData ssTdev =
-                            TangoSupport.getMatrixTransformAtTime(
-                                    0.0, TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
-                                    TangoPoseData.COORDINATE_FRAME_DEVICE,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL);
+                        // Calculate the camera color pose at the camera frame update time in
+                        // OpenGL engine.
+                        TangoSupport.TangoMatrixTransformData ssTdev =
+                                TangoSupport.getMatrixTransformAtTime(
+                                        0.0, TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+                                        TangoPoseData.COORDINATE_FRAME_DEVICE,
+                                        TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+                                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                        mDeviceToDisplayRotation);
 
-                    if (ssTdev.statusCode == TangoPoseData.POSE_VALID) {
-                        // Update the camera pose from the renderer
-                        mRenderer.updateViewMatrix(ssTdev.matrix);
-                    } else {
-                        Log.w(TAG, "Can't get last camera pose");
+                        if (ssTdev.statusCode == TangoPoseData.POSE_VALID) {
+                            // Update the camera pose from the renderer
+                            mRenderer.updateViewMatrix(ssTdev.matrix);
+                        } else {
+                            Log.w(TAG, "Can't get last camera pose");
+                        }
                     }
+                    // Update mesh.
+                    updateMeshMap();
+                } catch (TangoErrorException e) {
+                    Log.w(TAG, "Tango API call error within the OpenGL thread", e);
+                } catch (TangoInvalidException e) {
+                    Log.w(TAG, "Tango API call error within the OpenGL thread", e);
                 }
-                // Update mesh.
-                updateMeshMap();
             }
         });
         mSurfaceView.setRenderer(mRenderer);

@@ -15,7 +15,6 @@
  */
 package com.projecttango.examples.java.augmentedreality;
 
-import com.google.atap.tangoservice.TangoCameraIntrinsics;
 import com.google.atap.tangoservice.TangoPoseData;
 
 import android.content.Context;
@@ -29,7 +28,6 @@ import org.rajawali3d.Object3D;
 import org.rajawali3d.animation.Animation;
 import org.rajawali3d.animation.Animation3D;
 import org.rajawali3d.animation.EllipticalOrbitAnimation3D;
-import org.rajawali3d.animation.RotateAroundAnimation3D;
 import org.rajawali3d.animation.RotateOnAxisAnimation;
 import org.rajawali3d.lights.DirectionalLight;
 import org.rajawali3d.materials.Material;
@@ -66,7 +64,7 @@ public class AugmentedRealityRenderer extends RajawaliRenderer {
     // Keeps track of whether the scene camera has been configured.
     private boolean mSceneCameraConfigured;
 
-    private ScreenQuad mBackgroundQuad = new ScreenQuad();
+    private ScreenQuad mBackgroundQuad;
 
     public AugmentedRealityRenderer(Context context) {
         super(context);
@@ -79,7 +77,10 @@ public class AugmentedRealityRenderer extends RajawaliRenderer {
         Material tangoCameraMaterial = new Material();
         tangoCameraMaterial.setColorInfluence(0);
 
-        mBackgroundQuad.getGeometry().setTextureCoords(textureCoords0);
+        if (mBackgroundQuad == null) {
+            mBackgroundQuad = new ScreenQuad();
+            mBackgroundQuad.getGeometry().setTextureCoords(textureCoords0);
+        }
         // We need to use Rajawali's {@code StreamingTexture} since it sets up the texture
         // for GL_TEXTURE_EXTERNAL_OES rendering
         mTangoCameraTexture =
@@ -166,6 +167,10 @@ public class AugmentedRealityRenderer extends RajawaliRenderer {
      * between landscape and portrait mode.
      */
     public void updateColorCameraTextureUv(int rotation){
+        if (mBackgroundQuad == null) {
+            mBackgroundQuad = new ScreenQuad();
+        }
+
         switch (rotation) {
             case Surface.ROTATION_90:
                 mBackgroundQuad.getGeometry().setTextureCoords(textureCoords90);

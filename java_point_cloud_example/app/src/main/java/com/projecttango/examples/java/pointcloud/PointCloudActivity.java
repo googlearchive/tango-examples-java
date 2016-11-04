@@ -34,8 +34,11 @@ import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
 import android.app.Activity;
+import android.hardware.Camera;
+import android.hardware.display.DisplayManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Display;
 import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.View;
@@ -47,7 +50,6 @@ import org.rajawali3d.surface.RajawaliSurfaceView;
 import java.nio.FloatBuffer;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.projecttango.tangosupport.TangoPointCloudManager;
 import com.projecttango.tangosupport.TangoSupport;
@@ -79,6 +81,8 @@ public class PointCloudActivity extends Activity {
 
     private double mPointCloudTimeToNextUpdate = UPDATE_INTERVAL_MS;
 
+    private int mDepthCameraToDisplayRotation = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -92,11 +96,33 @@ public class PointCloudActivity extends Activity {
         mTangoUx = setupTangoUxAndLayout();
         mRenderer = new PointCloudRajawaliRenderer(this);
         setupRenderer();
+
+        DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+        if (displayManager != null) {
+            displayManager.registerDisplayListener(new DisplayManager.DisplayListener() {
+                @Override
+                public void onDisplayAdded(int displayId) {
+
+                }
+
+                @Override
+                public void onDisplayChanged(int displayId) {
+                    synchronized (this) {
+                        setAndroidOrientation();
+                    }
+                }
+
+                @Override
+                public void onDisplayRemoved(int displayId) {}
+            }, null);
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+
+        setAndroidOrientation();
 
         mTangoUx.start(new StartParams());
         // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
@@ -262,7 +288,8 @@ public class PointCloudActivity extends Activity {
                                         TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                         TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
                                         TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                        TangoSupport.TANGO_SUPPORT_ENGINE_TANGO);
+                                        TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+                                        Surface.ROTATION_0);
                         if (transform.statusCode == TangoPoseData.POSE_VALID) {
                             mRenderer.updatePointCloud(pointCloud, transform.matrix);
                         }
@@ -270,12 +297,14 @@ public class PointCloudActivity extends Activity {
 
                     // Update current camera pose.
                     try {
-                        // Calculate the last camera color pose.
+                        // Calculate the last depth camera pose. This transform is used to display
+                        // frustum in third and top down view, and used to render camera pose in
+                        // first person view.
                         TangoPoseData lastFramePose = TangoSupport.getPoseAtTime(0,
                                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
-                                TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
+                                TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
                                 TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                Surface.ROTATION_0);
+                                mDepthCameraToDisplayRotation);
                         mRenderer.updateCameraPose(lastFramePose);
                     } catch (TangoErrorException e) {
                         Log.e(TAG, "Could not get valid transform");
@@ -402,4 +431,33 @@ public class PointCloudActivity extends Activity {
         }
         return averageZ;
     }
+
+    /**
+     * Compute the depth camera to display's rotation. This is used for rendering
+     * camera in the correct rotation.
+     */
+    private void setAndroidOrientation() {
+        Display display = getWindowManager().getDefaultDisplay();
+        Camera.CameraInfo depthCameraInfo = new Camera.CameraInfo();
+        Camera.getCameraInfo(1, depthCameraInfo);
+
+        int depthCameraRotation = Surface.ROTATION_0;
+        switch(depthCameraInfo.orientation) {
+            case 90:
+                depthCameraRotation = Surface.ROTATION_90;
+                break;
+            case 180:
+                depthCameraRotation = Surface.ROTATION_180;
+                break;
+            case 270:
+                depthCameraRotation = Surface.ROTATION_270;
+                break;
+        }
+
+        mDepthCameraToDisplayRotation = display.getRotation() - depthCameraRotation;
+        if (mDepthCameraToDisplayRotation < 0) {
+            mDepthCameraToDisplayRotation += 4;
+        }
+    }
+
 }

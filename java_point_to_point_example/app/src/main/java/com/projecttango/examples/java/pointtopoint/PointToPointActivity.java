@@ -31,11 +31,15 @@ import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
 import android.app.Activity;
+import android.hardware.Camera;
+import android.hardware.display.DisplayManager;
 import android.opengl.Matrix;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
+import android.view.Display;
 import android.view.MotionEvent;
+import android.view.Surface;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -68,6 +72,9 @@ import com.projecttango.tangosupport.TangoSupport;
 public class PointToPointActivity extends Activity implements View.OnTouchListener {
     private static final String TAG = PointToPointActivity.class.getSimpleName();
 
+    // For all current Tango devices, color camera is in the camera id 0.
+    private static final int COLOR_CAMERA_ID = 0;
+
     // The interval at which we'll update our UI debug text in milliseconds.
     // This is the rate at which we query for distance data.
     private static final int UPDATE_UI_INTERVAL_MS = 100;
@@ -96,6 +103,8 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
     // Handles the debug text UI update loop.
     private Handler mHandler = new Handler();
 
+    private int mColorCameraToDisplayRotation = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -108,11 +117,33 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
         mDistanceMeasure = (TextView) findViewById(R.id.distance_textview);
         mLinePoints[0] = null;
         mLinePoints[1] = null;
+
+        DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+        if (displayManager != null) {
+            displayManager.registerDisplayListener(new DisplayManager.DisplayListener() {
+                @Override
+                public void onDisplayAdded(int displayId) {
+                }
+
+                @Override
+                public void onDisplayChanged(int displayId) {
+                    synchronized (this) {
+                        setAndroidOrientation();
+                    }
+                }
+
+                @Override
+                public void onDisplayRemoved(int displayId) {
+                }
+            }, null);
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+
+        setAndroidOrientation();
 
         // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
         // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
@@ -268,7 +299,8 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                         // Set-up scene camera projection to match RGB camera intrinsics
                         if (!mRenderer.isSceneCameraConfigured()) {
                             mRenderer.setProjectionMatrix(
-                                    projectionMatrixFromCameraIntrinsics(mIntrinsics));
+                                    projectionMatrixFromCameraIntrinsics(mIntrinsics,
+                                            mColorCameraToDisplayRotation));
                         }
 
                         // Connect the camera texture to the OpenGL Texture if necessary
@@ -299,11 +331,18 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                             // Note that if you don't want to use the drift corrected pose, the
                             // normal device with respect to start of service pose is still
                             // available.
+                            //
+                            // Also, we used mColorCameraToDipslayRotation to rotate the
+                            // transformation to align with the display frame. The reason we use
+                            // color camera instead depth camera frame is because the
+                            // getDepthAtPointNearestNeighbor transformed depth point to camera
+                            // frame.
                             TangoPoseData lastFramePose = TangoSupport.getPoseAtTime(
                                     mRgbTimestampGlThread,
                                     TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL, 0);
+                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                    mColorCameraToDisplayRotation);
                             if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
                                 // Update the camera pose from the renderer
                                 mRenderer.updateRenderCameraPose(lastFramePose);
@@ -346,27 +385,63 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
 
     /**
      * Use Tango camera intrinsics to calculate the projection Matrix for the Rajawali scene.
+     * The function also rotates the intrinsics based on current rotation from color camera to
+     * display.
      */
-    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics) {
+    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics,
+                                                                int rotation) {
         // Uses frustumM to create a projection matrix taking into account calibrated camera
         // intrinsic parameter.
         // Reference: http://ksimek.github.io/2013/06/03/calibrated_cameras_in_opengl/
         float near = 0.1f;
         float far = 100;
 
-        float xScale = near / (float) intrinsics.fx;
-        float yScale = near / (float) intrinsics.fy;
-        float xOffset = (float) (intrinsics.cx - (intrinsics.width / 2.0)) * xScale;
+        // Adjust camera intrinsics according to rotation from color camera to display.
+        double cx = intrinsics.cx;
+        double cy = intrinsics.cy;
+        double width = intrinsics.width;
+        double height = intrinsics.height;
+        double fx = intrinsics.fx;
+        double fy = intrinsics.fy;
+
+        switch (rotation) {
+            case Surface.ROTATION_90:
+                cx = intrinsics.cy;
+                cy = intrinsics.width - intrinsics.cx;
+                width = intrinsics.height;
+                height = intrinsics.width;
+                fx = intrinsics.fy;
+                fy = intrinsics.fx;
+                break;
+            case Surface.ROTATION_180:
+                cx = intrinsics.width - cx;
+                cy = intrinsics.height - cy;
+                break;
+            case Surface.ROTATION_270:
+                cx = intrinsics.height - intrinsics.cy;
+                cy = intrinsics.cx;
+                width = intrinsics.height;
+                height = intrinsics.width;
+                fx = intrinsics.fy;
+                fy = intrinsics.fx;
+                break;
+            default:
+                break;
+        }
+
+        double xscale = near / fx;
+        double yscale = near / fy;
+
+        double xoffset = (cx - (width / 2.0)) * xscale;
         // Color camera's coordinates has y pointing downwards so we negate this term.
-        float yOffset = (float) -(intrinsics.cy - (intrinsics.height / 2.0)) * yScale;
+        double yoffset = -(cy - (height / 2.0)) * yscale;
 
         float m[] = new float[16];
         Matrix.frustumM(m, 0,
-                xScale * (float) -intrinsics.width / 2.0f - xOffset,
-                xScale * (float) intrinsics.width / 2.0f - xOffset,
-                yScale * (float) -intrinsics.height / 2.0f - yOffset,
-                yScale * (float) intrinsics.height / 2.0f - yOffset,
-                near, far);
+                (float) (xscale * -width / 2.0 - xoffset),
+                (float) (xscale * width / 2.0 - xoffset),
+                (float) (yscale * -height / 2.0 - yoffset),
+                (float) (yscale * height / 2.0 - yoffset), near, far);
         return m;
     }
 
@@ -427,8 +502,10 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                 rgbTimestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                 pointCloud.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH);
 
+        float[] uv = getColorCameraUVFromDisplay(u, v, mColorCameraToDisplayRotation);
+
         float[] point = TangoSupport.getDepthAtPointNearestNeighbor(pointCloud,
-                colorTdepthPose, u, v);
+                colorTdepthPose, uv[0], uv[1]);
         if (point == null) {
             return null;
         }
@@ -437,9 +514,9 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
         TangoSupport.TangoMatrixTransformData transform =
                 TangoSupport.getMatrixTransformAtTime(pointCloud.timestamp,
                         TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
-                        TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
+                        TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                         TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                        TangoSupport.TANGO_SUPPORT_ENGINE_TANGO);
+                        TangoSupport.TANGO_SUPPORT_ENGINE_TANGO, Surface.ROTATION_0);
         if (transform.statusCode == TangoPoseData.POSE_VALID) {
             float[] depthPoint = new float[]{point[0], point[1], point[2], 1};
             float[] openGlPoint = new float[4];
@@ -522,5 +599,81 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Set the color camera background texture rotation and save the camera to display rotation.
+     */
+    private void setAndroidOrientation() {
+        Display display = getWindowManager().getDefaultDisplay();
+        Camera.CameraInfo colorCameraInfo = new Camera.CameraInfo();
+        Camera.getCameraInfo(COLOR_CAMERA_ID, colorCameraInfo);
+
+        mColorCameraToDisplayRotation =
+                getAndroidRotationFromColorCameraToDisplayRotation(display.getRotation(),
+                colorCameraInfo.orientation);
+
+        switch (mColorCameraToDisplayRotation) {
+            case Surface.ROTATION_90:
+                mRenderer.setScreenQuadRotation(270);
+                break;
+            case Surface.ROTATION_180:
+                mRenderer.setScreenQuadRotation(180);
+                break;
+            case Surface.ROTATION_270:
+                mRenderer.setScreenQuadRotation(90);
+                break;
+            default:
+                mRenderer.setScreenQuadRotation(0);
+                break;
+        }
+    }
+
+    /**
+     * Given an UV coordinate in display(screen) space, returns UV coordinate in color camera space.
+     */
+    float[] getColorCameraUVFromDisplay(float u, float v,
+            int colorToDisplayRotation) {
+        switch (colorToDisplayRotation) {
+            case 1:
+                return new float[]{1.0f - v, u};
+            case 2:
+                return new float[]{1.0f - u, 1.0f - v};
+            case 3:
+                return new float[]{v, 1.0f - u};
+            default:
+                return new float[]{u, v};
+        }
+    }
+
+    /**
+     * Get relative rotation from color camera to display. The return integer follows the Android
+     * display's Surface.ROTATION convention:
+     * https://developer.android.com/reference/android/view/Surface.html#ROTATION_0
+     */
+    int getAndroidRotationFromColorCameraToDisplayRotation(int displayRotation,
+                                                           int colorCameraRotation) {
+        int cameraN = 0;
+        // Covert camera rotation to Surface.ROTATION format.
+        switch (colorCameraRotation) {
+            case 90:
+                cameraN = Surface.ROTATION_90;
+                break;
+            case 180:
+                cameraN = Surface.ROTATION_180;
+                break;
+            case 270:
+                cameraN = Surface.ROTATION_270;
+                break;
+            default:
+                cameraN = Surface.ROTATION_0;
+                break;
+        }
+
+        int ret = displayRotation - cameraN;
+        if (ret < 0) {
+            ret += 4;
+        }
+        return ret % 4;
     }
 }

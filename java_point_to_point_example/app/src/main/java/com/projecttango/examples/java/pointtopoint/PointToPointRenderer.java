@@ -15,7 +15,6 @@
  */
 package com.projecttango.examples.java.pointtopoint;
 
-import com.google.atap.tangoservice.TangoCameraIntrinsics;
 import com.google.atap.tangoservice.TangoPoseData;
 
 import android.content.Context;
@@ -45,8 +44,8 @@ import javax.microedition.khronos.opengles.GL10;
  * placed at the point corresponding to the depth at the point of the click.
  */
 public class PointToPointRenderer extends RajawaliRenderer {
-
     private static final String TAG = PointToPointRenderer.class.getSimpleName();
+
     private Object3D mLine;
     private Stack<Vector3> mPoints;
     private boolean mLineUpdated = false;
@@ -54,6 +53,7 @@ public class PointToPointRenderer extends RajawaliRenderer {
     // Augmented reality related fields
     private ATexture mTangoCameraTexture;
     private boolean mSceneCameraConfigured;
+    private ScreenQuad mBackgroundQuad;
 
     public PointToPointRenderer(Context context) {
         super(context);
@@ -63,7 +63,9 @@ public class PointToPointRenderer extends RajawaliRenderer {
     protected void initScene() {
         // Create a quad covering the whole background and assign a texture to it where the
         // Tango color camera contents will be rendered.
-        ScreenQuad backgroundQuad = new ScreenQuad();
+        if (mBackgroundQuad == null) {
+            mBackgroundQuad = new ScreenQuad();
+        }
         Material tangoCameraMaterial = new Material();
         tangoCameraMaterial.setColorInfluence(0);
         // We need to use Rajawali's {@code StreamingTexture} since it sets up the texture
@@ -72,11 +74,11 @@ public class PointToPointRenderer extends RajawaliRenderer {
                 new StreamingTexture("camera", (StreamingTexture.ISurfaceListener) null);
         try {
             tangoCameraMaterial.addTexture(mTangoCameraTexture);
-            backgroundQuad.setMaterial(tangoCameraMaterial);
+            mBackgroundQuad.setMaterial(tangoCameraMaterial);
         } catch (ATexture.TextureException e) {
             Log.e(TAG, "Exception creating texture for RGB camera contents", e);
         }
-        getCurrentScene().addChildAt(backgroundQuad, 0);
+        getCurrentScene().addChildAt(mBackgroundQuad, 0);
 
         // Add a directional light in an arbitrary direction.
         DirectionalLight light = new DirectionalLight(1, 0.2, -1);
@@ -115,6 +117,16 @@ public class PointToPointRenderer extends RajawaliRenderer {
     public synchronized void setLine(Stack<Vector3> points) {
         mPoints = points;
         mLineUpdated = true;
+    }
+
+    /**
+     * Set ScreenQuad (video overlay's screen)'s orientation along the z axis.
+     */
+    public void setScreenQuadRotation(float rotation) {
+        if (mBackgroundQuad == null) {
+            mBackgroundQuad = new ScreenQuad();
+        }
+        mBackgroundQuad.setRotation(Vector3.Axis.Z, rotation);
     }
 
     /**
