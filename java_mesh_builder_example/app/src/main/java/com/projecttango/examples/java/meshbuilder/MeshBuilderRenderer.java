@@ -15,10 +15,6 @@
  */
 package com.projecttango.examples.java.meshbuilder;
 
-import static android.opengl.GLES20.GL_TRIANGLES;
-import static android.opengl.GLES20.GL_UNSIGNED_INT;
-import static android.opengl.GLES20.glDrawElements;
-
 import com.google.atap.tango.mesh.TangoMesh;
 
 import android.annotation.SuppressLint;
@@ -105,7 +101,7 @@ public class MeshBuilderRenderer implements GLSurfaceView.Renderer {
         GLES20.glEnableVertexAttribArray(mMeshMaterial.getPosHandle());
         // Draw the mesh
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferId);
-        glDrawElements(GL_TRIANGLES, mesh.numFaces * 3, GL_UNSIGNED_INT, 0);
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES, mesh.numFaces * 3, GLES20.GL_UNSIGNED_INT, 0);
     }
 
 

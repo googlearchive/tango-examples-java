@@ -326,7 +326,7 @@ public class ModelCorrespondenceActivity extends Activity {
                                                     TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                                                     TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL);
+                                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL, 0);
                                     if (transform.statusCode == TangoPoseData.POSE_VALID) {
                                         // Place it in the top left corner, and rotate and scale it
                                         // accordingly.
@@ -507,7 +507,7 @@ public class ModelCorrespondenceActivity extends Activity {
                         TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                         TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
                         TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                        TangoSupport.TANGO_SUPPORT_ENGINE_TANGO);
+                        TangoSupport.TANGO_SUPPORT_ENGINE_TANGO, 0);
         if (transform.statusCode == TangoPoseData.POSE_VALID) {
             if (point == null) {
                 return null;

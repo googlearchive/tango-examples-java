@@ -16,8 +16,6 @@
 
 package com.projecttango.examples.java.meshbuilder;
 
-import static android.opengl.GLES20.glUseProgram;
-
 import android.opengl.GLES20;
 
 /**
@@ -59,7 +57,7 @@ public class MeshMaterial {
 
     private void loadHandles() {
         mShaderProgram = OpenGlHelper.createProgram(mVss, mFss);
-        glUseProgram(mShaderProgram);
+        GLES20.glUseProgram(mShaderProgram);
 
         mPosHandle = GLES20.glGetAttribLocation(mShaderProgram, "a_Position");
         mAttributeColorHandle = GLES20.glGetAttribLocation(mShaderProgram, "a_Color");
@@ -72,7 +70,7 @@ public class MeshMaterial {
         if (!mLoaded) {
             loadHandles();
         }
-        glUseProgram(mShaderProgram);
+        GLES20.glUseProgram(mShaderProgram);
         // Send the MVP Matrix.
         GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mvpMatrix, 0);
     }

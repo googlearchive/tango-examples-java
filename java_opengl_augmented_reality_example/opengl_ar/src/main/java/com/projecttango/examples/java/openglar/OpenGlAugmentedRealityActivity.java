@@ -307,7 +307,8 @@ public class OpenGlAugmentedRealityActivity extends Activity {
                                                             .COORDINATE_FRAME_AREA_DESCRIPTION,
                                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                                                     TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL);
+                                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                                    0);
                                     if (transform.statusCode == TangoPoseData.POSE_VALID) {
 
                                         mRenderer.updateViewMatrix(transform.matrix);

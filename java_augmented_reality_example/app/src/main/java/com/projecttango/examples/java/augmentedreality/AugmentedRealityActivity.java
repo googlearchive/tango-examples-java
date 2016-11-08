@@ -107,14 +107,7 @@ public class AugmentedRealityActivity extends Activity {
                 @Override
                 public void onDisplayChanged(int displayId) {
                     synchronized (this) {
-                        Display display = getWindowManager().getDefaultDisplay();
-                        Camera.CameraInfo colorCameraInfo = new Camera.CameraInfo();
-                        Camera.getCameraInfo(COLOR_CAMERA_ID, colorCameraInfo);
-
-                        mColorCameraToDisplayAndroidRotation =
-                                getColorCameraToDisplayAndroidRotation(display.getRotation(),
-                                        colorCameraInfo.orientation);
-                        mRenderer.updateColorCameraTextureUv(mColorCameraToDisplayAndroidRotation);
+                        setAndroidOrientation();
                     }
                 }
 
@@ -130,6 +123,9 @@ public class AugmentedRealityActivity extends Activity {
     protected void onResume() {
         super.onResume();
         mSurfaceView.onResume();
+
+        setAndroidOrientation();
+
         // Set render mode to RENDERMODE_CONTINUOUSLY to force getting onDraw callbacks until the
         // Tango service is properly set-up and we start getting onFrameAvailable callbacks.
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
@@ -454,5 +450,19 @@ public class AugmentedRealityActivity extends Activity {
                 yScale * (float) height / 2.0f - yOffset,
                 near, far);
         return m;
+    }
+
+    /**
+     * Set the color camera background texture rotation and save the camera to display rotation.
+     */
+    private void setAndroidOrientation() {
+        Display display = getWindowManager().getDefaultDisplay();
+        Camera.CameraInfo colorCameraInfo = new Camera.CameraInfo();
+        Camera.getCameraInfo(COLOR_CAMERA_ID, colorCameraInfo);
+
+        mColorCameraToDisplayAndroidRotation =
+                getColorCameraToDisplayAndroidRotation(display.getRotation(),
+                        colorCameraInfo.orientation);
+        mRenderer.updateColorCameraTextureUv(mColorCameraToDisplayAndroidRotation);
     }
 }

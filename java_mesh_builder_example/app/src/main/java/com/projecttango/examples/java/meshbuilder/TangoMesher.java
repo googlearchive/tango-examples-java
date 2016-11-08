@@ -59,6 +59,7 @@ public class TangoMesher implements Tango.OnTangoUpdateListener, Tango.OnFrameAv
     private volatile boolean mIsReconstructionActive = false;
 
     private Runnable mRunnableCallback = null;
+    private Object mReleaseSyncObject = new Object();
 
     /**
      * Callback for when meshes are available.
@@ -84,61 +85,65 @@ public class TangoMesher implements Tango.OnTangoUpdateListener, Tango.OnFrameAv
             mRunnableCallback = new Runnable() {
                 @Override
                 public void run() {
-                    if (!mIsReconstructionActive) {
-                        return;
-                    }
+                    synchronized (mReleaseSyncObject) {
+                        if (!mIsReconstructionActive) {
+                            return;
+                        }
 
-                    if (mPointCloudBuffer.getLatestPointCloud() == null) {
-                        return;
-                    }
+                        if (mPointCloudBuffer.getLatestPointCloud() == null) {
+                            return;
+                        }
 
-                    TangoPointCloudData cloudData = mPointCloudBuffer.getLatestPointCloud();
-                    TangoPoseData depthPose = TangoSupport.getPoseAtTime(cloudData.timestamp,
-                            TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
-                            TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
-                            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
-                            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO);
-                    if (depthPose.statusCode != TangoPoseData.POSE_VALID) {
-                        Log.e(TAG, "couldn't extract a valid depth pose");
-                        return;
-                    }
+                        TangoPointCloudData cloudData = mPointCloudBuffer.getLatestPointCloud();
+                        TangoPoseData depthPose = TangoSupport.getPoseAtTime(cloudData.timestamp,
+                                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+                                TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
+                                TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+                                TangoSupport.TANGO_SUPPORT_ENGINE_TANGO);
+                        if (depthPose.statusCode != TangoPoseData.POSE_VALID) {
+                            Log.e(TAG, "couldn't extract a valid depth pose");
+                            return;
+                        }
 
-                    TangoImageBuffer imageBuffer = null;
-                    if (mImageBuffer != null) {
-                        imageBuffer = mImageBuffer;
-                        mImageBuffer = null;
-                    }
+                        TangoImageBuffer imageBuffer = null;
+                        if (mImageBuffer != null) {
+                            imageBuffer = mImageBuffer;
+                            mImageBuffer = null;
+                        } else {
+                            return;
+                        }
 
-                    TangoPoseData imagePose = TangoSupport.getPoseAtTime(imageBuffer.timestamp,
-                            TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
-                            TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
-                            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO);
-                    if (imagePose.statusCode != TangoPoseData.POSE_VALID) {
-                        Log.e(TAG, "couldn't extract a valid color pose");
-                        return;
-                    }
+                        TangoPoseData imagePose = TangoSupport.getPoseAtTime(imageBuffer.timestamp,
+                                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+                                TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
+                                TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+                                TangoSupport.TANGO_SUPPORT_ENGINE_TANGO);
+                        if (imagePose.statusCode != TangoPoseData.POSE_VALID) {
+                            Log.e(TAG, "couldn't extract a valid color pose");
+                            return;
+                        }
 
-                    // Synchronize access to mTango3dReconstruction. This runs in TangoMesher
-                    // thread.
-                    synchronized (TangoMesher.this) {
-                        List<int[]> updatedIndices =
-                                mTango3dReconstruction.update(cloudData, depthPose,
-                                        imageBuffer, imagePose);
+                        // Synchronize access to mTango3dReconstruction. This runs in TangoMesher
+                        // thread.
+                        synchronized (TangoMesher.this) {
+                            List<int[]> updatedIndices =
+                                    mTango3dReconstruction.update(cloudData, depthPose,
+                                            imageBuffer, imagePose);
 
-                        if (updatedIndices != null) {
-                            int indexCount = updatedIndices.size();
-                            List<TangoMesh> meshes = new ArrayList<TangoMesh>(indexCount);
-                            for (int i = 0; i < indexCount; ++i) {
-                                TangoMesh mesh = mTango3dReconstruction.extractMeshSegment(
-                                        updatedIndices.get(i));
-                                if (mesh.numVertices > 0 && mesh.numFaces > 0) {
-                                    meshes.add(mesh);
+                            if (updatedIndices != null) {
+                                int indexCount = updatedIndices.size();
+                                List<TangoMesh> meshes = new ArrayList<TangoMesh>(indexCount);
+                                for (int i = 0; i < indexCount; ++i) {
+                                    TangoMesh mesh = mTango3dReconstruction.extractMeshSegment(
+                                            updatedIndices.get(i));
+                                    if (mesh.numVertices > 0 && mesh.numFaces > 0) {
+                                        meshes.add(mesh);
+                                    }
                                 }
+                                TangoMesh[] meshArray = new TangoMesh[meshes.size()];
+                                meshes.toArray(meshArray);
+                                mCallback.onMeshesAvailable(meshArray);
                             }
-                            TangoMesh[] meshArray = new TangoMesh[meshes.size()];
-                            meshes.toArray(meshArray);
-                            mCallback.onMeshesAvailable(meshArray);
                         }
                     }
                 }
@@ -149,9 +154,11 @@ public class TangoMesher implements Tango.OnTangoUpdateListener, Tango.OnFrameAv
     /**
      * Synchronize access to mTango3dReconstruction. This runs in UI thread.
      */
-    public synchronized void release() {
-        mIsReconstructionActive = false;
-        mTango3dReconstruction.release();
+    public void release() {
+        synchronized (mReleaseSyncObject) {
+            mIsReconstructionActive = false;
+            mTango3dReconstruction.release();
+        }
     }
 
     public void startSceneReconstruction() {
