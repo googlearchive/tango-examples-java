@@ -21,6 +21,7 @@ import android.content.Context;
 import android.graphics.Color;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.Surface;
 
 import org.rajawali3d.Object3D;
 import org.rajawali3d.lights.DirectionalLight;
@@ -32,7 +33,7 @@ import org.rajawali3d.math.Quaternion;
 import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.primitives.Line3D;
 import org.rajawali3d.primitives.ScreenQuad;
-import org.rajawali3d.renderer.RajawaliRenderer;
+import org.rajawali3d.renderer.Renderer;
 
 import java.util.Stack;
 
@@ -43,8 +44,13 @@ import javax.microedition.khronos.opengles.GL10;
  * Whenever the user clicks on the screen, the line is re-rendered with an endpoint
  * placed at the point corresponding to the depth at the point of the click.
  */
-public class PointToPointRenderer extends RajawaliRenderer {
+public class PointToPointRenderer extends Renderer {
     private static final String TAG = PointToPointRenderer.class.getSimpleName();
+
+    private float[] textureCoords0 = new float[]{0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 0.0F};
+    private float[] textureCoords270 = new float[]{1.0F, 1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F};
+    private float[] textureCoords180 = new float[]{1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F, 1.0F};
+    private float[] textureCoords90 = new float[]{0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F};
 
     private Object3D mLine;
     private Stack<Vector3> mPoints;
@@ -65,6 +71,7 @@ public class PointToPointRenderer extends RajawaliRenderer {
         // Tango color camera contents will be rendered.
         if (mBackgroundQuad == null) {
             mBackgroundQuad = new ScreenQuad();
+            mBackgroundQuad.getGeometry().setTextureCoords(textureCoords0);
         }
         Material tangoCameraMaterial = new Material();
         tangoCameraMaterial.setColorInfluence(0);
@@ -86,6 +93,33 @@ public class PointToPointRenderer extends RajawaliRenderer {
         light.setPower(0.8f);
         light.setPosition(3, 2, 4);
         getCurrentScene().addLight(light);
+    }
+
+    /**
+     * Update background texture's UV coordinates when device orientation is changed. i.e change
+     * between landscape and portrait mode.
+     * This must be run in the OpenGL thread.
+     */
+    public void updateColorCameraTextureUvGlThread(int rotation) {
+        if (mBackgroundQuad == null) {
+            mBackgroundQuad = new ScreenQuad();
+        }
+
+        switch (rotation) {
+            case Surface.ROTATION_90:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords90, true);
+                break;
+            case Surface.ROTATION_180:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords180, true);
+                break;
+            case Surface.ROTATION_270:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords270, true);
+                break;
+            default:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords0, true);
+                break;
+        }
+        mBackgroundQuad.getGeometry().reload();
     }
 
     @Override
@@ -117,16 +151,6 @@ public class PointToPointRenderer extends RajawaliRenderer {
     public synchronized void setLine(Stack<Vector3> points) {
         mPoints = points;
         mLineUpdated = true;
-    }
-
-    /**
-     * Set ScreenQuad (video overlay's screen)'s orientation along the z axis.
-     */
-    public void setScreenQuadRotation(float rotation) {
-        if (mBackgroundQuad == null) {
-            mBackgroundQuad = new ScreenQuad();
-        }
-        mBackgroundQuad.setRotation(Vector3.Axis.Z, rotation);
     }
 
     /**

@@ -30,10 +30,14 @@ import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
 import android.app.Activity;
+import android.hardware.Camera;
+import android.hardware.display.DisplayManager;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Display;
+import android.view.Surface;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -65,6 +69,8 @@ import com.projecttango.tangosupport.TangoSupport;
 public class OpenGlAugmentedRealityActivity extends Activity {
     private static final String TAG = OpenGlAugmentedRealityActivity.class.getSimpleName();
     private static final int INVALID_TEXTURE_ID = 0;
+    // For all current Tango devices, color camera is in the camera id 0.
+    private static final int COLOR_CAMERA_ID = 0;
 
     private GLSurfaceView mSurfaceView;
     private OpenGlAugmentedRealityRenderer mRenderer;
@@ -90,12 +96,31 @@ public class OpenGlAugmentedRealityActivity extends Activity {
     // is rotating.
     private float[] mEarthMoonCenterTMoonRotation = new float[16];
 
+    private int mColorCameraToDisplayAndroidRotation = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mSurfaceView = (GLSurfaceView) findViewById(R.id.surfaceview);
+        DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+        if (displayManager != null) {
+            displayManager.registerDisplayListener(new DisplayManager.DisplayListener() {
+                @Override
+                public void onDisplayAdded(int displayId) {}
+
+                @Override
+                public void onDisplayChanged(int displayId) {
+                    synchronized (this) {
+                        setAndroidOrientation();
+                    }
+                }
+
+                @Override
+                public void onDisplayRemoved(int displayId) {}
+            }, null);
+        }
+
         setupRenderer();
     }
 
@@ -103,6 +128,9 @@ public class OpenGlAugmentedRealityActivity extends Activity {
     protected void onResume() {
         super.onResume();
         mSurfaceView.onResume();
+
+        setAndroidOrientation();
+
         // Set render mode to RENDERMODE_CONTINUOUSLY to force getting onDraw callbacks until the
         // Tango service is properly set-up and we start getting onFrameAvailable callbacks.
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
@@ -265,6 +293,12 @@ public class OpenGlAugmentedRealityActivity extends Activity {
                                     return;
                                 }
 
+                                // Set-up scene camera projection to match RGB camera intrinsics.
+                                if (!mRenderer.isProjectionMatrixConfigured()) {
+                                    mRenderer.setProjectionMatrix(
+                                            projectionMatrixFromCameraIntrinsics(mIntrinsics,
+                                                    mColorCameraToDisplayAndroidRotation));
+                                }
                                 // Connect the Tango SDK to the OpenGL texture ID where we are
                                 // going to render the camera.
                                 // NOTE: This must be done after both the texture is generated
@@ -276,10 +310,6 @@ public class OpenGlAugmentedRealityActivity extends Activity {
                                     mConnectedTextureIdGlThread = mRenderer.getTextureId();
                                     Log.d(TAG, "connected to texture id: " +
                                             mRenderer.getTextureId());
-
-                                    // Set-up scene camera projection to match RGB camera intrinsics
-                                    mRenderer.setProjectionMatrix(
-                                            projectionMatrixFromCameraIntrinsics(mIntrinsics));
                                 }
                                 // If there is a new RGB camera frame available, update the texture
                                 // and scene camera pose.
@@ -308,7 +338,7 @@ public class OpenGlAugmentedRealityActivity extends Activity {
                                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                                                     TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
                                                     TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                                    0);
+                                                    mColorCameraToDisplayAndroidRotation);
                                     if (transform.statusCode == TangoPoseData.POSE_VALID) {
 
                                         mRenderer.updateViewMatrix(transform.matrix);
@@ -368,29 +398,109 @@ public class OpenGlAugmentedRealityActivity extends Activity {
         mSurfaceView.setRenderer(mRenderer);
     }
 
+    private static int getColorCameraToDisplayAndroidRotation(int displayRotation,
+                                                              int cameraRotation) {
+        int cameraRotationNormalized = 0;
+        switch (cameraRotation) {
+            case 90:
+                cameraRotationNormalized = 1;
+                break;
+            case 180:
+                cameraRotationNormalized = 2;
+                break;
+            case 270:
+                cameraRotationNormalized = 3;
+                break;
+            default:
+                cameraRotationNormalized = 0;
+                break;
+        }
+        int ret = displayRotation - cameraRotationNormalized;
+        if (ret < 0) {
+            ret += 4;
+        }
+        return ret;
+    }
+
     /**
      * Use Tango camera intrinsics to calculate the projection Matrix for the OpenGL scene.
+     * @param intrinsics camera instrinsics for computing the project matrix.
+     * @param rotation the relative rotation between the camera intrinsics and display glContext.
      */
-    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics) {
+    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics,
+                                                                int rotation) {
+        // Adjust camera intrinsics according to rotation
+        float cx = (float) intrinsics.cx;
+        float cy = (float) intrinsics.cy;
+        float width = (float) intrinsics.width;
+        float height = (float) intrinsics.height;
+        float fx = (float) intrinsics.fx;
+        float fy = (float) intrinsics.fy;
+
+        switch (rotation) {
+            case Surface.ROTATION_90:
+                cx = (float) intrinsics.cy;
+                cy = (float) intrinsics.width - (float) intrinsics.cx;
+                width = (float) intrinsics.height;
+                height = (float) intrinsics.width;
+                fx = (float) intrinsics.fy;
+                fy = (float) intrinsics.fx;
+                break;
+            case Surface.ROTATION_180:
+                cx = (float) intrinsics.width - cx;
+                cy = (float) intrinsics.height - cy;
+                break;
+            case Surface.ROTATION_270:
+                cx = (float) intrinsics.height - (float) intrinsics.cy;
+                cy = (float) intrinsics.cx;
+                width = (float) intrinsics.height;
+                height = (float) intrinsics.width;
+                fx = (float) intrinsics.fy;
+                fy = (float) intrinsics.fx;
+                break;
+            default:
+                break;
+        }
+
         // Uses frustumM to create a projection matrix taking into account calibrated camera
         // intrinsic parameter.
         // Reference: http://ksimek.github.io/2013/06/03/calibrated_cameras_in_opengl/
         float near = 0.1f;
         float far = 100;
 
-        float xScale = near / (float) intrinsics.fx;
-        float yScale = near / (float) intrinsics.fy;
-        float xOffset = (float) (intrinsics.cx - (intrinsics.width / 2.0)) * xScale;
+        float xScale = near / fx;
+        float yScale = near / fy;
+        float xOffset = (cx - (width / 2.0f)) * xScale;
         // Color camera's coordinates has y pointing downwards so we negate this term.
-        float yOffset = (float) -(intrinsics.cy - (intrinsics.height / 2.0)) * yScale;
+        float yOffset = -(cy - (height / 2.0f)) * yScale;
 
         float m[] = new float[16];
         Matrix.frustumM(m, 0,
-                xScale * (float) -intrinsics.width / 2.0f - xOffset,
-                xScale * (float) intrinsics.width / 2.0f - xOffset,
-                yScale * (float) -intrinsics.height / 2.0f - yOffset,
-                yScale * (float) intrinsics.height / 2.0f - yOffset,
+                xScale * (float) -width / 2.0f - xOffset,
+                xScale * (float) width / 2.0f - xOffset,
+                yScale * (float) -height / 2.0f - yOffset,
+                yScale * (float) height / 2.0f - yOffset,
                 near, far);
         return m;
+    }
+
+    /**
+     * Set the color camera background texture rotation and save the camera to display rotation.
+     */
+    private void setAndroidOrientation() {
+        Display display = getWindowManager().getDefaultDisplay();
+        Camera.CameraInfo colorCameraInfo = new Camera.CameraInfo();
+        Camera.getCameraInfo(COLOR_CAMERA_ID, colorCameraInfo);
+
+        mColorCameraToDisplayAndroidRotation =
+                getColorCameraToDisplayAndroidRotation(display.getRotation(),
+                        colorCameraInfo.orientation);
+        // Run this in the OpenGL thread.
+        mSurfaceView.queueEvent(new Runnable() {
+            @Override
+            public void run() {
+                mRenderer.updateColorCameraTextureUv(mColorCameraToDisplayAndroidRotation);
+            }
+        });
     }
 }

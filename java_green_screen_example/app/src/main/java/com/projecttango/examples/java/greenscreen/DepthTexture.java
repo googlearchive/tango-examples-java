@@ -59,6 +59,7 @@ public class DepthTexture {
     public boolean createOrBindGPUTexture() {
         if (mDepthTexture != 0) {
             GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, mFrameBuffer);
+            GLES20.glViewport(0, 0, mTexWidth, mTexHeight);
             return false;
         } else {
             int[] tempFrameBuffers = new int[1];
@@ -129,8 +130,8 @@ public class DepthTexture {
             GLES20.glUniformMatrix4fv(mMvpHandle, 1, false, mvpMatrix, 0);
 
             GLES20.glEnableVertexAttribArray(mVertexHandle);
-            GLES20.glVertexAttribPointer(mVertexHandle, 3, GLES20.GL_FLOAT, false, Float
-                    .SIZE / 8 * 3, 0);
+            GLES20.glVertexAttribPointer(mVertexHandle, 4, GLES20.GL_FLOAT, false, Float
+                    .SIZE / 8 * 4, 0);
 
             GLES20.glDrawArrays(GLES20.GL_POINTS, 0, pointCloud.numPoints);
             GLES20.glDisableVertexAttribArray(mVertexHandle);

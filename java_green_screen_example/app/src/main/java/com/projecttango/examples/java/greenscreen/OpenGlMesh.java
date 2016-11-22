@@ -29,6 +29,7 @@ public class OpenGlMesh {
 
     private FloatBuffer mVertex;
     private FloatBuffer mTexCoord;
+    private FloatBuffer mCameraTexCoord;
     private ShortBuffer mIndices;
 
     private int mNumVertices;
@@ -39,11 +40,12 @@ public class OpenGlMesh {
     /**
      * Create an OpenGL mesh.
      *
-     * @param vertices          Array of vertex positions.
-     * @param texCoords         Array of texture coordinates.
-     * @param indices           Array of indices.
+     * @param vertices  Array of vertex positions.
+     * @param texCoords Array of texture coordinates.
+     * @param indices   Array of indices.
      */
-    public OpenGlMesh(float[] vertices, float[] texCoords, short[] indices, int openGlPrimitive) {
+    public OpenGlMesh(float[] vertices, float[] texCoords, float[] cameraTexCoords, short[]
+            indices, int openGlPrimitive) {
         mNumVertices = vertices.length / 3;
         mOpenGlPrimitive = openGlPrimitive;
 
@@ -57,6 +59,10 @@ public class OpenGlMesh {
         mTexCoord.put(texCoords);
         mTexCoord.position(0);
 
+        mCameraTexCoord = ByteBuffer.allocateDirect(Float.SIZE / 8 * cameraTexCoords.length).order(
+                ByteOrder.nativeOrder()).asFloatBuffer();
+        mCameraTexCoord.put(cameraTexCoords);
+        mCameraTexCoord.position(0);
 
         mIndices = ByteBuffer.allocateDirect(Short.SIZE / 8 * indices.length).order(
                 ByteOrder.nativeOrder()).asShortBuffer();
@@ -66,14 +72,14 @@ public class OpenGlMesh {
     }
 
     public void createVbos() {
-        mVbos = new int[3];
+        mVbos = new int[4];
         // Generate 3 buffers. Vertex buffer, texture buffer and index buffer.
-        GLES20.glGenBuffers(3, mVbos, 0);
+        GLES20.glGenBuffers(4, mVbos, 0);
         // Bind to vertex buffer
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mVbos[0]);
         // Populate it.
         GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, mNumVertices * 3 * Float
-                        .SIZE / 8, mVertex, GLES20.GL_STATIC_DRAW); // vertices of floats.
+                .SIZE / 8, mVertex, GLES20.GL_STATIC_DRAW); // vertices of floats.
 
         // Bind to texcoord buffer
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mVbos[1]);
@@ -81,8 +87,14 @@ public class OpenGlMesh {
         GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, mNumVertices * 2 * Float.SIZE / 8,
                 mTexCoord, GLES20.GL_STATIC_DRAW); // texcoord of floats.
 
+        // Bind to cameratexcoord buffer
+        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mVbos[2]);
+        // Populate it.
+        GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, mNumVertices * 2 * Float.SIZE / 8,
+                mCameraTexCoord, GLES20.GL_STATIC_DRAW); // texcoord of floats.
+
         // Bind to indices buffer
-        GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, mVbos[2]);
+        GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, mVbos[3]);
         // Populate it.
         GLES20.glBufferData(GLES20.GL_ELEMENT_ARRAY_BUFFER, mNumIndices * Short.SIZE / 8,
                 mIndices, GLES20.GL_STATIC_DRAW); // Indices
@@ -91,7 +103,7 @@ public class OpenGlMesh {
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
     }
 
-    public void drawMesh(int positionh, int textureh) {
+    public void drawMesh(int positionh, int textureh, int cameratextureh) {
         GLES20.glEnableVertexAttribArray(positionh);
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mVbos[0]);
         GLES20.glVertexAttribPointer(positionh, 3, GLES20.GL_FLOAT, false, Float
@@ -102,11 +114,28 @@ public class OpenGlMesh {
         GLES20.glVertexAttribPointer(textureh, 2, GLES20.GL_FLOAT, false, Float
                 .SIZE / 8 * 2, 0);
 
-        GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, mVbos[2]);
+        GLES20.glEnableVertexAttribArray(cameratextureh);
+        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mVbos[2]);
+        GLES20.glVertexAttribPointer(cameratextureh, 2, GLES20.GL_FLOAT, false, Float
+                .SIZE / 8 * 2, 0);
+
+        GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, mVbos[3]);
         GLES20.glDrawElements(mOpenGlPrimitive, mNumIndices, GLES20.GL_UNSIGNED_SHORT, 0);
 
         // Unbind.
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0);
+    }
+
+    public void setCameraTextureCoords(float[] textureCoords) {
+        mCameraTexCoord.put(textureCoords);
+        mCameraTexCoord.position(0);
+        if (mVbos != null) {
+            // Bind to camera texcoord buffer
+            GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mVbos[2]);
+            // Populate it.
+            GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, mNumVertices * 2 * Float
+                    .SIZE / 8, mCameraTexCoord, GLES20.GL_STATIC_DRAW); // texcoord of floats.
+        }
     }
 }

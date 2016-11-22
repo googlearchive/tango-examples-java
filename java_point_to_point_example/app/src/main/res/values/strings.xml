@@ -9,5 +9,6 @@
     <string name="failed_measurement">Failed to place point</string>
     <string name="failed_permissions">Permissions required!</string>
     <string name="measurement">DISTANCE: </string>
+    <string name="bilateral">Bilateral Upsample</string>
 
 </resources>

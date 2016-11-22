@@ -2,30 +2,58 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent">
 
-    <org.rajawali3d.surface.RajawaliSurfaceView
+    <org.rajawali3d.view.SurfaceView
         android:id="@+id/ar_view"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:layout_gravity="top"  />
 
-    <LinearLayout
-	    android:id="@+id/linearLayout1"
-	    android:layout_width="wrap_content"
-	    android:layout_height="wrap_content"
-	    android:layout_alignParentLeft="true"
-	    android:layout_alignParentTop="true"
-	    android:orientation="vertical">
+	<LinearLayout
+		android:id="@+id/linearLayout"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_alignParentLeft="true"
+		android:layout_alignParentTop="true"
+		android:orientation="vertical"
+		android:paddingLeft="5dp" >
 
-	    <TextView
-	        android:layout_width="wrap_content"
-	        android:layout_height="wrap_content"
-	        android:text="@string/measurement" />
+		<LinearLayout
+			android:layout_width="240dp"
+			android:layout_height="wrap_content"
+			android:layout_marginStart="17dp"
+			android:layout_marginTop="15dp"
+			android:gravity="top"
+			android:orientation="horizontal"
+			android:paddingStart="5dp"
+			android:paddingEnd="12dp">
 
-	    <TextView
-	        android:id="@+id/distance_textview"
-	        android:layout_width="wrap_content"
-	        android:layout_height="wrap_content"/>
+			<CheckBox android:id="@+id/check_box"
+					  android:layout_width="wrap_content"
+					  android:layout_height="wrap_content"
+					  android:text="@string/bilateral"
+					  android:textSize="20sp" />
 
-    </LinearLayout>
+		</LinearLayout>
+
+		<LinearLayout
+			android:id="@+id/linearLayout1"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_alignParentLeft="true"
+			android:layout_alignParentTop="true"
+			android:orientation="vertical">
+
+			<TextView
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"
+				android:text="@string/measurement" />
+
+			<TextView
+				android:id="@+id/distance_textview"
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content"/>
+
+		</LinearLayout>
+	</LinearLayout>
 
 </RelativeLayout>

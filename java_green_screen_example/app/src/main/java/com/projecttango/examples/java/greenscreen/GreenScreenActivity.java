@@ -35,6 +35,8 @@ import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.ContentValues;
 import android.graphics.Bitmap;
+import android.hardware.Camera;
+import android.hardware.display.DisplayManager;
 import android.media.MediaActionSound;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
@@ -44,6 +46,8 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.Display;
+import android.view.Surface;
 import android.view.View;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
@@ -88,6 +92,8 @@ import com.projecttango.tangosupport.TangoSupport;
 public class GreenScreenActivity extends AppCompatActivity {
     private static final String TAG = GreenScreenActivity.class.getSimpleName();
     private static final int INVALID_TEXTURE_ID = 0;
+    // For all current Tango devices, color camera is in the camera id 0.
+    private static final int COLOR_CAMERA_ID = 0;
 
     private SeekBar mDepthSeekbar;
     private FrameLayout mPanelFlash;
@@ -105,6 +111,8 @@ public class GreenScreenActivity extends AppCompatActivity {
     private AtomicBoolean mIsFrameAvailableTangoThread = new AtomicBoolean(false);
     private double mRgbTimestampGlThread;
 
+    private int mColorCameraToDisplayAndroidRotation = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -114,6 +122,25 @@ public class GreenScreenActivity extends AppCompatActivity {
         mDepthSeekbar.setOnSeekBarChangeListener(new DepthSeekbarListener());
         mPanelFlash = (FrameLayout) findViewById(R.id.panel_flash);
         mPointCloudManager = new TangoPointCloudManager();
+        DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+        if (displayManager != null) {
+            displayManager.registerDisplayListener(new DisplayManager.DisplayListener() {
+                @Override
+                public void onDisplayAdded(int displayId) {
+                }
+
+                @Override
+                public void onDisplayChanged(int displayId) {
+                    synchronized (this) {
+                        setAndroidOrientation();
+                    }
+                }
+
+                @Override
+                public void onDisplayRemoved(int displayId) {
+                }
+            }, null);
+        }
         setupRenderer();
     }
 
@@ -121,6 +148,9 @@ public class GreenScreenActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         mSurfaceView.onResume();
+
+        setAndroidOrientation();
+
         // Set render mode to RENDERMODE_CONTINUOUSLY to force getting onDraw callbacks until the
         // Tango service is properly set-up and we start getting onFrameAvailable callbacks.
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
@@ -291,10 +321,10 @@ public class GreenScreenActivity extends AppCompatActivity {
                                         mRenderer.getTextureId());
                                 mConnectedTextureIdGlThread = mRenderer.getTextureId();
                                 Log.d(TAG, "connected to texture id: " + mRenderer.getTextureId());
-
                                 // Set-up scene camera projection to match RGB camera intrinsics.
                                 mRenderer.setProjectionMatrix(
                                         projectionMatrixFromCameraIntrinsics(mIntrinsics));
+                                mRenderer.setCameraIntrinsics(mIntrinsics);
                             }
                             // If there is a new RGB camera frame available, update the texture and
                             // scene camera pose.
@@ -382,6 +412,30 @@ public class GreenScreenActivity extends AppCompatActivity {
         mSurfaceView.setRenderer(mRenderer);
     }
 
+    private static int getColorCameraToDisplayAndroidRotation(int displayRotation,
+                                                              int cameraRotation) {
+        int cameraRotationNormalized = 0;
+        switch (cameraRotation) {
+            case 90:
+                cameraRotationNormalized = 1;
+                break;
+            case 180:
+                cameraRotationNormalized = 2;
+                break;
+            case 270:
+                cameraRotationNormalized = 3;
+                break;
+            default:
+                cameraRotationNormalized = 0;
+                break;
+        }
+        int ret = displayRotation - cameraRotationNormalized;
+        if (ret < 0) {
+            ret += 4;
+        }
+        return ret;
+    }
+
     /**
      * Use Tango camera intrinsics to calculate the projection Matrix for the OpenGL scene.
      */
@@ -406,6 +460,26 @@ public class GreenScreenActivity extends AppCompatActivity {
                 yScale * (float) intrinsics.height / 2.0f - yOffset,
                 near, far);
         return m;
+    }
+
+    /**
+     * Set the color camera background texture rotation and save the camera to display rotation.
+     */
+    private void setAndroidOrientation() {
+        Display display = getWindowManager().getDefaultDisplay();
+        Camera.CameraInfo colorCameraInfo = new Camera.CameraInfo();
+        Camera.getCameraInfo(COLOR_CAMERA_ID, colorCameraInfo);
+
+        mColorCameraToDisplayAndroidRotation =
+                getColorCameraToDisplayAndroidRotation(display.getRotation(),
+                        colorCameraInfo.orientation);
+        // Run this in the OpenGL thread.
+        mSurfaceView.queueEvent(new Runnable() {
+            @Override
+            public void run() {
+                mRenderer.updateColorCameraTextureUv(mColorCameraToDisplayAndroidRotation);
+            }
+        });
     }
 
     /*

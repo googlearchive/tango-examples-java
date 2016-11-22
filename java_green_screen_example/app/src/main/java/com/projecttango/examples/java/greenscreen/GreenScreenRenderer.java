@@ -15,6 +15,7 @@
  */
 package com.projecttango.examples.java.greenscreen;
 
+import com.google.atap.tangoservice.TangoCameraIntrinsics;
 import com.google.atap.tangoservice.TangoPointCloudData;
 
 import android.content.Context;
@@ -85,10 +86,17 @@ public class GreenScreenRenderer implements GLSurfaceView.Renderer {
         mDepthTexture.resetDepthTexture();
     }
 
+    /**
+     * Update background texture's UV coordinates when device orientation is changed. i.e change
+     * between landscape and portrait mode.
+     */
+    public void updateColorCameraTextureUv(int rotation) {
+        mGreenScreen.updateTextureUv(rotation);
+    }
+
     @Override
     public void onSurfaceChanged(GL10 gl10, int width, int height) {
         GLES20.glViewport(0, 0, width, height);
-        mDepthTexture.setTextureSize(width, height);
         mDefaultViewportWidth = width;
         mDefaultViewportHeight = height;
     }
@@ -112,6 +120,7 @@ public class GreenScreenRenderer implements GLSurfaceView.Renderer {
         mDepthTexture.renderDepthTexture(mPointCloud, mMVP);
         mGreenScreen.setDepthTexture(mDepthTexture.getDepthTextureId());
 
+        GLES20.glViewport(0, 0, mDefaultViewportWidth, mDefaultViewportHeight);
         // Don't write depth buffer because we want to draw the camera as background.
         GLES20.glDepthMask(false);
         mGreenScreen.drawAsBackground();
@@ -143,6 +152,10 @@ public class GreenScreenRenderer implements GLSurfaceView.Renderer {
      */
     public void setProjectionMatrix(float[] matrixFloats) {
         mProjectionMatrix = matrixFloats;
+    }
+
+    public void setCameraIntrinsics(TangoCameraIntrinsics intrinsics) {
+        mDepthTexture.setTextureSize(intrinsics.width, intrinsics.height);
     }
 
     public void updateModelMatrix(float[] colorTdepth) {

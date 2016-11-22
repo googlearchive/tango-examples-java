@@ -15,9 +15,6 @@
  */
 package com.projecttango.examples.java.openglar;
 
-import com.google.atap.tangoservice.TangoCameraIntrinsics;
-import com.google.atap.tangoservice.TangoPoseData;
-
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -27,8 +24,6 @@ import android.opengl.Matrix;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
-
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * An OpenGL renderer that renders the Tango RGB camera texture on a full-screen background
@@ -49,6 +44,7 @@ public class OpenGlAugmentedRealityRenderer implements GLSurfaceView.Renderer {
     private OpenGlCameraPreview mOpenGlCameraPreview;
     private OpenGlSphere mEarthSphere;
     private OpenGlSphere mMoonSphere;
+    private boolean mProjectionMatrixConfigured;
     private Context mContext;
 
     public OpenGlAugmentedRealityRenderer(Context context, RenderCallback callback) {
@@ -78,9 +74,19 @@ public class OpenGlAugmentedRealityRenderer implements GLSurfaceView.Renderer {
         mMoonSphere.setUpProgramAndBuffers(moonBitmap);
     }
 
+    /**
+     * Update background texture's UV coordinates when device orientation is changed. i.e change
+     * between landscape and portrait mode.
+     */
+    public void updateColorCameraTextureUv(int rotation) {
+        mOpenGlCameraPreview.updateTextureUv(rotation);
+        mProjectionMatrixConfigured = false;
+    }
+
     @Override
     public void onSurfaceChanged(GL10 gl10, int width, int height) {
         GLES20.glViewport(0, 0, width, height);
+        mProjectionMatrixConfigured = false;
     }
 
     @Override
@@ -115,6 +121,7 @@ public class OpenGlAugmentedRealityRenderer implements GLSurfaceView.Renderer {
     public void setProjectionMatrix(float[] matrixFloats) {
         mEarthSphere.setProjectionMatrix(matrixFloats);
         mMoonSphere.setProjectionMatrix(matrixFloats);
+        mProjectionMatrixConfigured = true;
     }
 
     /**
@@ -137,4 +144,7 @@ public class OpenGlAugmentedRealityRenderer implements GLSurfaceView.Renderer {
         mEarthSphere.setModelMatrix(worldTEarth);
     }
 
+    public boolean isProjectionMatrixConfigured(){
+        return mProjectionMatrixConfigured;
+    }
 }

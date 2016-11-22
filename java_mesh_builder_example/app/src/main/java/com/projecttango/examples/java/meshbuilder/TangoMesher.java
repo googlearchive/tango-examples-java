@@ -59,7 +59,6 @@ public class TangoMesher implements Tango.OnTangoUpdateListener, Tango.OnFrameAv
     private volatile boolean mIsReconstructionActive = false;
 
     private Runnable mRunnableCallback = null;
-    private Object mReleaseSyncObject = new Object();
 
     /**
      * Callback for when meshes are available.
@@ -85,7 +84,9 @@ public class TangoMesher implements Tango.OnTangoUpdateListener, Tango.OnFrameAv
             mRunnableCallback = new Runnable() {
                 @Override
                 public void run() {
-                    synchronized (mReleaseSyncObject) {
+                    // Synchronize access to mTango3dReconstruction. This runs in TangoMesher
+                    // thread.
+                    synchronized (TangoMesher.this) {
                         if (!mIsReconstructionActive) {
                             return;
                         }
@@ -123,27 +124,24 @@ public class TangoMesher implements Tango.OnTangoUpdateListener, Tango.OnFrameAv
                             return;
                         }
 
-                        // Synchronize access to mTango3dReconstruction. This runs in TangoMesher
-                        // thread.
-                        synchronized (TangoMesher.this) {
-                            List<int[]> updatedIndices =
-                                    mTango3dReconstruction.update(cloudData, depthPose,
-                                            imageBuffer, imagePose);
 
-                            if (updatedIndices != null) {
-                                int indexCount = updatedIndices.size();
-                                List<TangoMesh> meshes = new ArrayList<TangoMesh>(indexCount);
-                                for (int i = 0; i < indexCount; ++i) {
-                                    TangoMesh mesh = mTango3dReconstruction.extractMeshSegment(
-                                            updatedIndices.get(i));
-                                    if (mesh.numVertices > 0 && mesh.numFaces > 0) {
-                                        meshes.add(mesh);
-                                    }
+                        List<int[]> updatedIndices =
+                                mTango3dReconstruction.update(cloudData, depthPose,
+                                        imageBuffer, imagePose);
+
+                        if (updatedIndices != null) {
+                            int indexCount = updatedIndices.size();
+                            List<TangoMesh> meshes = new ArrayList<TangoMesh>(indexCount);
+                            for (int i = 0; i < indexCount; ++i) {
+                                TangoMesh mesh = mTango3dReconstruction.extractMeshSegment(
+                                        updatedIndices.get(i));
+                                if (mesh.numVertices > 0 && mesh.numFaces > 0) {
+                                    meshes.add(mesh);
                                 }
-                                TangoMesh[] meshArray = new TangoMesh[meshes.size()];
-                                meshes.toArray(meshArray);
-                                mCallback.onMeshesAvailable(meshArray);
                             }
+                            TangoMesh[] meshArray = new TangoMesh[meshes.size()];
+                            meshes.toArray(meshArray);
+                            mCallback.onMeshesAvailable(meshArray);
                         }
                     }
                 }
@@ -154,18 +152,18 @@ public class TangoMesher implements Tango.OnTangoUpdateListener, Tango.OnFrameAv
     /**
      * Synchronize access to mTango3dReconstruction. This runs in UI thread.
      */
-    public void release() {
-        synchronized (mReleaseSyncObject) {
-            mIsReconstructionActive = false;
-            mTango3dReconstruction.release();
-        }
+    public synchronized void release() {
+        mIsReconstructionActive = false;
+        mTango3dReconstruction.release();
     }
 
     public void startSceneReconstruction() {
         mIsReconstructionActive = true;
     }
 
-    public void stopSceneReconstruction() { mIsReconstructionActive = false; }
+    public void stopSceneReconstruction() {
+        mIsReconstructionActive = false;
+    }
 
     /**
      * Synchronize access to mTango3dReconstruction. This runs in UI thread.
@@ -201,6 +199,7 @@ public class TangoMesher implements Tango.OnTangoUpdateListener, Tango.OnFrameAv
     /**
      * Receives the depth point cloud. This method retrieves and stores the depth camera pose
      * and point cloud to later use it when updating the {@code Tango3dReconstruction}.
+     *
      * @param tangoPointCloudData the depth point cloud.
      */
     @Override
@@ -227,9 +226,10 @@ public class TangoMesher implements Tango.OnTangoUpdateListener, Tango.OnFrameAv
     /**
      * Receives the rgb camera frame buffer. This method retrieves and stores the rgb camera pose
      * and frame buffer to later use it when updating the {@code Tango3dReconstruction}.
+     *
      * @param tangoImageBuffer the image buffer containing the rgb color information.
-     * @param cameraId The camera id, only {@code TangoCameraIntrinsics.TANGO_CAMERA_COLOR} is
-     *                 expected, all other cameras will be discarded.
+     * @param cameraId         The camera id, only {@code TangoCameraIntrinsics.TANGO_CAMERA_COLOR}
+     *                         is expected, all other cameras will be discarded.
      */
     @Override
     public void onFrameAvailable(TangoImageBuffer tangoImageBuffer, int cameraId) {

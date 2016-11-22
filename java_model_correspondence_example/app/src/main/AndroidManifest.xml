@@ -19,8 +19,8 @@
         android:theme="@style/AppTheme" >
         <activity
             android:name=".ModelCorrespondenceActivity"
-            android:label="@string/app_name_long" 
-            android:screenOrientation="landscape" >
+            android:label="@string/app_name_long"
+            android:configChanges="orientation|screenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

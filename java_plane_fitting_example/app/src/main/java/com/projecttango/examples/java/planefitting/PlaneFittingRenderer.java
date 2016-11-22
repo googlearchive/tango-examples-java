@@ -22,6 +22,7 @@ import android.content.Context;
 
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.Surface;
 
 import org.rajawali3d.Object3D;
 import org.rajawali3d.lights.DirectionalLight;
@@ -32,10 +33,9 @@ import org.rajawali3d.materials.textures.StreamingTexture;
 import org.rajawali3d.materials.textures.Texture;
 import org.rajawali3d.math.Matrix4;
 import org.rajawali3d.math.Quaternion;
-import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.primitives.Cube;
 import org.rajawali3d.primitives.ScreenQuad;
-import org.rajawali3d.renderer.RajawaliRenderer;
+import org.rajawali3d.renderer.Renderer;
 
 import javax.microedition.khronos.opengles.GL10;
 
@@ -44,9 +44,14 @@ import javax.microedition.khronos.opengles.GL10;
  * The position of the cube in the OpenGL world is updated using the {@code updateObjectPose}
  * method.
  */
-public class PlaneFittingRenderer extends RajawaliRenderer {
+public class PlaneFittingRenderer extends Renderer {
     private static final float CUBE_SIDE_LENGTH = 0.5f;
     private static final String TAG = PlaneFittingRenderer.class.getSimpleName();
+
+    private float[] textureCoords0 = new float[]{0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 0.0F};
+    private float[] textureCoords270 = new float[]{1.0F, 1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F};
+    private float[] textureCoords180 = new float[]{1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F, 1.0F};
+    private float[] textureCoords90 = new float[]{0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F};
 
     // Augmented Reality related fields
     private ATexture mTangoCameraTexture;
@@ -56,6 +61,8 @@ public class PlaneFittingRenderer extends RajawaliRenderer {
     private Matrix4 mObjectTransform;
     private boolean mObjectPoseUpdated = false;
 
+    private ScreenQuad mBackgroundQuad;
+
     public PlaneFittingRenderer(Context context) {
         super(context);
     }
@@ -64,7 +71,10 @@ public class PlaneFittingRenderer extends RajawaliRenderer {
     protected void initScene() {
         // Create a quad covering the whole background and assign a texture to it where the
         // Tango color camera contents will be rendered.
-        ScreenQuad backgroundQuad = new ScreenQuad();
+        if (mBackgroundQuad == null) {
+            mBackgroundQuad = new ScreenQuad();
+            mBackgroundQuad.getGeometry().setTextureCoords(textureCoords0);
+        }
         Material tangoCameraMaterial = new Material();
         tangoCameraMaterial.setColorInfluence(0);
         // We need to use Rajawali's {@code StreamingTexture} since it sets up the texture
@@ -73,11 +83,11 @@ public class PlaneFittingRenderer extends RajawaliRenderer {
                 new StreamingTexture("camera", (StreamingTexture.ISurfaceListener) null);
         try {
             tangoCameraMaterial.addTexture(mTangoCameraTexture);
-            backgroundQuad.setMaterial(tangoCameraMaterial);
+            mBackgroundQuad.setMaterial(tangoCameraMaterial);
         } catch (ATexture.TextureException e) {
             Log.e(TAG, "Exception creating texture for RGB camera contents", e);
         }
-        getCurrentScene().addChildAt(backgroundQuad, 0);
+        getCurrentScene().addChildAt(mBackgroundQuad, 0);
 
         // Add a directional light in an arbitrary direction.
         DirectionalLight light = new DirectionalLight(1, 0.2, -1);
@@ -107,6 +117,33 @@ public class PlaneFittingRenderer extends RajawaliRenderer {
         getCurrentScene().addChild(mObject);
     }
 
+    /**
+     * Update background texture's UV coordinates when device orientation is changed. i.e change
+     * between landscape and portrait mode.
+     * This must be run in the OpenGL thread.
+     */
+    public void updateColorCameraTextureUvGlThread(int rotation) {
+        if (mBackgroundQuad == null) {
+            mBackgroundQuad = new ScreenQuad();
+        }
+
+        switch (rotation) {
+            case Surface.ROTATION_90:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords90, true);
+                break;
+            case Surface.ROTATION_180:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords180, true);
+                break;
+            case Surface.ROTATION_270:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords270, true);
+                break;
+            default:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords0, true);
+                break;
+        }
+        mBackgroundQuad.getGeometry().reload();
+    }
+
     @Override
     protected void onRender(long elapsedRealTime, double deltaTime) {
         // Update the AR object if necessary
@@ -117,7 +154,7 @@ public class PlaneFittingRenderer extends RajawaliRenderer {
                 mObject.setPosition(mObjectTransform.getTranslation());
                 // Note that Rajawali uses left-hand convetion for Quaternions so we need to
                 // specify a quaternion with rotation in the opposite direction.
-                mObject.setOrientation(new Quaternion().fromMatrix(mObjectTransform).conjugate());
+                mObject.setOrientation(new Quaternion().fromMatrix(mObjectTransform));
                 // Move it forward by half of the size of the cube to make it
                 // flush with the plane surface.
                 mObject.moveForward(CUBE_SIDE_LENGTH / 2.0f);
