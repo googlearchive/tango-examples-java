@@ -22,6 +22,7 @@ import android.content.Context;
 import android.graphics.Color;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.Surface;
 
 import org.rajawali3d.Object3D;
 import org.rajawali3d.lights.DirectionalLight;
@@ -37,8 +38,9 @@ import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.primitives.Line3D;
 import org.rajawali3d.primitives.Plane;
 import org.rajawali3d.primitives.ScreenQuad;
-import org.rajawali3d.renderer.RajawaliRenderer;
+import org.rajawali3d.renderer.Renderer;
 
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -52,9 +54,14 @@ import javax.microedition.khronos.opengles.GL10;
  * Each time the user clicks on the screen, a cube is placed flush with the surface detected
  * using the point cloud data at the position clicked.
  */
-public class FloorplanRenderer extends RajawaliRenderer {
+public class FloorplanRenderer extends Renderer {
     private static final float CUBE_SIDE_LENGTH = 0.3f;
     private static final String TAG = FloorplanRenderer.class.getSimpleName();
+
+    private float[] textureCoords0 = new float[]{0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 0.0F};
+    private float[] textureCoords270 = new float[]{1.0F, 1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F};
+    private float[] textureCoords180 = new float[]{1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F, 1.0F};
+    private float[] textureCoords90 = new float[]{0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F};
 
     private List<Pose> mNewPoseList = new ArrayList<Pose>();
     private boolean mObjectPoseUpdated = false;
@@ -68,6 +75,8 @@ public class FloorplanRenderer extends RajawaliRenderer {
     private ATexture mTangoCameraTexture;
     private boolean mSceneCameraConfigured;
 
+    private ScreenQuad mBackgroundQuad;
+
     /**
      * Small utility class to hold a position and orientation pair.
      */
@@ -76,6 +85,7 @@ public class FloorplanRenderer extends RajawaliRenderer {
             position = p;
             orientation = q;
         }
+
         public Quaternion orientation;
         public Vector3 position;
     }
@@ -88,7 +98,10 @@ public class FloorplanRenderer extends RajawaliRenderer {
     protected void initScene() {
         // Create a quad covering the whole background and assign a texture to it where the
         // Tango color camera contents will be rendered.
-        ScreenQuad backgroundQuad = new ScreenQuad();
+        if (mBackgroundQuad == null) {
+            mBackgroundQuad = new ScreenQuad();
+            mBackgroundQuad.getGeometry().setTextureCoords(textureCoords0);
+        }
         Material tangoCameraMaterial = new Material();
         tangoCameraMaterial.setColorInfluence(0);
         // We need to use Rajawali's {@code StreamingTexture} since it sets up the texture
@@ -97,11 +110,11 @@ public class FloorplanRenderer extends RajawaliRenderer {
                 new StreamingTexture("camera", (StreamingTexture.ISurfaceListener) null);
         try {
             tangoCameraMaterial.addTexture(mTangoCameraTexture);
-            backgroundQuad.setMaterial(tangoCameraMaterial);
+            mBackgroundQuad.setMaterial(tangoCameraMaterial);
         } catch (ATexture.TextureException e) {
             Log.e(TAG, "Exception creating texture for RGB camera contents", e);
         }
-        getCurrentScene().addChildAt(backgroundQuad, 0);
+        getCurrentScene().addChildAt(mBackgroundQuad, 0);
 
         // Add a directional light in an arbitrary direction.
         DirectionalLight light = new DirectionalLight(1, 0.2, -1);
@@ -125,6 +138,33 @@ public class FloorplanRenderer extends RajawaliRenderer {
         }
     }
 
+    /**
+     * Update background texture's UV coordinates when device orientation is changed. i.e change
+     * between landscape and portrait mode.
+     * This must be run in the OpenGL thread.
+     */
+    public void updateColorCameraTextureUvGlThread(int rotation) {
+        if (mBackgroundQuad == null) {
+            mBackgroundQuad = new ScreenQuad();
+        }
+
+        switch (rotation) {
+            case Surface.ROTATION_90:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords90, true);
+                break;
+            case Surface.ROTATION_180:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords180, true);
+                break;
+            case Surface.ROTATION_270:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords270, true);
+                break;
+            default:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords0, true);
+                break;
+        }
+        mBackgroundQuad.getGeometry().reload();
+    }
+
     @Override
     protected void onRender(long elapsedRealTime, double deltaTime) {
         // Update the AR object if necessary
@@ -137,11 +177,6 @@ public class FloorplanRenderer extends RajawaliRenderer {
                     Pose pose = poseIterator.next();
                     object3D = new Plane(CUBE_SIDE_LENGTH, CUBE_SIDE_LENGTH, 2, 2);
                     object3D.setMaterial(mPlaneMaterial);
-                    // Rotate around Y axis so the texture is applied correctly.
-                    // NOTE: This may be a Rajawali bug.
-                    // https://github.com/Rajawali/Rajawali/issues/1561
-                    object3D.setDoubleSided(true);
-                    object3D.rotate(Vector3.Axis.Y, 180);
                     // Place the 3D object in the location of the detected plane.
                     object3D.setPosition(pose.position);
                     object3D.rotate(pose.orientation);
@@ -240,7 +275,7 @@ public class FloorplanRenderer extends RajawaliRenderer {
         float[] openGlTWall = wallMeasurement.getPlaneTransform();
         Matrix4 openGlTWallMatrix = new Matrix4(openGlTWall);
         mNewPoseList.add(new Pose(openGlTWallMatrix.getTranslation(),
-                new Quaternion().fromMatrix(openGlTWallMatrix).conjugate()));
+                new Quaternion().fromMatrix(openGlTWallMatrix)));
         mObjectPoseUpdated = true;
     }
 

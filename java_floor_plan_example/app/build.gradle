@@ -39,7 +39,7 @@ repositories {
 }
 
 dependencies {
-    compile 'org.rajawali3d:rajawali:1.0.325@aar'
+    compile 'org.rajawali3d:rajawali:1.1.668@aar'
     compile (name: 'tango_support_java_lib', ext: 'aar')
     compile fileTree(dir: external_lib_prefix + '/jar', include: ['**/*.jar'])
 }

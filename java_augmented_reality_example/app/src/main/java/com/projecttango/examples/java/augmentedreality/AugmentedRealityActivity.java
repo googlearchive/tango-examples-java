@@ -40,7 +40,7 @@ import android.view.Display;
 import android.view.Surface;
 
 import org.rajawali3d.scene.ASceneFrameCallback;
-import org.rajawali3d.surface.RajawaliSurfaceView;
+import org.rajawali3d.view.SurfaceView;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -75,7 +75,7 @@ public class AugmentedRealityActivity extends Activity {
     // For all current Tango devices, color camera is in the camera id 0.
     private static final int COLOR_CAMERA_ID = 0;
 
-    private RajawaliSurfaceView mSurfaceView;
+    private SurfaceView mSurfaceView;
     private AugmentedRealityRenderer mRenderer;
     private TangoCameraIntrinsics mIntrinsics;
     private Tango mTango;
@@ -95,7 +95,7 @@ public class AugmentedRealityActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mSurfaceView = (RajawaliSurfaceView) findViewById(R.id.surfaceview);
+        mSurfaceView = (SurfaceView) findViewById(R.id.surfaceview);
         mRenderer = new AugmentedRealityRenderer(this);
 
         DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
@@ -463,6 +463,12 @@ public class AugmentedRealityActivity extends Activity {
         mColorCameraToDisplayAndroidRotation =
                 getColorCameraToDisplayAndroidRotation(display.getRotation(),
                         colorCameraInfo.orientation);
-        mRenderer.updateColorCameraTextureUv(mColorCameraToDisplayAndroidRotation);
+        // Run this in OpenGL thread.
+        mSurfaceView.queueEvent(new Runnable() {
+            @Override
+            public void run() {
+                mRenderer.updateColorCameraTextureUvGlThread(mColorCameraToDisplayAndroidRotation);
+            }
+        });
     }
 }

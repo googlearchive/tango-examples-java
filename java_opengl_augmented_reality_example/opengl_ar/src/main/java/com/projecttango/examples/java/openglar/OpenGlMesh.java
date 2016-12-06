@@ -79,7 +79,7 @@ public class OpenGlMesh {
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mVbos[0]);
         // Populate it.
         GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, mNumVertices * mVertexCoordNumber * Float
-                        .SIZE / 8, mVertex, GLES20.GL_STATIC_DRAW); // vertices of floats.
+                .SIZE / 8, mVertex, GLES20.GL_STATIC_DRAW); // vertices of floats.
 
         // Bind to texcoord buffer
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mVbos[1]);
@@ -114,5 +114,17 @@ public class OpenGlMesh {
         // Unbind.
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0);
+    }
+
+    public void setTextureCoords(float[] textureCoords) {
+        mTexCoord.put(textureCoords);
+        mTexCoord.position(0);
+        if (mVbos != null) {
+            // Bind to texcoord buffer
+            GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mVbos[1]);
+            // Populate it.
+            GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, mNumVertices * mTexCoordNumber * Float
+                    .SIZE / 8, mTexCoord, GLES20.GL_STATIC_DRAW); // texcoord of floats.
+        }
     }
 }

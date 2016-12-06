@@ -21,6 +21,7 @@ import android.content.Context;
 import android.graphics.Color;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.Surface;
 
 import org.rajawali3d.Object3D;
 import org.rajawali3d.lights.DirectionalLight;
@@ -36,7 +37,7 @@ import org.rajawali3d.math.Quaternion;
 import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.primitives.ScreenQuad;
 import org.rajawali3d.primitives.Sphere;
-import org.rajawali3d.renderer.RajawaliRenderer;
+import org.rajawali3d.renderer.Renderer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,9 +50,14 @@ import javax.microedition.khronos.opengles.GL10;
  * Whenever the user clicks on '+' button, a sphere is placed in the aimed position with the
  * crosshair.
  */
-public class ModelCorrespondenceRenderer extends RajawaliRenderer {
+public class ModelCorrespondenceRenderer extends Renderer {
     private static final float SPHERE_RADIUS = 0.02f;
     private static final String TAG = ModelCorrespondenceRenderer.class.getSimpleName();
+
+    private float[] textureCoords0 = new float[]{0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 0.0F};
+    private float[] textureCoords270 = new float[]{1.0F, 1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F};
+    private float[] textureCoords180 = new float[]{1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F, 1.0F};
+    private float[] textureCoords90 = new float[]{0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F};
 
     // Augmented reality related fields
     private ATexture mTangoCameraTexture;
@@ -63,6 +69,8 @@ public class ModelCorrespondenceRenderer extends RajawaliRenderer {
     private Material mSphereMaterial;
     private Material mHouseMaterial;
 
+    private ScreenQuad mBackgroundQuad;
+
     public ModelCorrespondenceRenderer(Context context) {
         super(context);
     }
@@ -71,7 +79,10 @@ public class ModelCorrespondenceRenderer extends RajawaliRenderer {
     protected void initScene() {
         // Create a quad covering the whole background and assign a texture to it where the
         // Tango color camera contents will be rendered.
-        ScreenQuad backgroundQuad = new ScreenQuad();
+        if (mBackgroundQuad == null) {
+            mBackgroundQuad = new ScreenQuad();
+            mBackgroundQuad.getGeometry().setTextureCoords(textureCoords0);
+        }
         Material tangoCameraMaterial = new Material();
         tangoCameraMaterial.setColorInfluence(0);
         // We need to use Rajawali's {@code StreamingTexture} since it sets up the texture
@@ -80,11 +91,11 @@ public class ModelCorrespondenceRenderer extends RajawaliRenderer {
                 new StreamingTexture("camera", (StreamingTexture.ISurfaceListener) null);
         try {
             tangoCameraMaterial.addTexture(mTangoCameraTexture);
-            backgroundQuad.setMaterial(tangoCameraMaterial);
+            mBackgroundQuad.setMaterial(tangoCameraMaterial);
         } catch (ATexture.TextureException e) {
             Log.e(TAG, "Exception creating texture for RGB camera contents", e);
         }
-        getCurrentScene().addChildAt(backgroundQuad, 0);
+        getCurrentScene().addChildAt(mBackgroundQuad, 0);
 
         // Add two directional lights in arbitrary directions.
         DirectionalLight light = new DirectionalLight(1, 0.2, -1);
@@ -123,6 +134,33 @@ public class ModelCorrespondenceRenderer extends RajawaliRenderer {
         } catch (ParsingException e) {
             Log.d(TAG, "Model load failed");
         }
+    }
+
+    /**
+     * Update background texture's UV coordinates when device orientation is changed. i.e change
+     * between landscape and portrait mode.
+     * This must be run in the OpenGL thread.
+     */
+    public void updateColorCameraTextureUvGlThread(int rotation) {
+        if (mBackgroundQuad == null) {
+            mBackgroundQuad = new ScreenQuad();
+        }
+
+        switch (rotation) {
+            case Surface.ROTATION_90:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords90, true);
+                break;
+            case Surface.ROTATION_180:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords180, true);
+                break;
+            case Surface.ROTATION_270:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords270, true);
+                break;
+            default:
+                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords0, true);
+                break;
+        }
+        mBackgroundQuad.getGeometry().reload();
     }
 
     /**
@@ -206,8 +244,7 @@ public class ModelCorrespondenceRenderer extends RajawaliRenderer {
             Vector3 translation = transform.getTranslation();
             Matrix4 invScale = Matrix4.createScaleMatrix(1 / scale, 1 / scale, 1 / scale);
             transform.multiply(invScale);
-            // Conjugation is needed because Rajawali uses a left handed convention for quaternions.
-            Quaternion orientation = new Quaternion().fromMatrix(transform).conjugate();
+            Quaternion orientation = new Quaternion().fromMatrix(transform);
             orientation.normalize();
             mHouseObject3D.setPosition(translation);
             mHouseObject3D.setOrientation(orientation);

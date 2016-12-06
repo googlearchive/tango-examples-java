@@ -31,16 +31,19 @@ import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
 import android.app.Activity;
+import android.hardware.Camera;
+import android.hardware.display.DisplayManager;
 import android.opengl.Matrix;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Display;
 import android.view.MotionEvent;
+import android.view.Surface;
 import android.view.View;
 import android.widget.Toast;
 
-import org.rajawali3d.math.Plane;
 import org.rajawali3d.scene.ASceneFrameCallback;
-import org.rajawali3d.surface.RajawaliSurfaceView;
+import org.rajawali3d.view.SurfaceView;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -73,8 +76,10 @@ import com.projecttango.tangosupport.TangoSupport.IntersectionPointPlaneModelPai
 public class PlaneFittingActivity extends Activity implements View.OnTouchListener {
     private static final String TAG = PlaneFittingActivity.class.getSimpleName();
     private static final int INVALID_TEXTURE_ID = 0;
+    // For all current Tango devices, color camera is in the camera id 0.
+    private static final int COLOR_CAMERA_ID = 0;
 
-    private RajawaliSurfaceView mSurfaceView;
+    private SurfaceView mSurfaceView;
     private PlaneFittingRenderer mRenderer;
     private TangoCameraIntrinsics mIntrinsics;
     private TangoPointCloudManager mPointCloudManager;
@@ -89,20 +94,44 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
     private AtomicBoolean mIsFrameAvailableTangoThread = new AtomicBoolean(false);
     private double mRgbTimestampGlThread;
 
+    private int mColorCameraToDisplayAndroidRotation = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mSurfaceView = new RajawaliSurfaceView(this);
+        mSurfaceView = new SurfaceView(this);
         mRenderer = new PlaneFittingRenderer(this);
         mSurfaceView.setSurfaceRenderer(mRenderer);
         mSurfaceView.setOnTouchListener(this);
         mPointCloudManager = new TangoPointCloudManager();
         setContentView(mSurfaceView);
+
+        DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+        if (displayManager != null) {
+            displayManager.registerDisplayListener(new DisplayManager.DisplayListener() {
+                @Override
+                public void onDisplayAdded(int displayId) {}
+
+                @Override
+                public void onDisplayChanged(int displayId) {
+                    synchronized (this) {
+                        setAndroidOrientation();
+                    }
+                }
+
+                @Override
+                public void onDisplayRemoved(int displayId) {}
+            }, null);
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        mSurfaceView.onResume();
+
+        setAndroidOrientation();
+
         // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
         // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
         // should create a new Tango object.
@@ -138,6 +167,7 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
     @Override
     protected void onPause() {
         super.onPause();
+        mSurfaceView.onPause();
         // Synchronize against disconnecting while the service is being used in the OpenGL thread or
         // in the UI thread.
         synchronized (this) {
@@ -248,7 +278,8 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
                         // Set-up scene camera projection to match RGB camera intrinsics
                         if (!mRenderer.isSceneCameraConfigured()) {
                             mRenderer.setProjectionMatrix(
-                                    projectionMatrixFromCameraIntrinsics(mIntrinsics));
+                                    projectionMatrixFromCameraIntrinsics(mIntrinsics,
+                                            mColorCameraToDisplayAndroidRotation));
                         }
 
                         // Connect the camera texture to the OpenGL Texture if necessary
@@ -282,7 +313,8 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
                                     mRgbTimestampGlThread,
                                     TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL, 0);
+                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                    mColorCameraToDisplayAndroidRotation);
                             if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
                                 // Update the camera pose from the renderer
                                 mRenderer.updateRenderCameraPose(lastFramePose);
@@ -325,27 +357,63 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
 
     /**
      * Use Tango camera intrinsics to calculate the projection Matrix for the Rajawali scene.
+     * The function also rotates the intrinsics based on current rotation from color camera to
+     * display.
      */
-    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics) {
+    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics,
+                                                                int rotation) {
         // Uses frustumM to create a projection matrix taking into account calibrated camera
         // intrinsic parameter.
         // Reference: http://ksimek.github.io/2013/06/03/calibrated_cameras_in_opengl/
         float near = 0.1f;
         float far = 100;
 
-        float xScale = near / (float) intrinsics.fx;
-        float yScale = near / (float) intrinsics.fy;
-        float xOffset = (float) (intrinsics.cx - (intrinsics.width / 2.0)) * xScale;
+        // Adjust camera intrinsics according to rotation from color camera to display.
+        double cx = intrinsics.cx;
+        double cy = intrinsics.cy;
+        double width = intrinsics.width;
+        double height = intrinsics.height;
+        double fx = intrinsics.fx;
+        double fy = intrinsics.fy;
+
+        switch (rotation) {
+            case Surface.ROTATION_90:
+                cx = intrinsics.cy;
+                cy = intrinsics.width - intrinsics.cx;
+                width = intrinsics.height;
+                height = intrinsics.width;
+                fx = intrinsics.fy;
+                fy = intrinsics.fx;
+                break;
+            case Surface.ROTATION_180:
+                cx = intrinsics.width - cx;
+                cy = intrinsics.height - cy;
+                break;
+            case Surface.ROTATION_270:
+                cx = intrinsics.height - intrinsics.cy;
+                cy = intrinsics.cx;
+                width = intrinsics.height;
+                height = intrinsics.width;
+                fx = intrinsics.fy;
+                fy = intrinsics.fx;
+                break;
+            default:
+                break;
+        }
+
+        double xscale = near / fx;
+        double yscale = near / fy;
+
+        double xoffset = (cx - (width / 2.0)) * xscale;
         // Color camera's coordinates has y pointing downwards so we negate this term.
-        float yOffset = (float) -(intrinsics.cy - (intrinsics.height / 2.0)) * yScale;
+        double yoffset = -(cy - (height / 2.0)) * yscale;
 
         float m[] = new float[16];
         Matrix.frustumM(m, 0,
-                xScale * (float) -intrinsics.width / 2.0f - xOffset,
-                xScale * (float) intrinsics.width / 2.0f - xOffset,
-                yScale * (float) -intrinsics.height / 2.0f - yOffset,
-                yScale * (float) intrinsics.height / 2.0f - yOffset,
-                near, far);
+                (float) (xscale * -width / 2.0 - xoffset),
+                (float) (xscale * width / 2.0 - xoffset),
+                (float) (yscale * -height / 2.0 - yoffset),
+                (float) (yscale * height / 2.0 - yoffset), near, far);
         return m;
     }
 
@@ -405,10 +473,12 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
                 rgbTimestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                 pointCloud.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH);
 
+        float[] uv = getColorCameraUVFromDisplay(u, v, mColorCameraToDisplayAndroidRotation);
+
         // Perform plane fitting with the latest available point cloud data.
         IntersectionPointPlaneModelPair intersectionPointPlaneModelPair =
                 TangoSupport.fitPlaneModelNearPoint(pointCloud,
-                        colorTdepthPose, u, v);
+                        colorTdepthPose, uv[0], uv[1]);
 
         // Get the transform from depth camera to OpenGL world at the timestamp of the cloud.
         TangoSupport.TangoMatrixTransformData transform =
@@ -427,6 +497,66 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
             Log.w(TAG, "Can't get depth camera transform at time " + pointCloud.timestamp);
             return null;
         }
+    }
+
+    /**
+     * Given an UV coordinate in display(screen) space, returns UV coordinate in color camera space.
+     */
+    float[] getColorCameraUVFromDisplay(float u, float v, int colorToDisplayRotation) {
+        switch (colorToDisplayRotation) {
+            case 1:
+                return new float[]{1.0f - v, u};
+            case 2:
+                return new float[]{1.0f - u, 1.0f - v};
+            case 3:
+                return new float[]{v, 1.0f - u};
+            default:
+                return new float[]{u, v};
+        }
+    }
+
+    private static int getColorCameraToDisplayAndroidRotation(int displayRotation,
+                                                              int cameraRotation) {
+        int cameraRotationNormalized = 0;
+        switch (cameraRotation) {
+            case 90:
+                cameraRotationNormalized = 1;
+                break;
+            case 180:
+                cameraRotationNormalized = 2;
+                break;
+            case 270:
+                cameraRotationNormalized = 3;
+                break;
+            default:
+                cameraRotationNormalized = 0;
+                break;
+        }
+        int ret = displayRotation - cameraRotationNormalized;
+        if (ret < 0) {
+            ret += 4;
+        }
+        return ret;
+    }
+
+    /**
+     * Set the color camera background texture rotation and save the camera to display rotation.
+     */
+    private void setAndroidOrientation() {
+        Display display = getWindowManager().getDefaultDisplay();
+        Camera.CameraInfo colorCameraInfo = new Camera.CameraInfo();
+        Camera.getCameraInfo(COLOR_CAMERA_ID, colorCameraInfo);
+
+        mColorCameraToDisplayAndroidRotation =
+                getColorCameraToDisplayAndroidRotation(display.getRotation(),
+                        colorCameraInfo.orientation);
+        // Run this in OpenGL thread.
+        mSurfaceView.queueEvent(new Runnable() {
+            @Override
+            public void run() {
+                mRenderer.updateColorCameraTextureUvGlThread(mColorCameraToDisplayAndroidRotation);
+            }
+        });
     }
 
     /**

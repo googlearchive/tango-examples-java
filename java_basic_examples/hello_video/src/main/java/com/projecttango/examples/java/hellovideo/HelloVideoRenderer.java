@@ -19,6 +19,7 @@ import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.util.Log;
+import android.view.Surface;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -51,6 +52,15 @@ public class HelloVideoRenderer implements GLSurfaceView.Renderer {
             "void main() {\n" +
             "  gl_FragColor = texture2D(sTexture,texCoord);\n" +
             "}";
+
+    private final float[] textureCoords0 =
+            new float[]{1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f};
+    private final float[] textureCoords270 =
+            new float[]{1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F, 1.0F};
+    private final float[] textureCoords180 =
+            new float[]{0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F};
+    private final float[] textureCoords90 =
+            new float[]{0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 0.0F};
 
     /**
      * A small callback to allow the caller to introduce application-specific code to be executed
@@ -89,6 +99,35 @@ public class HelloVideoRenderer implements GLSurfaceView.Renderer {
                 ByteOrder.nativeOrder()).asShortBuffer();
         mIndices.put(itmp);
         mIndices.position(0);
+    }
+
+    public void updateColorCameraTextureUv(int rotation){
+        switch (rotation) {
+            case Surface.ROTATION_90:
+                setTextureCoords(textureCoords90);
+                break;
+            case Surface.ROTATION_180:
+                setTextureCoords(textureCoords180);
+                break;
+            case Surface.ROTATION_270:
+                setTextureCoords(textureCoords270);
+                break;
+            default:
+                setTextureCoords(textureCoords0);
+                break;
+        }
+    }
+
+    private void setTextureCoords(float[] textureCoords) {
+        mTexCoord.put(textureCoords);
+        mTexCoord.position(0);
+        if (mVbos != null) {
+            // Bind to texcoord buffer
+            GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mVbos[1]);
+            // Populate it.
+            GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, 4 * 2 * Float
+                    .SIZE / 8, mTexCoord, GLES20.GL_STATIC_DRAW); // texcoord of floats.
+        }
     }
 
     @Override

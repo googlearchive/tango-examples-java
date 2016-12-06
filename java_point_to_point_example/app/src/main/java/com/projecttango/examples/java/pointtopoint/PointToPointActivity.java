@@ -29,6 +29,7 @@ import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
+import com.google.atap.tangoservice.experimental.TangoImageBuffer;
 
 import android.app.Activity;
 import android.hardware.Camera;
@@ -41,13 +42,15 @@ import android.view.Display;
 import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.View;
+import android.widget.CheckBox;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.scene.ASceneFrameCallback;
-import org.rajawali3d.surface.RajawaliSurfaceView;
+import org.rajawali3d.view.SurfaceView;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -81,7 +84,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
 
     private static final int INVALID_TEXTURE_ID = 0;
 
-    private RajawaliSurfaceView mSurfaceView;
+    private SurfaceView mSurfaceView;
     private PointToPointRenderer mRenderer;
     private TangoCameraIntrinsics mIntrinsics;
     private TangoPointCloudManager mPointCloudManager;
@@ -90,6 +93,8 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
     private boolean mIsConnected = false;
     private double mCameraPoseTimestamp = 0;
     private TextView mDistanceMeasure;
+    private CheckBox mBilateralBox;
+    private volatile TangoImageBuffer mCurrentImageBuffer;
 
     // Texture rendering related fields
     // NOTE: Naming indicates which thread is in charge of updating this variable
@@ -103,18 +108,19 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
     // Handles the debug text UI update loop.
     private Handler mHandler = new Handler();
 
-    private int mColorCameraToDisplayRotation = 0;
+    private int mColorCameraToDisplayAndroidRotation = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mSurfaceView = (RajawaliSurfaceView) findViewById(R.id.ar_view);
+        mSurfaceView = (SurfaceView) findViewById(R.id.ar_view);
         mRenderer = new PointToPointRenderer(this);
         mSurfaceView.setSurfaceRenderer(mRenderer);
         mSurfaceView.setOnTouchListener(this);
         mPointCloudManager = new TangoPointCloudManager();
         mDistanceMeasure = (TextView) findViewById(R.id.distance_textview);
+        mBilateralBox = (CheckBox) findViewById(R.id.check_box);
         mLinePoints[0] = null;
         mLinePoints[1] = null;
 
@@ -268,6 +274,24 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                 // We are not using OnPoseAvailable for this app.
             }
         });
+        mTango.experimentalConnectOnFrameListener(TangoCameraIntrinsics.TANGO_CAMERA_COLOR,
+                new Tango.OnFrameAvailableListener() {
+                    @Override
+                    public void onFrameAvailable(TangoImageBuffer tangoImageBuffer, int i) {
+                        mCurrentImageBuffer = copyImageBuffer(tangoImageBuffer);
+                    }
+
+                    TangoImageBuffer copyImageBuffer(TangoImageBuffer imageBuffer) {
+                        ByteBuffer clone = ByteBuffer.allocateDirect(imageBuffer.data.capacity());
+                        imageBuffer.data.rewind();
+                        clone.put(imageBuffer.data);
+                        imageBuffer.data.rewind();
+                        clone.flip();
+                        return new TangoImageBuffer(imageBuffer.width, imageBuffer.height,
+                                imageBuffer.stride, imageBuffer.frameNumber,
+                                imageBuffer.timestamp, imageBuffer.format, clone);
+                    }
+                });
 
         // Obtain the intrinsic parameters of the color camera.
         mIntrinsics = mTango.getCameraIntrinsics(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
@@ -300,7 +324,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                         if (!mRenderer.isSceneCameraConfigured()) {
                             mRenderer.setProjectionMatrix(
                                     projectionMatrixFromCameraIntrinsics(mIntrinsics,
-                                            mColorCameraToDisplayRotation));
+                                            mColorCameraToDisplayAndroidRotation));
                         }
 
                         // Connect the camera texture to the OpenGL Texture if necessary
@@ -342,7 +366,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                                     TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                                     TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                    mColorCameraToDisplayRotation);
+                                    mColorCameraToDisplayAndroidRotation);
                             if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
                                 // Update the camera pose from the renderer
                                 mRenderer.updateRenderCameraPose(lastFramePose);
@@ -458,7 +482,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                 // and a possible service disconnection due to an onPause event.
                 float[] rgbPoint;
                 synchronized (this) {
-                    rgbPoint = getDepthAtTouchPosition(u, v, mRgbTimestampGlThread);
+                    rgbPoint = getDepthAtTouchPosition(u, v);
                 }
                 if (rgbPoint != null) {
                     // Update a line endpoint to the touch location.
@@ -489,10 +513,18 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
      * of the point closest to where the user touches the screen. It returns a
      * Vector3 in openGL world space.
      */
-    private float[] getDepthAtTouchPosition(float u, float v, double rgbTimestamp) {
+    private float[] getDepthAtTouchPosition(float u, float v) {
         TangoPointCloudData pointCloud = mPointCloudManager.getLatestPointCloud();
         if (pointCloud == null) {
             return null;
+        }
+
+        double rgbTimestamp;
+        TangoImageBuffer imageBuffer = mCurrentImageBuffer;
+        if (mBilateralBox.isChecked()) {
+            rgbTimestamp = imageBuffer.timestamp; // CPU.
+        } else {
+            rgbTimestamp = mRgbTimestampGlThread; // GPU.
         }
 
         // We need to calculate the transform between the color camera at the
@@ -502,10 +534,16 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                 rgbTimestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                 pointCloud.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH);
 
-        float[] uv = getColorCameraUVFromDisplay(u, v, mColorCameraToDisplayRotation);
+        float[] uv = getColorCameraUVFromDisplay(u, v, mColorCameraToDisplayAndroidRotation);
 
-        float[] point = TangoSupport.getDepthAtPointNearestNeighbor(pointCloud,
-                colorTdepthPose, uv[0], uv[1]);
+        float[] point;
+        if (mBilateralBox.isChecked()) {
+            point = TangoSupport.getDepthAtPointBilateral(pointCloud, imageBuffer,
+                    colorTdepthPose, uv[0], uv[1]);
+        } else {
+            point = TangoSupport.getDepthAtPointNearestNeighbor(pointCloud,
+                    colorTdepthPose, uv[0], uv[1]);
+        }
         if (point == null) {
             return null;
         }
@@ -569,7 +607,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
     }
 
     /**
-     * Create a String containing a human-readable description of the 
+     * Create a String containing a human-readable description of the
      * distance between endpoints.
      */
     private synchronized String getPointSeparation() {
@@ -609,24 +647,16 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
         Camera.CameraInfo colorCameraInfo = new Camera.CameraInfo();
         Camera.getCameraInfo(COLOR_CAMERA_ID, colorCameraInfo);
 
-        mColorCameraToDisplayRotation =
+        mColorCameraToDisplayAndroidRotation =
                 getAndroidRotationFromColorCameraToDisplayRotation(display.getRotation(),
                 colorCameraInfo.orientation);
-
-        switch (mColorCameraToDisplayRotation) {
-            case Surface.ROTATION_90:
-                mRenderer.setScreenQuadRotation(270);
-                break;
-            case Surface.ROTATION_180:
-                mRenderer.setScreenQuadRotation(180);
-                break;
-            case Surface.ROTATION_270:
-                mRenderer.setScreenQuadRotation(90);
-                break;
-            default:
-                mRenderer.setScreenQuadRotation(0);
-                break;
-        }
+        // Run this in OpenGL thread.
+        mSurfaceView.queueEvent(new Runnable() {
+            @Override
+            public void run() {
+                mRenderer.updateColorCameraTextureUvGlThread(mColorCameraToDisplayAndroidRotation);
+            }
+        });
     }
 
     /**

@@ -34,6 +34,8 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.hardware.Camera;
+import android.hardware.display.DisplayManager;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Bundle;
@@ -80,6 +82,23 @@ public class MeshBuilderActivity extends Activity {
         mSurfaceView = (GLSurfaceView) findViewById(R.id.surfaceview);
         // Set ZOrderOnTop to false so the other views don't get hidden by the SurfaceView.
         mSurfaceView.setZOrderOnTop(false);
+        DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+        if (displayManager != null) {
+            displayManager.registerDisplayListener(new DisplayManager.DisplayListener() {
+                @Override
+                public void onDisplayAdded(int displayId) {}
+
+                @Override
+                public void onDisplayChanged(int displayId) {
+                    synchronized (this) {
+                        setAndroidOrientation();
+                    }
+                }
+
+                @Override
+                public void onDisplayRemoved(int displayId) {}
+            }, null);
+        }
         connectRenderer();
     }
 
@@ -87,51 +106,42 @@ public class MeshBuilderActivity extends Activity {
     protected void onResume() {
         super.onResume();
 
-        Display display = getWindowManager().getDefaultDisplay();
-        mDeviceToDisplayRotation = display.getRotation();
+        setAndroidOrientation();
 
         mSurfaceView.onResume();
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
-        // Check if it has permissions.
-        // Dataset permissions are needed in order to build the mesh.
-        if (Tango.hasPermission(this, Tango.PERMISSIONTYPE_DATASET)) {
-            // Initialize Tango Service as a normal Android Service.
-            // Since we call mTango.disconnect() in onPause, this will unbind Tango Service,
-            // so every time when onResume gets called, we should create a new Tango object.
-            mTango = new Tango(MeshBuilderActivity.this, new Runnable() {
-                // Pass in a Runnable to be called from UI thread when Tango is ready,
-                // this Runnable will be running on a new thread.
-                // When Tango is ready, we can call Tango functions safely here only
-                // when there is no UI thread changes involved.
-                @Override
-                public void run() {
-                    synchronized (MeshBuilderActivity.this) {
-                        try {
-                            TangoSupport.initialize();
-                            mConfig = setupTangoConfig(mTango);
-                            mTango.connect(mConfig);
-                            startupTango();
-                            mIsConnected = true;
-                            mIsPaused = false;
-                        } catch (TangoOutOfDateException e) {
-                            Log.e(TAG, getString(R.string.exception_out_of_date), e);
-                        } catch (TangoErrorException e) {
-                            Log.e(TAG, getString(R.string.exception_tango_error), e);
-                        } catch (TangoInvalidException e) {
-                            Log.e(TAG, getString(R.string.exception_tango_invalid), e);
-                        } catch (SecurityException e) {
-                            // Dataset permissions are required. If they are not available,
-                            // SecurityException is thrown.
-                            Log.e(TAG, getString(R.string.exception_tango_permission), e);
-                        }
+        // Initialize Tango Service as a normal Android Service.
+        // Since we call mTango.disconnect() in onPause, this will unbind Tango Service,
+        // so every time when onResume gets called, we should create a new Tango object.
+        mTango = new Tango(MeshBuilderActivity.this, new Runnable() {
+            // Pass in a Runnable to be called from UI thread when Tango is ready,
+            // this Runnable will be running on a new thread.
+            // When Tango is ready, we can call Tango functions safely here only
+            // when there is no UI thread changes involved.
+            @Override
+            public void run() {
+                synchronized (MeshBuilderActivity.this) {
+                    try {
+                        TangoSupport.initialize();
+                        mConfig = setupTangoConfig(mTango);
+                        mTango.connect(mConfig);
+                        startupTango();
+                        mIsConnected = true;
+                        mIsPaused = false;
+                    } catch (TangoOutOfDateException e) {
+                        Log.e(TAG, getString(R.string.exception_out_of_date), e);
+                    } catch (TangoErrorException e) {
+                        Log.e(TAG, getString(R.string.exception_tango_error), e);
+                    } catch (TangoInvalidException e) {
+                        Log.e(TAG, getString(R.string.exception_tango_invalid), e);
+                    } catch (SecurityException e) {
+                        // Dataset permissions are required. If they are not available,
+                        // SecurityException is thrown.
+                        Log.e(TAG, getString(R.string.exception_tango_permission), e);
                     }
                 }
-            });
-        } else {
-            startActivityForResult(
-                    Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_DATASET),
-                    Tango.TANGO_INTENT_ACTIVITYCODE);
-        }
+            }
+        });
     }
 
     @Override
@@ -157,19 +167,6 @@ public class MeshBuilderActivity extends Activity {
         }
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        // Check which request we're responding to
-        if (requestCode == Tango.TANGO_INTENT_ACTIVITYCODE) {
-            // Make sure the request was successful
-            if (resultCode == RESULT_CANCELED) {
-                Toast.makeText(this, "Dataset Permissions Required!",
-                        Toast.LENGTH_SHORT).show();
-                finish();
-            }
-        }
-    }
-
     /**
      * Sets up the tango configuration object. Make sure mTango object is initialized before
      * making this call.
@@ -185,9 +182,6 @@ public class MeshBuilderActivity extends Activity {
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
         config.putInt(TangoConfig.KEY_INT_DEPTH_MODE, TangoConfig.TANGO_DEPTH_MODE_POINT_CLOUD);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_COLORCAMERA, true);
-        config.putBoolean(TangoConfig.KEY_BOOLEAN_DATASETRECORDING, true);
-        config.putInt(TangoConfig.KEY_INT_DATASETRECORDING_MODE,
-                TangoConfig.TANGO_DATASETRECORDING_MODE_SCENE_RECONSTRUCTION);
 
         return config;
     }
@@ -272,12 +266,6 @@ public class MeshBuilderActivity extends Activity {
                             return;
                         }
 
-                        // Set-up scene camera projection to match RGB camera intrinsics
-                        if (!mRenderer.isSceneCameraConfigured()) {
-                            mRenderer.setProjectionMatrix(
-                                    projectionMatrixFromCameraIntrinsics(mIntrinsics));
-                        }
-
                         // Calculate the camera color pose at the camera frame update time in
                         // OpenGL engine.
                         TangoSupport.TangoMatrixTransformData ssTdev =
@@ -306,33 +294,6 @@ public class MeshBuilderActivity extends Activity {
         });
         mSurfaceView.setRenderer(mRenderer);
     }
-
-    /**
-     * Use Tango camera intrinsics to calculate the projection Matrix for the Rajawali scene.
-     */
-    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics) {
-        // Uses frustumM to create a projection matrix taking into account calibrated camera
-        // intrinsic parameter.
-        // Reference: http://ksimek.github.io/2013/06/03/calibrated_cameras_in_opengl/
-        float near = 0.1f;
-        float far = 100;
-
-        float xScale = near / (float) intrinsics.fx;
-        float yScale = near / (float) intrinsics.fy;
-        float xOffset = (float) (intrinsics.cx - (intrinsics.width / 2.0)) * xScale;
-        // Color camera's coordinates has y pointing downwards so we negate this term.
-        float yOffset = (float) -(intrinsics.cy - (intrinsics.height / 2.0)) * yScale;
-
-        float m[] = new float[16];
-        Matrix.frustumM(m, 0,
-                xScale * (float) -intrinsics.width / 2.0f - xOffset,
-                xScale * (float) intrinsics.width / 2.0f - xOffset,
-                yScale * (float) -intrinsics.height / 2.0f - yOffset,
-                yScale * (float) intrinsics.height / 2.0f - yOffset,
-                near, far);
-        return m;
-    }
-
 
     public void onPauseButtonClick(View v) {
         if (mIsPaused) {
@@ -382,5 +343,13 @@ public class MeshBuilderActivity extends Activity {
         } catch (PackageManager.NameNotFoundException e) {
             Log.d(TAG, "Tango package could not be found");
         }
+    }
+
+    /**
+     * Set the display rotation.
+     */
+    private void setAndroidOrientation() {
+        Display display = getWindowManager().getDefaultDisplay();
+        mDeviceToDisplayRotation = display.getRotation();
     }
 }

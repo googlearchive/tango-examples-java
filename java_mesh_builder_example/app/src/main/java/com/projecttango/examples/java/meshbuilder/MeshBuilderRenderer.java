@@ -73,6 +73,7 @@ public class MeshBuilderRenderer implements GLSurfaceView.Renderer {
     @Override
     public void onSurfaceChanged(GL10 gl10, int width, int height) {
         GLES20.glViewport(0, 0, width, height);
+        updateProjectionMatrix(width, height);
     }
 
     @Override
@@ -104,16 +105,6 @@ public class MeshBuilderRenderer implements GLSurfaceView.Renderer {
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, mesh.numFaces * 3, GLES20.GL_UNSIGNED_INT, 0);
     }
 
-
-    /**
-     * Set the Projection matrix matching the Tango RGB camera in order to be able to do
-     * Augmented Reality.
-     */
-    public void setProjectionMatrix(float[] matrixFloats) {
-        mProjectionMatrix = matrixFloats;
-        mSceneCameraConfigured = true;
-    }
-
     /**
      * Update the View matrix matching the pose of the Tango RGB camera.
      *
@@ -135,6 +126,10 @@ public class MeshBuilderRenderer implements GLSurfaceView.Renderer {
         Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, modelViewMatrix, 0);
     }
 
+    private void updateProjectionMatrix(int width, int height) {
+        Matrix.perspectiveM(mProjectionMatrix, 0, 45f, (float) width / height, 0.1f, 100f);
+    }
+
     public boolean isSceneCameraConfigured() {
         return mSceneCameraConfigured;
     }
@@ -149,7 +144,7 @@ public class MeshBuilderRenderer implements GLSurfaceView.Renderer {
         mMeshMap.put(key, mesh);
     }
 
-    public void clearMeshes(){
+    public void clearMeshes() {
         mMeshMap.clear();
     }
 }

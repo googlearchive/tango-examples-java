@@ -32,18 +32,21 @@ import com.google.atap.tangoservice.TangoXyzIjData;
 
 import android.animation.ValueAnimator;
 import android.app.Activity;
+import android.hardware.Camera;
+import android.hardware.display.DisplayManager;
 import android.opengl.Matrix;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Display;
+import android.view.Surface;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-import org.rajawali3d.math.Matrix4;
 import org.rajawali3d.scene.ASceneFrameCallback;
-import org.rajawali3d.surface.RajawaliSurfaceView;
+import org.rajawali3d.view.SurfaceView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -71,17 +74,14 @@ import com.projecttango.tangosupport.TangoSupport;
  */
 public class ModelCorrespondenceActivity extends Activity {
     private static final String TAG = ModelCorrespondenceActivity.class.getSimpleName();
-    // Record Device to Start of Service as the main frame pair to be used for device pose
-    // queries.
-    private static final TangoCoordinateFramePair FRAME_PAIR = new TangoCoordinateFramePair(
-            TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
-            TangoPoseData.COORDINATE_FRAME_DEVICE);
     private static final int INVALID_TEXTURE_ID = 0;
+    // For all current Tango devices, color camera is in the camera id 0.
+    private static final int COLOR_CAMERA_ID = 0;
 
     private ImageButton mAddButton;
     private Button mUndoButton;
     private Button mResetButton;
-    private RajawaliSurfaceView mSurfaceView;
+    private SurfaceView mSurfaceView;
     private ModelCorrespondenceRenderer mRenderer;
     private TangoCameraIntrinsics mIntrinsics;
     private TangoPointCloudManager mPointCloudManager;
@@ -112,6 +112,8 @@ public class ModelCorrespondenceActivity extends Activity {
     private AtomicBoolean mIsFrameAvailableTangoThread = new AtomicBoolean(false);
     private double mRgbTimestampGlThread;
 
+    private int mColorCameraToDisplayAndroidRotation = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -120,7 +122,7 @@ public class ModelCorrespondenceActivity extends Activity {
         mAddButton = (ImageButton) findViewById(R.id.add_point_button);
         mUndoButton = (Button) findViewById(R.id.undo_button);
         mResetButton = (Button) findViewById(R.id.reset_button);
-        mSurfaceView = (RajawaliSurfaceView) findViewById(R.id.ar_view);
+        mSurfaceView = (SurfaceView) findViewById(R.id.ar_view);
         mRenderer = new ModelCorrespondenceRenderer(this);
         mSurfaceView.setSurfaceRenderer(mRenderer);
         // Set ZOrderOnTop to false so the other views don't get hidden by the SurfaceView.
@@ -129,11 +131,33 @@ public class ModelCorrespondenceActivity extends Activity {
         mPointCloudManager = new TangoPointCloudManager();
         mCrosshair = (ImageView) findViewById(R.id.crosshair);
         mCrosshair.setColorFilter(getResources().getColor(R.color.crosshair_ready));
+
+        DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+        if (displayManager != null) {
+            displayManager.registerDisplayListener(new DisplayManager.DisplayListener() {
+                @Override
+                public void onDisplayAdded(int displayId) {
+                }
+
+                @Override
+                public void onDisplayChanged(int displayId) {
+                    synchronized (this) {
+                        setAndroidOrientation();
+                    }
+                }
+
+                @Override
+                public void onDisplayRemoved(int displayId) {
+                }
+            }, null);
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+
+        setAndroidOrientation();
 
         // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
         // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
@@ -168,11 +192,7 @@ public class ModelCorrespondenceActivity extends Activity {
 
         // Reset status and correspondence every time we connect again to the service.
         // If we didn't do it, then the old points wouldn't make sense.
-        mHouseModel = new HouseModel();
-        mModelUpdated = true;
-        mCorrespondenceDone = false;
-        mOpenGlTHouse = new float[16];
-        mDestPointList = new ArrayList<float[]>();
+        reset(null);
     }
 
     @Override
@@ -284,7 +304,8 @@ public class ModelCorrespondenceActivity extends Activity {
                         // Set-up scene camera projection to match RGB camera intrinsics
                         if (!mRenderer.isSceneCameraConfigured()) {
                             mRenderer.setProjectionMatrix(
-                                    projectionMatrixFromCameraIntrinsics(mIntrinsics));
+                                    projectionMatrixFromCameraIntrinsics(mIntrinsics,
+                                            mColorCameraToDisplayAndroidRotation));
                         }
 
                         // Connect the camera texture to the OpenGL Texture if necessary
@@ -311,7 +332,8 @@ public class ModelCorrespondenceActivity extends Activity {
                                     mRgbTimestampGlThread,
                                     TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL, 0);
+                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                    mColorCameraToDisplayAndroidRotation);
 
                             if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
                                 // Update the camera pose from the renderer
@@ -326,11 +348,13 @@ public class ModelCorrespondenceActivity extends Activity {
                                                     TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                                                     TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL, 0);
+                                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                                    mColorCameraToDisplayAndroidRotation);
                                     if (transform.statusCode == TangoPoseData.POSE_VALID) {
                                         // Place it in the top left corner, and rotate and scale it
                                         // accordingly.
-                                        float[] rgbTHouse = calculateModelTransformFixedToCam();
+                                        float[] rgbTHouse = calculateModelTransformFixedToCam
+                                                (mColorCameraToDisplayAndroidRotation);
                                         // Combine the two transforms.
                                         float[] openGlTHouse = new float[16];
                                         Matrix.multiplyMM(openGlTHouse, 0, transform.matrix,
@@ -382,27 +406,63 @@ public class ModelCorrespondenceActivity extends Activity {
 
     /**
      * Use Tango camera intrinsics to calculate the projection Matrix for the Rajawali scene.
+     * The function also rotates the intrinsics based on current rotation from color camera to
+     * display.
      */
-    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics) {
+    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics,
+                                                                int rotation) {
         // Uses frustumM to create a projection matrix taking into account calibrated camera
         // intrinsic parameter.
         // Reference: http://ksimek.github.io/2013/06/03/calibrated_cameras_in_opengl/
         float near = 0.1f;
         float far = 100;
 
-        float xScale = near / (float) intrinsics.fx;
-        float yScale = near / (float) intrinsics.fy;
-        float xOffset = (float) (intrinsics.cx - (intrinsics.width / 2.0)) * xScale;
+        // Adjust camera intrinsics according to rotation from color camera to display.
+        double cx = intrinsics.cx;
+        double cy = intrinsics.cy;
+        double width = intrinsics.width;
+        double height = intrinsics.height;
+        double fx = intrinsics.fx;
+        double fy = intrinsics.fy;
+
+        switch (rotation) {
+            case Surface.ROTATION_90:
+                cx = intrinsics.cy;
+                cy = intrinsics.width - intrinsics.cx;
+                width = intrinsics.height;
+                height = intrinsics.width;
+                fx = intrinsics.fy;
+                fy = intrinsics.fx;
+                break;
+            case Surface.ROTATION_180:
+                cx = intrinsics.width - cx;
+                cy = intrinsics.height - cy;
+                break;
+            case Surface.ROTATION_270:
+                cx = intrinsics.height - intrinsics.cy;
+                cy = intrinsics.cx;
+                width = intrinsics.height;
+                height = intrinsics.width;
+                fx = intrinsics.fy;
+                fy = intrinsics.fx;
+                break;
+            default:
+                break;
+        }
+
+        double xscale = near / fx;
+        double yscale = near / fy;
+
+        double xoffset = (cx - (width / 2.0)) * xscale;
         // Color camera's coordinates has y pointing downwards so we negate this term.
-        float yOffset = (float) -(intrinsics.cy - (intrinsics.height / 2.0)) * yScale;
+        double yoffset = -(cy - (height / 2.0)) * yscale;
 
         float m[] = new float[16];
         Matrix.frustumM(m, 0,
-                xScale * (float) -intrinsics.width / 2.0f - xOffset,
-                xScale * (float) intrinsics.width / 2.0f - xOffset,
-                yScale * (float) -intrinsics.height / 2.0f - yOffset,
-                yScale * (float) intrinsics.height / 2.0f - yOffset,
-                near, far);
+                (float) (xscale * -width / 2.0 - xoffset),
+                (float) (xscale * width / 2.0 - xoffset),
+                (float) (yscale * -height / 2.0 - yoffset),
+                (float) (yscale * height / 2.0 - yoffset), near, far);
         return m;
     }
 
@@ -470,8 +530,10 @@ public class ModelCorrespondenceActivity extends Activity {
         if (mZRotationAnimator != null) {
             mZRotationAnimator.cancel();
         }
+        mHouseModel = new HouseModel();
+        mOpenGlTHouse = new float[16];
+        mDestPointList = new ArrayList<float[]>();
         mCorrespondenceDone = false;
-        mDestPointList.clear();
         mModelUpdated = true;
         mModelZRotation = 0;
         mResetButton.setVisibility(View.GONE);
@@ -497,9 +559,11 @@ public class ModelCorrespondenceActivity extends Activity {
                 rgbTimestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                 pointCloud.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH);
 
+        float[] uv = getColorCameraUVFromDisplay(u, v, mColorCameraToDisplayAndroidRotation);
+
         // Get depth point with the latest available point cloud data.
         float[] point = TangoSupport.getDepthAtPointNearestNeighbor(pointCloud,
-                colorTdepthPose, u, v);
+                colorTdepthPose, uv[0], uv[1]);
 
         // Get the transform from depth camera to OpenGL world at the timestamp of the cloud.
         TangoSupport.TangoMatrixTransformData transform =
@@ -570,11 +634,22 @@ public class ModelCorrespondenceActivity extends Activity {
      * Calculate the transform needed to place the model in the upper left corner of the camera,
      * and rotate it to show the next point to make the correspondence.
      */
-    private float[] calculateModelTransformFixedToCam() {
-        // Translate to the upper left corner and ahead of the cam.
+    private float[] calculateModelTransformFixedToCam(int colorCameraToDisplayAndroidRotation) {
+        // Translate to the upper left corner and ahead of the cam if the device is in landscape
+        // mode or to the upper center if it is in portrait mode.
         float[] rgbTHouse = new float[16];
         Matrix.setIdentityM(rgbTHouse, 0);
-        Matrix.translateM(rgbTHouse, 0, -1.5f, 0.3f, -4);
+        switch (colorCameraToDisplayAndroidRotation) {
+            case Surface.ROTATION_90:
+            case Surface.ROTATION_270:
+                Matrix.translateM(rgbTHouse, 0, 0f, 1.2f, -4);
+                break;
+            case Surface.ROTATION_0:
+            case Surface.ROTATION_180:
+            default:
+                Matrix.translateM(rgbTHouse, 0, -1.5f, 0.3f, -4);
+        }
+
         // Rotate it 180 degrees around the Z axis to show the front of the house as default
         // orientation.
         Matrix.rotateM(rgbTHouse, 0, 180, 0, 0, 1);
@@ -584,7 +659,6 @@ public class ModelCorrespondenceActivity extends Activity {
         Matrix.rotateM(rgbTHouse, 0, -mModelZRotation, 0, 0, 1);
         // Scale it to a proper size.
         Matrix.scaleM(rgbTHouse, 0, 0.03f, 0.03f, 0.03f);
-        Matrix4 m = new Matrix4(rgbTHouse);
         return rgbTHouse;
     }
 
@@ -612,5 +686,65 @@ public class ModelCorrespondenceActivity extends Activity {
             dest[i] = (float) source[i];
         }
         return dest;
+    }
+
+    /**
+     * Given an UV coordinate in display(screen) space, returns UV coordinate in color camera space.
+     */
+    float[] getColorCameraUVFromDisplay(float u, float v, int colorToDisplayRotation) {
+        switch (colorToDisplayRotation) {
+            case 1:
+                return new float[]{1.0f - v, u};
+            case 2:
+                return new float[]{1.0f - u, 1.0f - v};
+            case 3:
+                return new float[]{v, 1.0f - u};
+            default:
+                return new float[]{u, v};
+        }
+    }
+
+    private static int getColorCameraToDisplayAndroidRotation(int displayRotation,
+                                                              int cameraRotation) {
+        int cameraRotationNormalized = 0;
+        switch (cameraRotation) {
+            case 90:
+                cameraRotationNormalized = 1;
+                break;
+            case 180:
+                cameraRotationNormalized = 2;
+                break;
+            case 270:
+                cameraRotationNormalized = 3;
+                break;
+            default:
+                cameraRotationNormalized = 0;
+                break;
+        }
+        int ret = displayRotation - cameraRotationNormalized;
+        if (ret < 0) {
+            ret += 4;
+        }
+        return ret;
+    }
+
+    /**
+     * Set the color camera background texture rotation and save the camera to display rotation.
+     */
+    private void setAndroidOrientation() {
+        Display display = getWindowManager().getDefaultDisplay();
+        Camera.CameraInfo colorCameraInfo = new Camera.CameraInfo();
+        Camera.getCameraInfo(COLOR_CAMERA_ID, colorCameraInfo);
+
+        mColorCameraToDisplayAndroidRotation =
+                getColorCameraToDisplayAndroidRotation(display.getRotation(),
+                        colorCameraInfo.orientation);
+        // Run this in OpenGL thread.
+        mSurfaceView.queueEvent(new Runnable() {
+            @Override
+            public void run() {
+                mRenderer.updateColorCameraTextureUvGlThread(mColorCameraToDisplayAndroidRotation);
+            }
+        });
     }
 }
