@@ -219,7 +219,7 @@ public class PointCloudActivity extends Activity {
             @Override
             public void onPointCloudAvailable(TangoPointCloudData pointCloud) {
                 if (mTangoUx != null) {
-                    mTangoUx.updateXyzCount(pointCloud.numPoints);
+                    mTangoUx.updatePointCloud(pointCloud);
                 }
                 mPointCloudManager.updatePointCloud(pointCloud);
 
@@ -372,14 +372,14 @@ public class PointCloudActivity extends Activity {
             if (uxExceptionEvent.getType() == UxExceptionEvent.TYPE_MOVING_TOO_FAST) {
                 Log.i(TAG, "Invalid poses in MotionTracking ");
             }
-            if (uxExceptionEvent.getType() == UxExceptionEvent.TYPE_OVER_EXPOSED) {
-                Log.i(TAG, "Camera Over Exposed");
+            if (uxExceptionEvent.getType() == UxExceptionEvent.TYPE_FISHEYE_CAMERA_OVER_EXPOSED) {
+                Log.i(TAG, "Fisheye Camera Over Exposed");
+            }
+            if (uxExceptionEvent.getType() == UxExceptionEvent.TYPE_FISHEYE_CAMERA_UNDER_EXPOSED) {
+                Log.i(TAG, "Fisheye Camera Under Exposed ");
             }
             if (uxExceptionEvent.getType() == UxExceptionEvent.TYPE_TANGO_SERVICE_NOT_RESPONDING) {
                 Log.i(TAG, "TangoService is not responding ");
-            }
-            if (uxExceptionEvent.getType() == UxExceptionEvent.TYPE_UNDER_EXPOSED) {
-                Log.i(TAG, "Camera Under Exposed ");
             }
 
         }

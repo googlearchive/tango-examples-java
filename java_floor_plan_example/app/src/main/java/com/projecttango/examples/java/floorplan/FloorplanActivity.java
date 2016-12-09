@@ -149,15 +149,12 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
     @Override
     protected void onResume() {
         super.onResume();
-        mSurfaceView.onResume();
 
         setAndroidOrientation();
 
         // Check if it has permissions.
         // Area learning permissions are needed in order to save the adf.
         if (Tango.hasPermission(this, Tango.PERMISSIONTYPE_ADF_LOAD_SAVE)) {
-            // When connecting, reset the plan. The old measurements don't make sense.
-            resetRenderer();
             // Initialize Tango Service as a normal Android Service, since we call
             // mTango.disconnect() in onPause, this will unbind Tango Service, so
             // every time when onResume get called, we should create a new Tango object.
@@ -190,6 +187,9 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
                     }
                 }
             });
+
+            // When connecting, reset the plan. The old measurements don't make sense.
+            resetRenderer();
         } else {
             startActivityForResult(
                     Tango.getRequestPermissionIntent(Tango.PERMISSIONTYPE_ADF_LOAD_SAVE),
@@ -200,7 +200,6 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
     @Override
     protected void onPause() {
         super.onPause();
-        mSurfaceView.onPause();
 
         // Synchronize against disconnecting while the service is being used in the OpenGL thread or
         // in the UI thread.
@@ -305,7 +304,7 @@ public class FloorplanActivity extends Activity implements View.OnTouchListener 
      * Resets the status every time we connect to the service. The old measurements
      * don't make sense.
      */
-    private void resetRenderer() {
+    private synchronized void resetRenderer() {
         mWallMeasurementList = new ArrayList<WallMeasurement>();
         mRenderer.removeMeasurements();
         mRenderer.updatePlan(new Floorplan(new ArrayList<float[]>()));
