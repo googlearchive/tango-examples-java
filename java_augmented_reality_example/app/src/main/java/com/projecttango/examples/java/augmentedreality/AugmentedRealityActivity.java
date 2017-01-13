@@ -29,15 +29,22 @@ import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
+import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.hardware.display.DisplayManager;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.Display;
 import android.view.Surface;
+import android.widget.Toast;
 
 import org.rajawali3d.scene.ASceneFrameCallback;
 import org.rajawali3d.view.SurfaceView;
@@ -75,6 +82,9 @@ public class AugmentedRealityActivity extends Activity {
     // For all current Tango devices, color camera is in the camera id 0.
     private static final int COLOR_CAMERA_ID = 0;
 
+    private static final String CAMERA_PERMISSION = Manifest.permission.CAMERA;
+    private static final int CAMERA_PERMISSION_CODE = 0;
+
     private SurfaceView mSurfaceView;
     private AugmentedRealityRenderer mRenderer;
     private TangoCameraIntrinsics mIntrinsics;
@@ -102,7 +112,8 @@ public class AugmentedRealityActivity extends Activity {
         if (displayManager != null) {
             displayManager.registerDisplayListener(new DisplayManager.DisplayListener() {
                 @Override
-                public void onDisplayAdded(int displayId) {}
+                public void onDisplayAdded(int displayId) {
+                }
 
                 @Override
                 public void onDisplayChanged(int displayId) {
@@ -112,7 +123,8 @@ public class AugmentedRealityActivity extends Activity {
                 }
 
                 @Override
-                public void onDisplayRemoved(int displayId) {}
+                public void onDisplayRemoved(int displayId) {
+                }
             }, null);
         }
 
@@ -120,28 +132,64 @@ public class AugmentedRealityActivity extends Activity {
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
+    protected void onStart() {
+        super.onStart();
         mSurfaceView.onResume();
 
         setAndroidOrientation();
 
-        // Set render mode to RENDERMODE_CONTINUOUSLY to force getting onDraw callbacks until the
-        // Tango service is properly set-up and we start getting onFrameAvailable callbacks.
+        // Set render mode to RENDERMODE_CONTINUOUSLY to force getting onDraw callbacks until
+        // the Tango service is properly set-up and we start getting onFrameAvailable callbacks.
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
+        // Check and request camera permission at run time.
+        if (hasCameraPermission()) {
+            bindTangoService();
+        } else {
+            requestCameraPermission();
+        }
+    }
 
-        // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
-        // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
-        // should create a new Tango object.
+    @Override
+    public void onStop() {
+        super.onStop();
+        mSurfaceView.onPause();
+        // Synchronize against disconnecting while the service is being used in the OpenGL thread or
+        // in the UI thread.
+        // NOTE: DO NOT lock against this same object in the Tango callback thread. Tango.disconnect
+        // will block here until all Tango callback calls are finished. If you lock against this
+        // object in a Tango callback thread it will cause a deadlock.
+        synchronized (this) {
+            if (mIsConnected) {
+                try {
+                    mIsConnected = false;
+                    mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
+                    // We need to invalidate the connected texture ID so that we cause a
+                    // re-connection in the OpenGL thread after resume.
+                    mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
+                    mTango.disconnect();
+                    mTango = null;
+                } catch (TangoErrorException e) {
+                    Log.e(TAG, getString(R.string.exception_tango_error), e);
+                }
+            }
+        }
+    }
+
+    /**
+     * Initialize Tango Service as a normal Android Service.
+     */
+    private void bindTangoService() {
+        // Since we call mTango.disconnect() in onStop, this will unbind Tango Service, so every
+        // time when onStart gets called, we should create a new Tango object.
         mTango = new Tango(AugmentedRealityActivity.this, new Runnable() {
             // Pass in a Runnable to be called from UI thread when Tango is ready, this Runnable
             // will be running on a new thread.
-            // When Tango is ready, we can call Tango functions safely here only when there is no UI
-            // thread changes involved.
+            // When Tango is ready, we can call Tango functions safely here only when there
+            // is no UI thread changes involved.
             @Override
             public void run() {
-                // Synchronize against disconnecting while the service is being used in the OpenGL
-                // thread or in the UI thread.
+                // Synchronize against disconnecting while the service is being used in the
+                // OpenGL thread or in the UI thread.
                 synchronized (AugmentedRealityActivity.this) {
                     try {
                         TangoSupport.initialize();
@@ -159,29 +207,6 @@ public class AugmentedRealityActivity extends Activity {
                 }
             }
         });
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        mSurfaceView.onPause();
-        // Synchronize against disconnecting while the service is being used in the OpenGL thread or
-        // in the UI thread.
-        // NOTE: DO NOT lock against this same object in the Tango callback thread. Tango.disconnect
-        // will block here until all Tango callback calls are finished. If you lock against this
-        // object in a Tango callback thread it will cause a deadlock.
-        synchronized (this) {
-            try {
-                mIsConnected = false;
-                mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
-                // We need to invalidate the connected texture ID so that we cause a re-connection
-                // in the OpenGL thread after resume.
-                mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
-                mTango.disconnect();
-            } catch (TangoErrorException e) {
-                Log.e(TAG, getString(R.string.exception_tango_error), e);
-            }
-        }
     }
 
     /**
@@ -392,8 +417,9 @@ public class AugmentedRealityActivity extends Activity {
 
     /**
      * Use Tango camera intrinsics to calculate the projection Matrix for the Rajawali scene.
+     *
      * @param intrinsics camera instrinsics for computing the project matrix.
-     * @param rotation the relative rotation between the camera intrinsics and display glContext.
+     * @param rotation   the relative rotation between the camera intrinsics and display glContext.
      */
     private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics,
                                                                 int rotation) {
@@ -470,5 +496,54 @@ public class AugmentedRealityActivity extends Activity {
                 mRenderer.updateColorCameraTextureUvGlThread(mColorCameraToDisplayAndroidRotation);
             }
         });
+    }
+
+    /**
+     * Check we have the necessary permissions for this app.
+     */
+    private boolean hasCameraPermission() {
+        return ContextCompat.checkSelfPermission(this, CAMERA_PERMISSION) ==
+                PackageManager.PERMISSION_GRANTED;
+    }
+
+    /**
+     * Request the necessary permissions for this app.
+     */
+    private void requestCameraPermission() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, CAMERA_PERMISSION)) {
+            showRequestPermissionRationale();
+        } else {
+            ActivityCompat.requestPermissions(this, new String[]{CAMERA_PERMISSION},
+                    CAMERA_PERMISSION_CODE);
+        }
+    }
+
+    /**
+     * If the user has declined the permission before, we have to explain him the app needs this
+     * permission.
+     */
+    private void showRequestPermissionRationale() {
+        final AlertDialog dialog = new AlertDialog.Builder(this)
+                .setMessage("Java Augmented Reality Example requires camera permission")
+                .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        ActivityCompat.requestPermissions(AugmentedRealityActivity.this,
+                                new String[]{CAMERA_PERMISSION}, CAMERA_PERMISSION_CODE);
+                    }
+                })
+                .create();
+        dialog.show();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                                           int[] grantResults) {
+        if (hasCameraPermission()) {
+            bindTangoService();
+        } else {
+            Toast.makeText(this, "Java Augmented Reality Example requires camera permission",
+                    Toast.LENGTH_LONG).show();
+        }
     }
 }

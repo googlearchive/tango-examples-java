@@ -562,8 +562,11 @@ public class ModelCorrespondenceActivity extends Activity {
         float[] uv = getColorCameraUVFromDisplay(u, v, mColorCameraToDisplayAndroidRotation);
 
         // Get depth point with the latest available point cloud data.
+        double[] identityTranslation = {0.0, 0.0, 0.0};
+        double[] identityRotation = {0.0, 0.0, 0.0, 1.0};
         float[] point = TangoSupport.getDepthAtPointNearestNeighbor(pointCloud,
-                colorTdepthPose, uv[0], uv[1]);
+                colorTdepthPose.translation, colorTdepthPose.rotation, uv[0], uv[1],
+                identityTranslation, identityRotation);
 
         // Get the transform from depth camera to OpenGL world at the timestamp of the cloud.
         TangoSupport.TangoMatrixTransformData transform =

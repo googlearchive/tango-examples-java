@@ -537,12 +537,16 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
         float[] uv = getColorCameraUVFromDisplay(u, v, mColorCameraToDisplayAndroidRotation);
 
         float[] point;
+        double[] identityTranslation = {0.0, 0.0, 0.0};
+        double[] identityRotation = {0.0, 0.0, 0.0, 1.0};
         if (mBilateralBox.isChecked()) {
-            point = TangoSupport.getDepthAtPointBilateral(pointCloud, imageBuffer,
-                    colorTdepthPose, uv[0], uv[1]);
+            point = TangoSupport.getDepthAtPointBilateral(pointCloud,
+                    colorTdepthPose.translation, colorTdepthPose.rotation,
+                    imageBuffer, uv[0], uv[1], identityTranslation, identityRotation);
         } else {
             point = TangoSupport.getDepthAtPointNearestNeighbor(pointCloud,
-                    colorTdepthPose, uv[0], uv[1]);
+                    colorTdepthPose.translation, colorTdepthPose.rotation,
+                    uv[0], uv[1], identityTranslation, identityRotation);
         }
         if (point == null) {
             return null;

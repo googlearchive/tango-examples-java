@@ -296,19 +296,23 @@ public class MeshBuilderActivity extends Activity {
     }
 
     public void onPauseButtonClick(View v) {
-        if (mIsPaused) {
-            mTangoMesher.startSceneReconstruction();
-            mPauseButton.setText("Pause");
-        } else {
-            mTangoMesher.stopSceneReconstruction();
-            mPauseButton.setText("Resume");
+        if (mTangoMesher != null) {
+            if (mIsPaused) {
+                mTangoMesher.startSceneReconstruction();
+                mPauseButton.setText("Pause");
+            } else {
+                mTangoMesher.stopSceneReconstruction();
+                mPauseButton.setText("Resume");
+            }
+            mIsPaused = !mIsPaused;
         }
-        mIsPaused = !mIsPaused;
     }
 
     public void onClearButtonClicked(View v) {
-        mTangoMesher.resetSceneReconstruction();
-        mClearMeshes = true;
+        if (mTangoMesher != null) {
+            mTangoMesher.resetSceneReconstruction();
+            mClearMeshes = true;
+        }
     }
 
     /**
