@@ -67,7 +67,9 @@ public class TangoMesher implements Tango.OnTangoUpdateListener {
     public TangoMesher(OnTangoMeshesAvailableListener callback) {
         mCallback = callback;
 
-        mTango3dReconstruction = new Tango3dReconstruction(new Tango3dReconstructionConfig());
+        Tango3dReconstructionConfig config = new Tango3dReconstructionConfig();
+        config.putBoolean("generate_color", false);
+        mTango3dReconstruction = new Tango3dReconstruction(config);
         mPointCloudBuffer = new TangoPointCloudManager();
 
         mHandlerThread = new HandlerThread("mesherCallback");

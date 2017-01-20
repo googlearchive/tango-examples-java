@@ -346,7 +346,7 @@ public class GreenScreenActivity extends AppCompatActivity {
                                     // In the following code, we define t0 as the depth timestamp
                                     // and t1 as the color camera timestamp.
 
-                                    // Calculate the relative pose from color camera frame at
+                                    // Calculate the relative pose between color camera frame at
                                     // timestamp color_timestamp t1 and depth.
                                     TangoPoseData poseColort1Tdeptht0;
                                     poseColort1Tdeptht0 = TangoSupport.calculateRelativePose(

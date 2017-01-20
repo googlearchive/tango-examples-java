@@ -511,16 +511,19 @@ public class OcclusionActivity extends Activity implements View.OnTouchListener 
         // We need to calculate the transform between the color camera at the
         // time the user clicked and the depth camera at the time the depth
         // cloud was acquired.
-        TangoPoseData colorTdepthPose = TangoSupport.calculateRelativePose(
-                rgbTimestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                pointCloud.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH);
+        TangoPoseData depthTcolorPose = TangoSupport.calculateRelativePose(
+                pointCloud.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
+                rgbTimestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR);
 
         float[] uv = getColorCameraUVFromDisplay(u, v, mColorCameraToDisplayAndroidRotation);
 
         // Perform plane fitting with the latest available point cloud data.
+        double[] identityTranslation = {0.0, 0.0, 0.0};
+        double[] identityRotation = {0.0, 0.0, 0.0, 1.0};
         TangoSupport.IntersectionPointPlaneModelPair intersectionPointPlaneModelPair =
                 TangoSupport.fitPlaneModelNearPoint(pointCloud,
-                        colorTdepthPose, uv[0], uv[1]);
+                        identityTranslation, identityRotation, uv[0], uv[1],
+                        depthTcolorPose.translation, depthTcolorPose.rotation);
 
         // Get the transform from depth camera to OpenGL world at the timestamp of the cloud.
         TangoSupport.TangoMatrixTransformData transform =
