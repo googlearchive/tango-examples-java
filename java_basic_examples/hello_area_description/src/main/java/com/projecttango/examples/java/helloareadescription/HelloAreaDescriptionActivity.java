@@ -103,14 +103,18 @@ public class HelloAreaDescriptionActivity extends Activity implements
                         startupTango();
                     } catch (TangoOutOfDateException e) {
                         Log.e(TAG, getString(R.string.tango_out_of_date_exception), e);
+                        showsToastAndFinishOnUiThread(R.string.tango_out_of_date_exception);
                     } catch (TangoErrorException e) {
                         Log.e(TAG, getString(R.string.tango_error), e);
+                        showsToastAndFinishOnUiThread(R.string.tango_error);
                     } catch (TangoInvalidException e) {
                         Log.e(TAG, getString(R.string.tango_invalid), e);
+                        showsToastAndFinishOnUiThread(R.string.tango_invalid);
                     } catch (SecurityException e) {
                         // Area Learning permissions are required. If they are not available,
                         // SecurityException is thrown.
                         Log.e(TAG, getString(R.string.no_permissions), e);
+                        showsToastAndFinishOnUiThread(R.string.no_permissions);
                     }
                 }
 
@@ -357,5 +361,21 @@ public class HelloAreaDescriptionActivity extends Activity implements
         SetAdfNameDialog setAdfNameDialog = new SetAdfNameDialog();
         setAdfNameDialog.setArguments(bundle);
         setAdfNameDialog.show(manager, "ADFNameDialog");
+    }
+
+    /**
+     * Display toast on UI thread.
+     *
+     * @param resId The resource id of the string resource to use. Can be formatted text.
+     */
+    private void showsToastAndFinishOnUiThread(final int resId) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(HelloAreaDescriptionActivity.this,
+                        getString(resId), Toast.LENGTH_LONG).show();
+                finish();
+            }
+        });
     }
 }

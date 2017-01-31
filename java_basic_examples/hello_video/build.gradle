@@ -31,6 +31,13 @@ if (project.hasProperty("Tango.catkin_devel_prefix")) {
     external_lib_prefix = "../../TangoReleaseLibs"
 }
 
+repositories {
+    flatDir {
+        dirs external_lib_prefix + '/aar'
+    }
+}
+
 dependencies {
     compile fileTree(dir: external_lib_prefix + '/jar', include: ['**/*.jar'])
+    compile (name: 'tango_support_java_lib', ext: 'aar')
 }

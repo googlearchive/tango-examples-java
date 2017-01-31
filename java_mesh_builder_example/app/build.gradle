@@ -1,13 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 19
+    compileSdkVersion 23
     buildToolsVersion "21.1.2"
 
     defaultConfig {
         applicationId "com.projecttango.experiments.javameshbuilderexample"
         minSdkVersion 19
-        targetSdkVersion 19
+        targetSdkVersion 23
         versionCode 1
         versionName "1.0"
     }
@@ -40,6 +40,7 @@ repositories {
 
 dependencies {
     compile 'org.rajawali3d:rajawali:1.0.325@aar'
+    compile 'com.android.support:appcompat-v7:23.0.0'
     compile (name: 'tango_support_java_lib', ext: 'aar')
     compile fileTree(dir: external_lib_prefix + '/jar', include: ['**/*.jar'])
 }

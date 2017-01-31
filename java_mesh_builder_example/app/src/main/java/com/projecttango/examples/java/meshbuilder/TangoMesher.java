@@ -45,7 +45,8 @@ import com.projecttango.tangosupport.TangoSupport;
  * report a callback with the generated meshes. It abstracts all the needed thread management and
  * pose requesting logic.
  */
-public class TangoMesher implements Tango.OnTangoUpdateListener, Tango.OnFrameAvailableListener {
+public class TangoMesher extends Tango.OnTangoUpdateListener 
+    implements Tango.OnFrameAvailableListener{
 
     private static final String TAG = TangoMesher.class.getSimpleName();
     private final TangoPointCloudManager mPointCloudBuffer;
@@ -100,7 +101,7 @@ public class TangoMesher implements Tango.OnTangoUpdateListener, Tango.OnFrameAv
                                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                 TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
                                 TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
-                                TangoSupport.TANGO_SUPPORT_ENGINE_TANGO);
+                                TangoSupport.ROTATION_IGNORED);
                         if (depthPose.statusCode != TangoPoseData.POSE_VALID) {
                             Log.e(TAG, "couldn't extract a valid depth pose");
                             return;
@@ -118,7 +119,7 @@ public class TangoMesher implements Tango.OnTangoUpdateListener, Tango.OnFrameAv
                                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                 TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                                 TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
-                                TangoSupport.TANGO_SUPPORT_ENGINE_TANGO);
+                                TangoSupport.ROTATION_IGNORED);
                         if (imagePose.statusCode != TangoPoseData.POSE_VALID) {
                             Log.e(TAG, "couldn't extract a valid color pose");
                             return;

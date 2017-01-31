@@ -30,17 +30,21 @@ import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
+import android.Manifest;
 import android.app.Activity;
-import android.content.Intent;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.hardware.display.DisplayManager;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.Display;
 import android.view.MotionEvent;
-import android.view.Surface;
 import android.view.View;
 import android.widget.Toast;
 
@@ -63,12 +67,12 @@ import com.projecttango.tangosupport.TangoSupport;
 public class OcclusionActivity extends Activity implements View.OnTouchListener {
     private static final String TAG = OcclusionActivity.class.getSimpleName();
     private static final int INVALID_TEXTURE_ID = 0;
-    // For all current Tango devices, color camera is in the camera id 0.
-    private static final int COLOR_CAMERA_ID = 0;
+
+    private static final String CAMERA_PERMISSION = Manifest.permission.CAMERA;
+    private static final int CAMERA_PERMISSION_CODE = 0;
 
     private GLSurfaceView mSurfaceView;
     private OcclusionRenderer mRenderer;
-    private TangoCameraIntrinsics mIntrinsics;
     private TangoMesher mTangoMesher;
     private volatile TangoMesh[] mMeshVector;
     private Tango mTango;
@@ -82,7 +86,7 @@ public class OcclusionActivity extends Activity implements View.OnTouchListener 
     private AtomicBoolean mIsFrameAvailableTangoThread = new AtomicBoolean(false);
     private double mRgbTimestampGlThread;
 
-    private int mColorCameraToDisplayAndroidRotation = 0;
+    private int mDisplayRotation = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,7 +108,7 @@ public class OcclusionActivity extends Activity implements View.OnTouchListener 
                 @Override
                 public void onDisplayChanged(int displayId) {
                     synchronized (this) {
-                        setAndroidOrientation();
+                        setDisplayRotation();
                     }
                 }
 
@@ -117,50 +121,22 @@ public class OcclusionActivity extends Activity implements View.OnTouchListener 
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
+    protected void onStart() {
+        super.onStart();
         mSurfaceView.onResume();
 
-        setAndroidOrientation();
-
+        // Set render mode to RENDERMODE_CONTINUOUSLY to force getting onDraw callbacks until
+        // the Tango service is properly set-up and we start getting onFrameAvailable callbacks.
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
-        // Synchronize against disconnecting while the service is being used in the OpenGL
-        // thread or
-        // in the UI thread.
-        if (!mIsConnected) {
-            // Initialize Tango Service as a normal Android Service, since we call
-            // mTango.disconnect() in onPause, this will unbind Tango Service, so
-            // everytime when onResume get called, we should create a new Tango object.
-            mTango = new Tango(OcclusionActivity.this, new Runnable() {
-                // Pass in a Runnable to be called from UI thread when Tango is ready,
-                // this Runnable will be running on a new thread.
-                // When Tango is ready, we can call Tango functions safely here only
-                // when there is no UI thread changes involved.
-                @Override
-                public void run() {
-                    try {
-                        synchronized (OcclusionActivity.this) {
-                            TangoSupport.initialize();
-                            mConfig = setupTangoConfig(mTango);
-                            mTango.connect(mConfig);
-                            startupTango();
-                            mIsConnected = true;
-                        }
-                    } catch (TangoOutOfDateException e) {
-                        Log.e(TAG, getString(R.string.exception_out_of_date), e);
-                    } catch (TangoErrorException e) {
-                        Log.e(TAG, getString(R.string.exception_tango_error), e);
-                    } catch (SecurityException e) {
-                        Log.e(TAG, getString(R.string.exception_tango_permission), e);
-                    }
-                }
-            });
+        // Check and request camera permission at run time.
+        if (checkAndRequestPermissions()) {
+            bindTangoService();
         }
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
+    protected void onStop() {
+        super.onStop();
         mSurfaceView.onPause();
         // Synchronize against disconnecting while the service is being used in the OpenGL thread or
         // in the UI thread.
@@ -179,6 +155,47 @@ public class OcclusionActivity extends Activity implements View.OnTouchListener 
                     Log.e(TAG, getString(R.string.exception_tango_error), e);
                 }
             }
+        }
+    }
+
+    /**
+     * Initialize Tango Service as a normal Android Service.
+     */
+    private void bindTangoService() {
+        // Synchronize against disconnecting while the service is being used in the OpenGL
+        // thread or in the UI thread.
+        if (!mIsConnected) {
+            // Initialize Tango Service as a normal Android Service, since we call
+            // mTango.disconnect() in onPause, this will unbind Tango Service, so
+            // everytime when onResume get called, we should create a new Tango object.
+            mTango = new Tango(OcclusionActivity.this, new Runnable() {
+                // Pass in a Runnable to be called from UI thread when Tango is ready,
+                // this Runnable will be running on a new thread.
+                // When Tango is ready, we can call Tango functions safely here only
+                // when there is no UI thread changes involved.
+                @Override
+                public void run() {
+                    try {
+                        synchronized (OcclusionActivity.this) {
+                            TangoSupport.initialize();
+                            mConfig = setupTangoConfig(mTango);
+                            mTango.connect(mConfig);
+                            startupTango();
+                            mIsConnected = true;
+                            setDisplayRotation();
+                        }
+                    } catch (TangoOutOfDateException e) {
+                        Log.e(TAG, getString(R.string.exception_out_of_date), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_out_of_date);
+                    } catch (TangoErrorException e) {
+                        Log.e(TAG, getString(R.string.exception_tango_error), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_tango_error);
+                    } catch (TangoInvalidException e) {
+                        Log.e(TAG, getString(R.string.exception_tango_invalid), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_tango_invalid);
+                    }
+                }
+            });
         }
     }
 
@@ -264,8 +281,8 @@ public class OcclusionActivity extends Activity implements View.OnTouchListener 
         });
 
         // Set camera intrinsics to TangoMesher.
-        mIntrinsics = mTango.getCameraIntrinsics(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
-        mTangoMesher.setColorCameraCalibration(mIntrinsics);
+        mTangoMesher.setColorCameraCalibration(mTango.getCameraIntrinsics(TangoCameraIntrinsics
+                .TANGO_CAMERA_COLOR));
         mTangoMesher.setDepthCameraCalibration(mTango.getCameraIntrinsics(TangoCameraIntrinsics
                 .TANGO_CAMERA_DEPTH));
         // Start the scene reconstruction. We will start getting new meshes from TangoMesher. These
@@ -297,9 +314,12 @@ public class OcclusionActivity extends Activity implements View.OnTouchListener 
                         // Set-up scene camera projection to match RGB camera intrinsics.
                         if (!mRenderer.isProjectionMatrixConfigured()) {
                             // Set-up scene camera projection to match RGB camera intrinsics.
+                            TangoCameraIntrinsics intrinsics =
+                                    TangoSupport.getCameraIntrinsicsBasedOnDisplayRotation(
+                                            TangoCameraIntrinsics.TANGO_CAMERA_COLOR,
+                                            mDisplayRotation);
                             mRenderer.setProjectionMatrix(
-                                    projectionMatrixFromCameraIntrinsics(mIntrinsics,
-                                            mColorCameraToDisplayAndroidRotation), 0.1f, 100f);
+                                    projectionMatrixFromCameraIntrinsics(intrinsics), 0.1f, 100f);
                         }
                         // Connect the Tango SDK to the OpenGL texture ID where we are
                         // going to render the camera.
@@ -326,7 +346,7 @@ public class OcclusionActivity extends Activity implements View.OnTouchListener 
                                             TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                                             TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
                                             TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                            mColorCameraToDisplayAndroidRotation);
+                                            mDisplayRotation);
 
                             if (ssTrgb.statusCode == TangoPoseData.POSE_VALID) {
                                 // Update the camera pose from the renderer
@@ -350,69 +370,18 @@ public class OcclusionActivity extends Activity implements View.OnTouchListener 
         mSurfaceView.setRenderer(mRenderer);
     }
 
-    private static int getColorCameraToDisplayAndroidRotation(int displayRotation,
-                                                              int cameraRotation) {
-        int cameraRotationNormalized = 0;
-        switch (cameraRotation) {
-            case 90:
-                cameraRotationNormalized = 1;
-                break;
-            case 180:
-                cameraRotationNormalized = 2;
-                break;
-            case 270:
-                cameraRotationNormalized = 3;
-                break;
-            default:
-                cameraRotationNormalized = 0;
-                break;
-        }
-        int ret = displayRotation - cameraRotationNormalized;
-        if (ret < 0) {
-            ret += 4;
-        }
-        return ret;
-    }
-
     /**
      * Use Tango camera intrinsics to calculate the projection Matrix for the OpenGL scene.
+     *
      * @param intrinsics camera instrinsics for computing the project matrix.
-     * @param rotation the relative rotation between the camera intrinsics and display glContext.
      */
-    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics,
-                                                                int rotation) {
-        // Adjust camera intrinsics according to rotation
+    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics) {
         float cx = (float) intrinsics.cx;
         float cy = (float) intrinsics.cy;
         float width = (float) intrinsics.width;
         float height = (float) intrinsics.height;
         float fx = (float) intrinsics.fx;
         float fy = (float) intrinsics.fy;
-
-        switch (rotation) {
-            case Surface.ROTATION_90:
-                cx = (float) intrinsics.cy;
-                cy = (float) intrinsics.width - (float) intrinsics.cx;
-                width = (float) intrinsics.height;
-                height = (float) intrinsics.width;
-                fx = (float) intrinsics.fy;
-                fy = (float) intrinsics.fx;
-                break;
-            case Surface.ROTATION_180:
-                cx = (float) intrinsics.width - cx;
-                cy = (float) intrinsics.height - cy;
-                break;
-            case Surface.ROTATION_270:
-                cx = (float) intrinsics.height - (float) intrinsics.cy;
-                cy = (float) intrinsics.cx;
-                width = (float) intrinsics.height;
-                height = (float) intrinsics.width;
-                fx = (float) intrinsics.fy;
-                fy = (float) intrinsics.fx;
-                break;
-            default:
-                break;
-        }
 
         // Uses frustumM to create a projection matrix taking into account calibrated camera
         // intrinsic parameter.
@@ -439,19 +408,18 @@ public class OcclusionActivity extends Activity implements View.OnTouchListener 
     /**
      * Set the color camera background texture rotation and save the camera to display rotation.
      */
-    private void setAndroidOrientation() {
+    private void setDisplayRotation() {
         Display display = getWindowManager().getDefaultDisplay();
-        Camera.CameraInfo colorCameraInfo = new Camera.CameraInfo();
-        Camera.getCameraInfo(COLOR_CAMERA_ID, colorCameraInfo);
+        mDisplayRotation = display.getRotation();
 
-        mColorCameraToDisplayAndroidRotation =
-                getColorCameraToDisplayAndroidRotation(display.getRotation(),
-                        colorCameraInfo.orientation);
-        // Run this in the OpenGL thread.
+        // We also need to update the camera texture UV coordinates. This must be run in the OpenGL
+        // thread.
         mSurfaceView.queueEvent(new Runnable() {
             @Override
             public void run() {
-                mRenderer.updateColorCameraTextureUv(mColorCameraToDisplayAndroidRotation);
+                if (mIsConnected) {
+                    mRenderer.updateColorCameraTextureUv(mDisplayRotation);
+                }
             }
         });
     }
@@ -515,14 +483,12 @@ public class OcclusionActivity extends Activity implements View.OnTouchListener 
                 pointCloud.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
                 rgbTimestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR);
 
-        float[] uv = getColorCameraUVFromDisplay(u, v, mColorCameraToDisplayAndroidRotation);
-
         // Perform plane fitting with the latest available point cloud data.
         double[] identityTranslation = {0.0, 0.0, 0.0};
         double[] identityRotation = {0.0, 0.0, 0.0, 1.0};
         TangoSupport.IntersectionPointPlaneModelPair intersectionPointPlaneModelPair =
                 TangoSupport.fitPlaneModelNearPoint(pointCloud,
-                        identityTranslation, identityRotation, uv[0], uv[1],
+                        identityTranslation, identityRotation, u, v, mDisplayRotation,
                         depthTcolorPose.translation, depthTcolorPose.rotation);
 
         // Get the transform from depth camera to OpenGL world at the timestamp of the cloud.
@@ -531,7 +497,8 @@ public class OcclusionActivity extends Activity implements View.OnTouchListener 
                         TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                         TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
                         TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                        TangoSupport.TANGO_SUPPORT_ENGINE_TANGO, 0);
+                        TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+                        TangoSupport.ROTATION_IGNORED);
         if (transform.statusCode == TangoPoseData.POSE_VALID) {
             float[] openGlTPlane = calculatePlaneTransform(
                     intersectionPointPlaneModelPair.intersectionPoint,
@@ -541,22 +508,6 @@ public class OcclusionActivity extends Activity implements View.OnTouchListener 
         } else {
             Log.w(TAG, "Can't get depth camera transform at time " + pointCloud.timestamp);
             return null;
-        }
-    }
-
-    /**
-     * Given an UV coordinate in display(screen) space, returns UV coordinate in color camera space.
-     */
-    float[] getColorCameraUVFromDisplay(float u, float v, int colorToDisplayRotation) {
-        switch (colorToDisplayRotation) {
-            case 1:
-                return new float[]{1.0f - v, u};
-            case 2:
-                return new float[]{1.0f - u, 1.0f - v};
-            case 3:
-                return new float[]{v, 1.0f - u};
-            default:
-                return new float[]{u, v};
         }
     }
 
@@ -636,12 +587,94 @@ public class OcclusionActivity extends Activity implements View.OnTouchListener 
      */
     private void updateMeshMap() {
         if (mMeshVector != null) {
+            Log.d(TAG, "Got mesh");
             for (TangoMesh tangoMesh : mMeshVector) {
                 if (tangoMesh != null && tangoMesh.numFaces > 0) {
                     mRenderer.updateMesh(tangoMesh);
                 }
             }
             mMeshVector = null;
+        }
+    }
+
+    /**
+     * Check we have the necessary permissions for this app, and ask for them if we haven't.
+     *
+     * @return True if we have the necessary permissions, false if we haven't.
+     */
+    private boolean checkAndRequestPermissions() {
+        if (!hasCameraPermission()) {
+            requestCameraPermission();
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Check we have the necessary permissions for this app.
+     */
+    private boolean hasCameraPermission() {
+        return ContextCompat.checkSelfPermission(this, CAMERA_PERMISSION) ==
+                PackageManager.PERMISSION_GRANTED;
+    }
+
+    /**
+     * Request the necessary permissions for this app.
+     */
+    private void requestCameraPermission() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, CAMERA_PERMISSION)) {
+            showRequestPermissionRationale();
+        } else {
+            ActivityCompat.requestPermissions(this, new String[]{CAMERA_PERMISSION},
+                    CAMERA_PERMISSION_CODE);
+        }
+    }
+
+    /**
+     * If the user has declined the permission before, we have to explain him the app needs this
+     * permission.
+     */
+    private void showRequestPermissionRationale() {
+        final AlertDialog dialog = new AlertDialog.Builder(this)
+                .setMessage("Java Occlusion Example requires camera permission")
+                .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        ActivityCompat.requestPermissions(OcclusionActivity.this,
+                                new String[]{CAMERA_PERMISSION}, CAMERA_PERMISSION_CODE);
+                    }
+                })
+                .create();
+        dialog.show();
+    }
+
+    /**
+     * Display toast on UI thread.
+     *
+     * @param resId The resource id of the string resource to use. Can be formatted text.
+     */
+    private void showsToastAndFinishOnUiThread(final int resId) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(OcclusionActivity.this,
+                        getString(resId), Toast.LENGTH_LONG).show();
+                finish();
+            }
+        });
+    }
+
+    /**
+     * Result for requesting camera permission.
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                                           int[] grantResults) {
+        if (hasCameraPermission()) {
+            bindTangoService();
+        } else {
+            Toast.makeText(this, "Java Occlusion Example requires camera permission",
+                    Toast.LENGTH_LONG).show();
         }
     }
 }

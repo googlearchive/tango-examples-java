@@ -20,6 +20,8 @@ import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.view.Surface;
 
+import com.projecttango.tangosupport.TangoSupport;
+
 /**
  * A preview of the RGB camera rendered as background using OpenGL.
  */
@@ -45,12 +47,6 @@ public class OpenGlCameraPreview {
 
     private final float[] textureCoords0 =
             new float[]{1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f};
-    private final float[] textureCoords270 =
-            new float[]{1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F, 1.0F};
-    private final float[] textureCoords180 =
-            new float[]{0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F};
-    private final float[] textureCoords90 =
-            new float[]{0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 0.0F};
 
     private OpenGlMesh mMesh;
     private int[] mTextures = new int[1];
@@ -68,20 +64,9 @@ public class OpenGlCameraPreview {
     }
 
     public void updateTextureUv(int rotation){
-        switch (rotation) {
-            case Surface.ROTATION_90:
-                mMesh.setTextureCoords(textureCoords90);
-                break;
-            case Surface.ROTATION_180:
-                mMesh.setTextureCoords(textureCoords180);
-                break;
-            case Surface.ROTATION_270:
-                mMesh.setTextureCoords(textureCoords270);
-                break;
-            default:
-                mMesh.setTextureCoords(textureCoords0);
-                break;
-        }
+        float[] textureCoords =
+                TangoSupport.getVideoOverlayUVBasedOnDisplayRotation(textureCoords0, rotation);
+        mMesh.setTextureCoords(textureCoords);
     }
 
     public void setUpProgramAndBuffers() {

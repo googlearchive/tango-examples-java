@@ -33,16 +33,19 @@ import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
+import android.Manifest;
 import android.app.Activity;
-import android.hardware.Camera;
 import android.hardware.display.DisplayManager;
+import android.opengl.GLSurfaceView;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.Display;
 import android.view.MotionEvent;
-import android.view.Surface;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.rajawali3d.scene.ASceneFrameCallback;
 import org.rajawali3d.surface.RajawaliSurfaceView;
@@ -63,6 +66,9 @@ public class PointCloudActivity extends Activity {
     private static final String TAG = PointCloudActivity.class.getSimpleName();
     private static final int SECS_TO_MILLISECS = 1000;
 
+    private static final String CAMERA_PERMISSION = Manifest.permission.CAMERA;
+    private static final int CAMERA_PERMISSION_CODE = 0;
+
     private Tango mTango;
     private TangoConfig mConfig;
     private TangoUx mTangoUx;
@@ -81,7 +87,7 @@ public class PointCloudActivity extends Activity {
 
     private double mPointCloudTimeToNextUpdate = UPDATE_INTERVAL_MS;
 
-    private int mDepthCameraToDisplayRotation = 0;
+    private int mDisplayRotation = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,23 +114,53 @@ public class PointCloudActivity extends Activity {
                 @Override
                 public void onDisplayChanged(int displayId) {
                     synchronized (this) {
-                        setAndroidOrientation();
+                        setDisplayRotation();
                     }
                 }
 
                 @Override
-                public void onDisplayRemoved(int displayId) {}
+                public void onDisplayRemoved(int displayId) {
+                }
             }, null);
         }
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-
-        setAndroidOrientation();
+    protected void onStart() {
+        super.onStart();
+        mSurfaceView.onResume();
 
         mTangoUx.start(new StartParams());
+        // Check and request camera permission at run time.
+        bindTangoService();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        // Synchronize against disconnecting while the service is being used in the OpenGL
+        // thread or in the UI thread.
+        // NOTE: DO NOT lock against this same object in the Tango callback thread.
+        // Tango.disconnect will block here until all Tango callback calls are finished.
+        // If you lock against this object in a Tango callback thread it will cause a deadlock.
+        synchronized (this) {
+            if (mIsConnected) {
+                try {
+                    mTangoUx.stop();
+                    mTango.disconnect();
+                    mIsConnected = false;
+                } catch (TangoErrorException e) {
+                    Log.e(TAG, getString(R.string.exception_tango_error), e);
+                }
+            }
+        }
+    }
+
+    /**
+     * Initialize Tango Service as a normal Android Service.
+     */
+    private void bindTangoService() {
         // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
         // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
         // should create a new Tango object.
@@ -144,6 +180,7 @@ public class PointCloudActivity extends Activity {
                         mTango.connect(mConfig);
                         startupTango();
                         mIsConnected = true;
+                        setDisplayRotation();
                     } catch (TangoOutOfDateException e) {
                         if (mTangoUx != null) {
                             mTangoUx.showTangoOutOfDate();
@@ -151,32 +188,14 @@ public class PointCloudActivity extends Activity {
                         Log.e(TAG, getString(R.string.exception_out_of_date), e);
                     } catch (TangoErrorException e) {
                         Log.e(TAG, getString(R.string.exception_tango_error), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_tango_error);
                     } catch (TangoInvalidException e) {
                         Log.e(TAG, getString(R.string.exception_tango_invalid), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_tango_invalid);
                     }
                 }
             }
         });
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-
-        // Synchronize against disconnecting while the service is being used in the OpenGL
-        // thread or in the UI thread.
-        // NOTE: DO NOT lock against this same object in the Tango callback thread.
-        // Tango.disconnect will block here until all Tango callback calls are finished.
-        // If you lock against this object in a Tango callback thread it will cause a deadlock.
-        synchronized (this) {
-            try {
-                mTangoUx.stop();
-                mTango.disconnect();
-                mIsConnected = false;
-            } catch (TangoErrorException e) {
-                Log.e(TAG, getString(R.string.exception_tango_error), e);
-            }
-        }
     }
 
     /**
@@ -289,7 +308,7 @@ public class PointCloudActivity extends Activity {
                                         TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
                                         TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
                                         TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
-                                        Surface.ROTATION_0);
+                                        TangoSupport.ROTATION_IGNORED);
                         if (transform.statusCode == TangoPoseData.POSE_VALID) {
                             mRenderer.updatePointCloud(pointCloud, transform.matrix);
                         }
@@ -302,9 +321,9 @@ public class PointCloudActivity extends Activity {
                         // first person view.
                         TangoPoseData lastFramePose = TangoSupport.getPoseAtTime(0,
                                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
-                                TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
+                                TangoPoseData.COORDINATE_FRAME_DEVICE,
                                 TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                mDepthCameraToDisplayRotation);
+                                mDisplayRotation);
                         mRenderer.updateCameraPose(lastFramePose);
                     } catch (TangoErrorException e) {
                         Log.e(TAG, "Could not get valid transform");
@@ -433,31 +452,26 @@ public class PointCloudActivity extends Activity {
     }
 
     /**
-     * Compute the depth camera to display's rotation. This is used for rendering
-     * camera in the correct rotation.
+     * Query the display's rotation.
      */
-    private void setAndroidOrientation() {
+    private void setDisplayRotation() {
         Display display = getWindowManager().getDefaultDisplay();
-        Camera.CameraInfo depthCameraInfo = new Camera.CameraInfo();
-        Camera.getCameraInfo(1, depthCameraInfo);
-
-        int depthCameraRotation = Surface.ROTATION_0;
-        switch(depthCameraInfo.orientation) {
-            case 90:
-                depthCameraRotation = Surface.ROTATION_90;
-                break;
-            case 180:
-                depthCameraRotation = Surface.ROTATION_180;
-                break;
-            case 270:
-                depthCameraRotation = Surface.ROTATION_270;
-                break;
-        }
-
-        mDepthCameraToDisplayRotation = display.getRotation() - depthCameraRotation;
-        if (mDepthCameraToDisplayRotation < 0) {
-            mDepthCameraToDisplayRotation += 4;
-        }
+        mDisplayRotation = display.getRotation();
     }
 
+    /**
+     * Display toast on UI thread.
+     *
+     * @param resId The resource id of the string resource to use. Can be formatted text.
+     */
+    private void showsToastAndFinishOnUiThread(final int resId) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(PointCloudActivity.this,
+                        getString(resId), Toast.LENGTH_LONG).show();
+                finish();
+            }
+        });
+    }
 }

@@ -19,7 +19,6 @@ import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.util.Log;
-import android.view.Surface;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -28,6 +27,8 @@ import java.nio.ShortBuffer;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
+
+import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * A simple OpenGL renderer that renders the Tango RGB camera texture on a full-screen background.
@@ -55,12 +56,6 @@ public class HelloVideoRenderer implements GLSurfaceView.Renderer {
 
     private final float[] textureCoords0 =
             new float[]{1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f};
-    private final float[] textureCoords270 =
-            new float[]{1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F, 1.0F};
-    private final float[] textureCoords180 =
-            new float[]{0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F};
-    private final float[] textureCoords90 =
-            new float[]{0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 0.0F};
 
     /**
      * A small callback to allow the caller to introduce application-specific code to be executed
@@ -102,20 +97,9 @@ public class HelloVideoRenderer implements GLSurfaceView.Renderer {
     }
 
     public void updateColorCameraTextureUv(int rotation){
-        switch (rotation) {
-            case Surface.ROTATION_90:
-                setTextureCoords(textureCoords90);
-                break;
-            case Surface.ROTATION_180:
-                setTextureCoords(textureCoords180);
-                break;
-            case Surface.ROTATION_270:
-                setTextureCoords(textureCoords270);
-                break;
-            default:
-                setTextureCoords(textureCoords0);
-                break;
-        }
+        float[] textureCoords =
+                TangoSupport.getVideoOverlayUVBasedOnDisplayRotation(textureCoords0, rotation);
+        setTextureCoords(textureCoords);
     }
 
     private void setTextureCoords(float[] textureCoords) {

@@ -31,16 +31,21 @@ import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 import com.google.atap.tangoservice.experimental.TangoImageBuffer;
 
+import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.hardware.display.DisplayManager;
 import android.opengl.Matrix;
 import android.os.Bundle;
 import android.os.Handler;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.Display;
 import android.view.MotionEvent;
-import android.view.Surface;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.TextView;
@@ -75,8 +80,8 @@ import com.projecttango.tangosupport.TangoSupport;
 public class PointToPointActivity extends Activity implements View.OnTouchListener {
     private static final String TAG = PointToPointActivity.class.getSimpleName();
 
-    // For all current Tango devices, color camera is in the camera id 0.
-    private static final int COLOR_CAMERA_ID = 0;
+    private static final String CAMERA_PERMISSION = Manifest.permission.CAMERA;
+    private static final int CAMERA_PERMISSION_CODE = 0;
 
     // The interval at which we'll update our UI debug text in milliseconds.
     // This is the rate at which we query for distance data.
@@ -86,7 +91,6 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
 
     private SurfaceView mSurfaceView;
     private PointToPointRenderer mRenderer;
-    private TangoCameraIntrinsics mIntrinsics;
     private TangoPointCloudManager mPointCloudManager;
     private Tango mTango;
     private TangoConfig mConfig;
@@ -108,7 +112,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
     // Handles the debug text UI update loop.
     private Handler mHandler = new Handler();
 
-    private int mColorCameraToDisplayAndroidRotation = 0;
+    private int mDisplayRotation = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -134,7 +138,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                 @Override
                 public void onDisplayChanged(int displayId) {
                     synchronized (this) {
-                        setAndroidOrientation();
+                        setDisplayRotation();
                     }
                 }
 
@@ -146,11 +150,48 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
+    protected void onStart() {
+        super.onStart();
+        mSurfaceView.onResume();
 
-        setAndroidOrientation();
+        // Check and request camera permission at run time.
+        if (checkAndRequestPermissions()) {
+            bindTangoService();
+        }
+    }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+        clearLine();
+        // Synchronize against disconnecting while the service is being used in the OpenGL thread or
+        // in the UI thread.
+        // NOTE: DO NOT lock against this same object in the Tango callback thread. Tango.disconnect
+        // will block here until all Tango callback calls are finished. If you lock against this
+        // object in a Tango callback thread it will cause a deadlock.
+        synchronized (this) {
+            if (mIsConnected) {
+                try {
+                    mRenderer.getCurrentScene().clearFrameCallbacks();
+                    mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
+                    // We need to invalidate the connected texture ID so that we cause a
+                    // re-connection
+
+                    // in the OpenGL thread after resume
+                    mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
+                    mTango.disconnect();
+                    mIsConnected = false;
+                } catch (TangoErrorException e) {
+                    Log.e(TAG, getString(R.string.exception_tango_error), e);
+                }
+            }
+        }
+    }
+
+    /**
+     * Initialize Tango Service as a normal Android Service.
+     */
+    private void bindTangoService() {
         // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
         // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
         // should create a new Tango object.
@@ -171,41 +212,21 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                         startupTango();
                         connectRenderer();
                         mIsConnected = true;
+                        setDisplayRotation();
                     } catch (TangoOutOfDateException e) {
                         Log.e(TAG, getString(R.string.exception_out_of_date), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_out_of_date);
                     } catch (TangoErrorException e) {
                         Log.e(TAG, getString(R.string.exception_tango_error), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_tango_error);
                     } catch (TangoInvalidException e) {
                         Log.e(TAG, getString(R.string.exception_tango_invalid), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_tango_invalid);
                     }
                 }
             }
         });
         mHandler.post(mUpdateUiLoopRunnable);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        clearLine();
-        // Synchronize against disconnecting while the service is being used in the OpenGL thread or
-        // in the UI thread.
-        // NOTE: DO NOT lock against this same object in the Tango callback thread. Tango.disconnect
-        // will block here until all Tango callback calls are finished. If you lock against this
-        // object in a Tango callback thread it will cause a deadlock.
-        synchronized (this) {
-            try {
-                mRenderer.getCurrentScene().clearFrameCallbacks();
-                mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
-                // We need to invalidate the connected texture ID so that we cause a re-connection
-                // in the OpenGL thread after resume
-                mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
-                mTango.disconnect();
-                mIsConnected = false;
-            } catch (TangoErrorException e) {
-                Log.e(TAG, getString(R.string.exception_tango_error), e);
-            }
-        }
     }
 
     /**
@@ -292,9 +313,6 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                                 imageBuffer.timestamp, imageBuffer.format, clone);
                     }
                 });
-
-        // Obtain the intrinsic parameters of the color camera.
-        mIntrinsics = mTango.getCameraIntrinsics(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
     }
 
     /**
@@ -322,9 +340,12 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
 
                         // Set-up scene camera projection to match RGB camera intrinsics
                         if (!mRenderer.isSceneCameraConfigured()) {
+                            TangoCameraIntrinsics intrinsics =
+                            TangoSupport.getCameraIntrinsicsBasedOnDisplayRotation(
+                                    TangoCameraIntrinsics.TANGO_CAMERA_COLOR,
+                                    mDisplayRotation);
                             mRenderer.setProjectionMatrix(
-                                    projectionMatrixFromCameraIntrinsics(mIntrinsics,
-                                            mColorCameraToDisplayAndroidRotation));
+                                    projectionMatrixFromCameraIntrinsics(intrinsics));
                         }
 
                         // Connect the camera texture to the OpenGL Texture if necessary
@@ -366,7 +387,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                                     TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                                     TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                    mColorCameraToDisplayAndroidRotation);
+                                    mDisplayRotation);
                             if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
                                 // Update the camera pose from the renderer
                                 mRenderer.updateRenderCameraPose(lastFramePose);
@@ -409,49 +430,20 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
 
     /**
      * Use Tango camera intrinsics to calculate the projection Matrix for the Rajawali scene.
-     * The function also rotates the intrinsics based on current rotation from color camera to
-     * display.
      */
-    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics,
-                                                                int rotation) {
+    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics) {
         // Uses frustumM to create a projection matrix taking into account calibrated camera
         // intrinsic parameter.
         // Reference: http://ksimek.github.io/2013/06/03/calibrated_cameras_in_opengl/
         float near = 0.1f;
         float far = 100;
 
-        // Adjust camera intrinsics according to rotation from color camera to display.
         double cx = intrinsics.cx;
         double cy = intrinsics.cy;
         double width = intrinsics.width;
         double height = intrinsics.height;
         double fx = intrinsics.fx;
         double fy = intrinsics.fy;
-
-        switch (rotation) {
-            case Surface.ROTATION_90:
-                cx = intrinsics.cy;
-                cy = intrinsics.width - intrinsics.cx;
-                width = intrinsics.height;
-                height = intrinsics.width;
-                fx = intrinsics.fy;
-                fy = intrinsics.fx;
-                break;
-            case Surface.ROTATION_180:
-                cx = intrinsics.width - cx;
-                cy = intrinsics.height - cy;
-                break;
-            case Surface.ROTATION_270:
-                cx = intrinsics.height - intrinsics.cy;
-                cy = intrinsics.cx;
-                width = intrinsics.height;
-                height = intrinsics.width;
-                fx = intrinsics.fy;
-                fy = intrinsics.fx;
-                break;
-            default:
-                break;
-        }
 
         double xscale = near / fx;
         double yscale = near / fy;
@@ -534,19 +526,17 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                 rgbTimestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                 pointCloud.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH);
 
-        float[] uv = getColorCameraUVFromDisplay(u, v, mColorCameraToDisplayAndroidRotation);
-
         float[] point;
         double[] identityTranslation = {0.0, 0.0, 0.0};
         double[] identityRotation = {0.0, 0.0, 0.0, 1.0};
         if (mBilateralBox.isChecked()) {
             point = TangoSupport.getDepthAtPointBilateral(pointCloud,
                     colorTdepthPose.translation, colorTdepthPose.rotation,
-                    imageBuffer, uv[0], uv[1], identityTranslation, identityRotation);
+                    imageBuffer, u, v, mDisplayRotation, identityTranslation, identityRotation);
         } else {
             point = TangoSupport.getDepthAtPointNearestNeighbor(pointCloud,
                     colorTdepthPose.translation, colorTdepthPose.rotation,
-                    uv[0], uv[1], identityTranslation, identityRotation);
+                    u, v, mDisplayRotation, identityTranslation, identityRotation);
         }
         if (point == null) {
             return null;
@@ -558,7 +548,8 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                         TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                         TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                         TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                        TangoSupport.TANGO_SUPPORT_ENGINE_TANGO, Surface.ROTATION_0);
+                        TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+                        TangoSupport.ROTATION_IGNORED);
         if (transform.statusCode == TangoPoseData.POSE_VALID) {
             float[] depthPoint = new float[]{point[0], point[1], point[2], 1};
             float[] openGlPoint = new float[4];
@@ -644,70 +635,102 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
     }
 
     /**
-     * Set the color camera background texture rotation and save the camera to display rotation.
+     * Set the color camera background texture rotation and save the display rotation.
      */
-    private void setAndroidOrientation() {
+    private void setDisplayRotation() {
         Display display = getWindowManager().getDefaultDisplay();
-        Camera.CameraInfo colorCameraInfo = new Camera.CameraInfo();
-        Camera.getCameraInfo(COLOR_CAMERA_ID, colorCameraInfo);
+        mDisplayRotation = display.getRotation();
 
-        mColorCameraToDisplayAndroidRotation =
-                getAndroidRotationFromColorCameraToDisplayRotation(display.getRotation(),
-                colorCameraInfo.orientation);
-        // Run this in OpenGL thread.
+        // We also need to update the camera texture UV coordinates. This must be run in the OpenGL
+        // thread.
         mSurfaceView.queueEvent(new Runnable() {
             @Override
             public void run() {
-                mRenderer.updateColorCameraTextureUvGlThread(mColorCameraToDisplayAndroidRotation);
+                if (mIsConnected) {
+                    mRenderer.updateColorCameraTextureUvGlThread(mDisplayRotation);
+                }
             }
         });
     }
 
     /**
-     * Given an UV coordinate in display(screen) space, returns UV coordinate in color camera space.
+     * Check we have the necessary permissions for this app, and ask for them if we haven't.
+     *
+     * @return True if we have the necessary permissions, false if we haven't.
      */
-    float[] getColorCameraUVFromDisplay(float u, float v,
-            int colorToDisplayRotation) {
-        switch (colorToDisplayRotation) {
-            case 1:
-                return new float[]{1.0f - v, u};
-            case 2:
-                return new float[]{1.0f - u, 1.0f - v};
-            case 3:
-                return new float[]{v, 1.0f - u};
-            default:
-                return new float[]{u, v};
+    private boolean checkAndRequestPermissions() {
+        if (!hasCameraPermission()) {
+            requestCameraPermission();
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Check we have the necessary permissions for this app.
+     */
+    private boolean hasCameraPermission() {
+        return ContextCompat.checkSelfPermission(this, CAMERA_PERMISSION) ==
+                PackageManager.PERMISSION_GRANTED;
+    }
+
+    /**
+     * Request the necessary permissions for this app.
+     */
+    private void requestCameraPermission() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, CAMERA_PERMISSION)) {
+            showRequestPermissionRationale();
+        } else {
+            ActivityCompat.requestPermissions(this, new String[]{CAMERA_PERMISSION},
+                    CAMERA_PERMISSION_CODE);
         }
     }
 
     /**
-     * Get relative rotation from color camera to display. The return integer follows the Android
-     * display's Surface.ROTATION convention:
-     * https://developer.android.com/reference/android/view/Surface.html#ROTATION_0
+     * If the user has declined the permission before, we have to explain him the app needs this
+     * permission.
      */
-    int getAndroidRotationFromColorCameraToDisplayRotation(int displayRotation,
-                                                           int colorCameraRotation) {
-        int cameraN = 0;
-        // Covert camera rotation to Surface.ROTATION format.
-        switch (colorCameraRotation) {
-            case 90:
-                cameraN = Surface.ROTATION_90;
-                break;
-            case 180:
-                cameraN = Surface.ROTATION_180;
-                break;
-            case 270:
-                cameraN = Surface.ROTATION_270;
-                break;
-            default:
-                cameraN = Surface.ROTATION_0;
-                break;
-        }
+    private void showRequestPermissionRationale() {
+        final AlertDialog dialog = new AlertDialog.Builder(this)
+                .setMessage("Java Point to point Example requires camera permission")
+                .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        ActivityCompat.requestPermissions(PointToPointActivity.this,
+                                new String[]{CAMERA_PERMISSION}, CAMERA_PERMISSION_CODE);
+                    }
+                })
+                .create();
+        dialog.show();
+    }
 
-        int ret = displayRotation - cameraN;
-        if (ret < 0) {
-            ret += 4;
+    /**
+     * Display toast on UI thread.
+     *
+     * @param resId The resource id of the string resource to use. Can be formatted text.
+     */
+    private void showsToastAndFinishOnUiThread(final int resId) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(PointToPointActivity.this,
+                        getString(resId), Toast.LENGTH_LONG).show();
+                finish();
+            }
+        });
+    }
+
+    /**
+     * Result for requesting camera permission.
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                                           int[] grantResults) {
+        if (hasCameraPermission()) {
+            bindTangoService();
+        } else {
+            Toast.makeText(this, "Java Point to point Example requires camera permission",
+                    Toast.LENGTH_LONG).show();
         }
-        return ret % 4;
     }
 }

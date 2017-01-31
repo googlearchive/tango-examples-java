@@ -34,7 +34,6 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
-import android.hardware.Camera;
 import android.hardware.display.DisplayManager;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
@@ -43,7 +42,6 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.Display;
-import android.view.Surface;
 import android.widget.Toast;
 
 import org.rajawali3d.scene.ASceneFrameCallback;
@@ -79,15 +77,11 @@ public class AugmentedRealityActivity extends Activity {
     private static final String TAG = AugmentedRealityActivity.class.getSimpleName();
     private static final int INVALID_TEXTURE_ID = 0;
 
-    // For all current Tango devices, color camera is in the camera id 0.
-    private static final int COLOR_CAMERA_ID = 0;
-
     private static final String CAMERA_PERMISSION = Manifest.permission.CAMERA;
     private static final int CAMERA_PERMISSION_CODE = 0;
 
     private SurfaceView mSurfaceView;
     private AugmentedRealityRenderer mRenderer;
-    private TangoCameraIntrinsics mIntrinsics;
     private Tango mTango;
     private TangoConfig mConfig;
     private boolean mIsConnected = false;
@@ -99,7 +93,7 @@ public class AugmentedRealityActivity extends Activity {
     private AtomicBoolean mIsFrameAvailableTangoThread = new AtomicBoolean(false);
     private double mRgbTimestampGlThread;
 
-    private int mColorCameraToDisplayAndroidRotation = 0;
+    private int mDisplayRotation = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -118,7 +112,7 @@ public class AugmentedRealityActivity extends Activity {
                 @Override
                 public void onDisplayChanged(int displayId) {
                     synchronized (this) {
-                        setAndroidOrientation();
+                        setDisplayRotation();
                     }
                 }
 
@@ -136,16 +130,12 @@ public class AugmentedRealityActivity extends Activity {
         super.onStart();
         mSurfaceView.onResume();
 
-        setAndroidOrientation();
-
         // Set render mode to RENDERMODE_CONTINUOUSLY to force getting onDraw callbacks until
         // the Tango service is properly set-up and we start getting onFrameAvailable callbacks.
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
         // Check and request camera permission at run time.
-        if (hasCameraPermission()) {
+        if (checkAndRequestPermissions()) {
             bindTangoService();
-        } else {
-            requestCameraPermission();
         }
     }
 
@@ -197,12 +187,16 @@ public class AugmentedRealityActivity extends Activity {
                         mTango.connect(mConfig);
                         startupTango();
                         mIsConnected = true;
+                        setDisplayRotation();
                     } catch (TangoOutOfDateException e) {
                         Log.e(TAG, getString(R.string.exception_out_of_date), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_out_of_date);
                     } catch (TangoErrorException e) {
                         Log.e(TAG, getString(R.string.exception_tango_error), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_tango_error);
                     } catch (TangoInvalidException e) {
                         Log.e(TAG, getString(R.string.exception_tango_invalid), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_tango_invalid);
                     }
                 }
             }
@@ -281,9 +275,6 @@ public class AugmentedRealityActivity extends Activity {
                 }
             }
         });
-
-        // Obtain the intrinsic parameters of the color camera.
-        mIntrinsics = mTango.getCameraIntrinsics(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
     }
 
     /**
@@ -311,9 +302,12 @@ public class AugmentedRealityActivity extends Activity {
 
                         // Set-up scene camera projection to match RGB camera intrinsics.
                         if (!mRenderer.isSceneCameraConfigured()) {
+                            TangoCameraIntrinsics intrinsics =
+                                    TangoSupport.getCameraIntrinsicsBasedOnDisplayRotation(
+                                            TangoCameraIntrinsics.TANGO_CAMERA_COLOR,
+                                            mDisplayRotation);
                             mRenderer.setProjectionMatrix(
-                                    projectionMatrixFromCameraIntrinsics(mIntrinsics,
-                                            mColorCameraToDisplayAndroidRotation));
+                                    projectionMatrixFromCameraIntrinsics(intrinsics));
                         }
                         // Connect the camera texture to the OpenGL Texture if necessary
                         // NOTE: When the OpenGL context is recycled, Rajawali may re-generate the
@@ -347,7 +341,7 @@ public class AugmentedRealityActivity extends Activity {
                                     TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                                     TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                    mColorCameraToDisplayAndroidRotation);
+                                    mDisplayRotation);
                             if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
                                 // Update the camera pose from the renderer
                                 mRenderer.updateRenderCameraPose(lastFramePose);
@@ -391,70 +385,18 @@ public class AugmentedRealityActivity extends Activity {
         mSurfaceView.setSurfaceRenderer(mRenderer);
     }
 
-    private static int getColorCameraToDisplayAndroidRotation(int displayRotation,
-                                                              int cameraRotation) {
-        int cameraRotationNormalized = 0;
-        switch (cameraRotation) {
-            case 90:
-                cameraRotationNormalized = 1;
-                break;
-            case 180:
-                cameraRotationNormalized = 2;
-                break;
-            case 270:
-                cameraRotationNormalized = 3;
-                break;
-            default:
-                cameraRotationNormalized = 0;
-                break;
-        }
-        int ret = displayRotation - cameraRotationNormalized;
-        if (ret < 0) {
-            ret += 4;
-        }
-        return ret;
-    }
-
     /**
      * Use Tango camera intrinsics to calculate the projection Matrix for the Rajawali scene.
      *
      * @param intrinsics camera instrinsics for computing the project matrix.
-     * @param rotation   the relative rotation between the camera intrinsics and display glContext.
      */
-    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics,
-                                                                int rotation) {
-        // Adjust camera intrinsics according to rotation
+    private static float[] projectionMatrixFromCameraIntrinsics(TangoCameraIntrinsics intrinsics) {
         float cx = (float) intrinsics.cx;
         float cy = (float) intrinsics.cy;
         float width = (float) intrinsics.width;
         float height = (float) intrinsics.height;
         float fx = (float) intrinsics.fx;
         float fy = (float) intrinsics.fy;
-
-        switch (rotation) {
-            case Surface.ROTATION_90:
-                cx = (float) intrinsics.cy;
-                cy = (float) intrinsics.width - (float) intrinsics.cx;
-                width = (float) intrinsics.height;
-                height = (float) intrinsics.width;
-                fx = (float) intrinsics.fy;
-                fy = (float) intrinsics.fx;
-                break;
-            case Surface.ROTATION_180:
-                cx = (float) intrinsics.width - cx;
-                cy = (float) intrinsics.height - cy;
-                break;
-            case Surface.ROTATION_270:
-                cx = (float) intrinsics.height - (float) intrinsics.cy;
-                cy = (float) intrinsics.cx;
-                width = (float) intrinsics.height;
-                height = (float) intrinsics.width;
-                fx = (float) intrinsics.fy;
-                fy = (float) intrinsics.fx;
-                break;
-            default:
-                break;
-        }
 
         // Uses frustumM to create a projection matrix taking into account calibrated camera
         // intrinsic parameter.
@@ -481,21 +423,33 @@ public class AugmentedRealityActivity extends Activity {
     /**
      * Set the color camera background texture rotation and save the camera to display rotation.
      */
-    private void setAndroidOrientation() {
+    private void setDisplayRotation() {
         Display display = getWindowManager().getDefaultDisplay();
-        Camera.CameraInfo colorCameraInfo = new Camera.CameraInfo();
-        Camera.getCameraInfo(COLOR_CAMERA_ID, colorCameraInfo);
+        mDisplayRotation = display.getRotation();
 
-        mColorCameraToDisplayAndroidRotation =
-                getColorCameraToDisplayAndroidRotation(display.getRotation(),
-                        colorCameraInfo.orientation);
-        // Run this in OpenGL thread.
+        // We also need to update the camera texture UV coordinates. This must be run in the OpenGL
+        // thread.
         mSurfaceView.queueEvent(new Runnable() {
             @Override
             public void run() {
-                mRenderer.updateColorCameraTextureUvGlThread(mColorCameraToDisplayAndroidRotation);
+                if (mIsConnected) {
+                    mRenderer.updateColorCameraTextureUvGlThread(mDisplayRotation);
+                }
             }
         });
+    }
+
+    /**
+     * Check we have the necessary permissions for this app, and ask for them if we haven't.
+     *
+     * @return True if we have the necessary permissions, false if we haven't.
+     */
+    private boolean checkAndRequestPermissions() {
+        if (!hasCameraPermission()) {
+            requestCameraPermission();
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -536,6 +490,9 @@ public class AugmentedRealityActivity extends Activity {
         dialog.show();
     }
 
+    /**
+     * Result for requesting camera permission.
+     */
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions,
                                            int[] grantResults) {
@@ -545,5 +502,21 @@ public class AugmentedRealityActivity extends Activity {
             Toast.makeText(this, "Java Augmented Reality Example requires camera permission",
                     Toast.LENGTH_LONG).show();
         }
+    }
+
+    /**
+     * Display toast on UI thread.
+     *
+     * @param resId The resource id of the string resource to use. Can be formatted text.
+     */
+    private void showsToastAndFinishOnUiThread(final int resId) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(AugmentedRealityActivity.this,
+                        getString(resId), Toast.LENGTH_LONG).show();
+                finish();
+            }
+        });
     }
 }

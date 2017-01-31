@@ -1,0 +1,46 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 23
+    buildToolsVersion "21.1.2"
+
+    defaultConfig {
+        applicationId "com.projecttango.experiments.javafloorplanreconstructionexample"
+        minSdkVersion 19
+        targetSdkVersion 23
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+
+        lintOptions {
+            abortOnError false
+        }
+    }
+}
+
+
+def external_lib_prefix = null
+if (project.hasProperty("Tango.catkin_devel_prefix")) {
+    external_lib_prefix = project.property("Tango.catkin_devel_prefix")
+} else {
+    // Building in standalone sample form.
+    external_lib_prefix = "../../TangoReleaseLibs"
+}
+
+repositories {
+    flatDir {
+        dirs external_lib_prefix + '/aar'
+    }
+}
+
+dependencies {
+    compile 'org.rajawali3d:rajawali:1.0.325@aar'
+    compile 'com.android.support:appcompat-v7:23.0.0'
+    compile (name: 'tango_support_java_lib', ext: 'aar')
+    compile fileTree(dir: external_lib_prefix + '/jar', include: ['**/*.jar'])
+}
