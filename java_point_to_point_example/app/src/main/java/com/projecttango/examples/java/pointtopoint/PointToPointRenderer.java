@@ -21,7 +21,6 @@ import android.content.Context;
 import android.graphics.Color;
 import android.util.Log;
 import android.view.MotionEvent;
-import android.view.Surface;
 
 import org.rajawali3d.Object3D;
 import org.rajawali3d.lights.DirectionalLight;
@@ -39,6 +38,8 @@ import java.util.Stack;
 
 import javax.microedition.khronos.opengles.GL10;
 
+import com.projecttango.tangosupport.TangoSupport;
+
 /**
  * Very simple example point to point renderer which displays a line fixed in place.
  * Whenever the user clicks on the screen, the line is re-rendered with an endpoint
@@ -48,9 +49,6 @@ public class PointToPointRenderer extends Renderer {
     private static final String TAG = PointToPointRenderer.class.getSimpleName();
 
     private float[] textureCoords0 = new float[]{0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 0.0F};
-    private float[] textureCoords270 = new float[]{1.0F, 1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F};
-    private float[] textureCoords180 = new float[]{1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F, 1.0F};
-    private float[] textureCoords90 = new float[]{0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F};
 
     private Object3D mLine;
     private Stack<Vector3> mPoints;
@@ -105,20 +103,9 @@ public class PointToPointRenderer extends Renderer {
             mBackgroundQuad = new ScreenQuad();
         }
 
-        switch (rotation) {
-            case Surface.ROTATION_90:
-                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords90, true);
-                break;
-            case Surface.ROTATION_180:
-                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords180, true);
-                break;
-            case Surface.ROTATION_270:
-                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords270, true);
-                break;
-            default:
-                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords0, true);
-                break;
-        }
+        float[] textureCoords =
+                TangoSupport.getVideoOverlayUVBasedOnDisplayRotation(textureCoords0, rotation);
+        mBackgroundQuad.getGeometry().setTextureCoords(textureCoords, true);
         mBackgroundQuad.getGeometry().reload();
     }
 

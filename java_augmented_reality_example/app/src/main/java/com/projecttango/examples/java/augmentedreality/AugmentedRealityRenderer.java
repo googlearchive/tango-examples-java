@@ -44,6 +44,8 @@ import org.rajawali3d.renderer.Renderer;
 
 import javax.microedition.khronos.opengles.GL10;
 
+import com.projecttango.tangosupport.TangoSupport;
+
 /**
  * Renderer that implements a basic augmented reality scene using Rajawali.
  * It creates a scene with a background quad taking the whole screen, where the color camera is
@@ -54,9 +56,6 @@ public class AugmentedRealityRenderer extends Renderer {
     private static final String TAG = AugmentedRealityRenderer.class.getSimpleName();
 
     private float[] textureCoords0 = new float[]{0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 0.0F};
-    private float[] textureCoords270 = new float[]{1.0F, 1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F};
-    private float[] textureCoords180 = new float[]{1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F, 1.0F};
-    private float[] textureCoords90 = new float[]{0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F};
 
     // Rajawali texture used to render the Tango color camera.
     private ATexture mTangoCameraTexture;
@@ -172,20 +171,9 @@ public class AugmentedRealityRenderer extends Renderer {
             mBackgroundQuad = new ScreenQuad();
         }
 
-        switch (rotation) {
-            case Surface.ROTATION_90:
-                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords90, true);
-                break;
-            case Surface.ROTATION_180:
-                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords180, true);
-                break;
-            case Surface.ROTATION_270:
-                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords270, true);
-                break;
-            default:
-                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords0, true);
-                break;
-        }
+        float[] textureCoords =
+                TangoSupport.getVideoOverlayUVBasedOnDisplayRotation(textureCoords0, rotation);
+        mBackgroundQuad.getGeometry().setTextureCoords(textureCoords, true);
         mBackgroundQuad.getGeometry().reload();
     }
 

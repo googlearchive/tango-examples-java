@@ -44,6 +44,8 @@ import java.util.List;
 
 import javax.microedition.khronos.opengles.GL10;
 
+import com.projecttango.tangosupport.TangoSupport;
+
 /**
  * Simple example augmented reality renderer which displays spheres fixed in place for every
  * point measurement and a 3D model of a house in the position given by the found correspondence.
@@ -55,9 +57,6 @@ public class ModelCorrespondenceRenderer extends Renderer {
     private static final String TAG = ModelCorrespondenceRenderer.class.getSimpleName();
 
     private float[] textureCoords0 = new float[]{0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 0.0F};
-    private float[] textureCoords270 = new float[]{1.0F, 1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F};
-    private float[] textureCoords180 = new float[]{1.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F, 1.0F};
-    private float[] textureCoords90 = new float[]{0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F};
 
     // Augmented reality related fields
     private ATexture mTangoCameraTexture;
@@ -146,20 +145,9 @@ public class ModelCorrespondenceRenderer extends Renderer {
             mBackgroundQuad = new ScreenQuad();
         }
 
-        switch (rotation) {
-            case Surface.ROTATION_90:
-                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords90, true);
-                break;
-            case Surface.ROTATION_180:
-                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords180, true);
-                break;
-            case Surface.ROTATION_270:
-                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords270, true);
-                break;
-            default:
-                mBackgroundQuad.getGeometry().setTextureCoords(textureCoords0, true);
-                break;
-        }
+        float[] textureCoords =
+                TangoSupport.getVideoOverlayUVBasedOnDisplayRotation(textureCoords0, rotation);
+        mBackgroundQuad.getGeometry().setTextureCoords(textureCoords, true);
         mBackgroundQuad.getGeometry().reload();
     }
 

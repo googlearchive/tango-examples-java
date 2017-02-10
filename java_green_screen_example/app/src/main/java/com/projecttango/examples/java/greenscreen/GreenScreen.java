@@ -22,6 +22,8 @@ import android.opengl.GLES20;
 import android.opengl.GLUtils;
 import android.view.Surface;
 
+import com.projecttango.tangosupport.TangoSupport;
+
 /**
  * A preview of the RGB camera rendered as background filtered by a depth texture using OpenGL.
  * The fragments that are further than a given threshold are discarded and rendered as green.
@@ -95,20 +97,9 @@ public class GreenScreen {
     }
 
     public void updateTextureUv(int rotation) {
-        switch (rotation) {
-            case Surface.ROTATION_90:
-                mMesh.setCameraTextureCoords(textureCoords90);
-                break;
-            case Surface.ROTATION_180:
-                mMesh.setCameraTextureCoords(textureCoords180);
-                break;
-            case Surface.ROTATION_270:
-                mMesh.setCameraTextureCoords(textureCoords270);
-                break;
-            default:
-                mMesh.setCameraTextureCoords(textureCoords0);
-                break;
-        }
+        float[] textureCoords =
+                TangoSupport.getVideoOverlayUVBasedOnDisplayRotation(textureCoords0, rotation);
+        mMesh.setCameraTextureCoords(textureCoords);
     }
 
     public void setUpProgramAndBuffers(Bitmap texture) {

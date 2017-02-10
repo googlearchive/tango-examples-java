@@ -31,6 +31,7 @@ import com.google.atap.tangoservice.TangoXyzIjData;
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
@@ -73,10 +74,13 @@ public class HelloDepthPerceptionActivity extends Activity {
                         startupTango();
                     } catch (TangoOutOfDateException e) {
                         Log.e(TAG, getString(R.string.exception_out_of_date), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_out_of_date);
                     } catch (TangoErrorException e) {
                         Log.e(TAG, getString(R.string.exception_tango_error), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_tango_error);
                     } catch (TangoInvalidException e) {
                         Log.e(TAG, getString(R.string.exception_tango_invalid), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_tango_invalid);
                     }
                 }
             }
@@ -176,5 +180,21 @@ public class HelloDepthPerceptionActivity extends Activity {
             averageZ = totalZ / numPoints;
         }
         return averageZ;
+    }
+
+    /**
+     * Display toast on UI thread.
+     *
+     * @param resId The resource id of the string resource to use. Can be formatted text.
+     */
+    private void showsToastAndFinishOnUiThread(final int resId) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(HelloDepthPerceptionActivity.this,
+                        getString(resId), Toast.LENGTH_LONG).show();
+                finish();
+            }
+        });
     }
 }

@@ -30,16 +30,18 @@ import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
 import android.app.Activity;
-import android.hardware.Camera;
 import android.hardware.display.DisplayManager;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Display;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * This is a stripped down simple example that shows how to use the Tango APIs to render the Tango
@@ -58,8 +60,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class HelloVideoActivity extends Activity {
     private static final String TAG = HelloVideoActivity.class.getSimpleName();
     private static final int INVALID_TEXTURE_ID = 0;
-    // For all current Tango devices, color camera is in the camera id 0.
-    private static final int COLOR_CAMERA_ID = 0;
     private static final String sTimestampFormat = "Timestamp: %f";
 
     private GLSurfaceView mSurfaceView;
@@ -74,7 +74,7 @@ public class HelloVideoActivity extends Activity {
     private int mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
     private AtomicBoolean mIsFrameAvailableTangoThread = new AtomicBoolean(false);
 
-    private int mColorCameraToDisplayAndroidRotation = 0;
+    private int mDisplayRotation = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,17 +87,19 @@ public class HelloVideoActivity extends Activity {
         if (displayManager != null) {
             displayManager.registerDisplayListener(new DisplayManager.DisplayListener() {
                 @Override
-                public void onDisplayAdded(int displayId) {}
+                public void onDisplayAdded(int displayId) {
+                }
 
                 @Override
                 public void onDisplayChanged(int displayId) {
                     synchronized (this) {
-                        setAndroidOrientation();
+                        setDisplayRotation();
                     }
                 }
 
                 @Override
-                public void onDisplayRemoved(int displayId) {}
+                public void onDisplayRemoved(int displayId) {
+                }
             }, null);
         }
         // Set-up a dummy OpenGL renderer associated with this surface view
@@ -108,8 +110,6 @@ public class HelloVideoActivity extends Activity {
     protected void onResume() {
         super.onResume();
         mSurfaceView.onResume();
-
-        setAndroidOrientation();
 
         // Set render mode to RENDERMODE_CONTINUOUSLY to force getting onDraw callbacks until the
         // Tango service is properly set-up and we start getting onFrameAvailable callbacks.
@@ -129,16 +129,21 @@ public class HelloVideoActivity extends Activity {
                 // the OpenGL thread or in the UI thread.
                 synchronized (HelloVideoActivity.this) {
                     try {
+                        TangoSupport.initialize();
                         mConfig = setupTangoConfig(mTango);
                         mTango.connect(mConfig);
                         startupTango();
                         mIsConnected = true;
+                        setDisplayRotation();
                     } catch (TangoOutOfDateException e) {
                         Log.e(TAG, getString(R.string.exception_out_of_date), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_out_of_date);
                     } catch (TangoErrorException e) {
                         Log.e(TAG, getString(R.string.exception_tango_error), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_tango_error);
                     } catch (TangoInvalidException e) {
                         Log.e(TAG, getString(R.string.exception_tango_invalid), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_tango_invalid);
                     }
                 }
             }
@@ -318,46 +323,37 @@ public class HelloVideoActivity extends Activity {
         mSurfaceView.setRenderer(mRenderer);
     }
 
-    private static int getColorCameraToDisplayAndroidRotation(int displayRotation,
-                                                              int cameraRotation) {
-        int cameraRotationNormalized = 0;
-        switch (cameraRotation) {
-            case 90:
-                cameraRotationNormalized = 1;
-                break;
-            case 180:
-                cameraRotationNormalized = 2;
-                break;
-            case 270:
-                cameraRotationNormalized = 3;
-                break;
-            default:
-                cameraRotationNormalized = 0;
-                break;
-        }
-        int ret = displayRotation - cameraRotationNormalized;
-        if (ret < 0) {
-            ret += 4;
-        }
-        return ret;
-    }
-
     /**
      * Set the color camera background texture rotation and save the camera to display rotation.
      */
-    private void setAndroidOrientation() {
+    private void setDisplayRotation() {
         Display display = getWindowManager().getDefaultDisplay();
-        Camera.CameraInfo colorCameraInfo = new Camera.CameraInfo();
-        Camera.getCameraInfo(COLOR_CAMERA_ID, colorCameraInfo);
+        mDisplayRotation = display.getRotation();
 
-        mColorCameraToDisplayAndroidRotation =
-                getColorCameraToDisplayAndroidRotation(display.getRotation(),
-                        colorCameraInfo.orientation);
-        // Run this in the OpenGL thread.
+        // We also need to update the camera texture UV coordinates. This must be run in the OpenGL
+        // thread.
         mSurfaceView.queueEvent(new Runnable() {
             @Override
             public void run() {
-                mRenderer.updateColorCameraTextureUv(mColorCameraToDisplayAndroidRotation);
+                if (mIsConnected) {
+                    mRenderer.updateColorCameraTextureUv(mDisplayRotation);
+                }
+            }
+        });
+    }
+
+    /**
+     * Display toast on UI thread.
+     *
+     * @param resId The resource id of the string resource to use. Can be formatted text.
+     */
+    private void showsToastAndFinishOnUiThread(final int resId) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(HelloVideoActivity.this,
+                        getString(resId), Toast.LENGTH_LONG).show();
+                finish();
             }
         });
     }

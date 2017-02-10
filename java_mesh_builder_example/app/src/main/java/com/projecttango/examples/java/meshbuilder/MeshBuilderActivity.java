@@ -30,15 +30,18 @@ import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 import com.google.atap.tangoservice.experimental.TangoImageBuffer;
 
+import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.hardware.Camera;
 import android.hardware.display.DisplayManager;
 import android.opengl.GLSurfaceView;
-import android.opengl.Matrix;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.Display;
 import android.view.View;
@@ -59,6 +62,9 @@ public class MeshBuilderActivity extends Activity {
     private static final String TANGO_PACKAGE_NAME = "com.google.tango";
     private static final int MIN_TANGO_VERSION = 11925;
 
+    private static final String CAMERA_PERMISSION = Manifest.permission.CAMERA;
+    private static final int CAMERA_PERMISSION_CODE = 0;
+
     private GLSurfaceView mSurfaceView;
     private MeshBuilderRenderer mRenderer;
     private TangoCameraIntrinsics mIntrinsics;
@@ -71,7 +77,7 @@ public class MeshBuilderActivity extends Activity {
     private boolean mIsPaused;
     private boolean mClearMeshes;
 
-    private int mDeviceToDisplayRotation = 0;
+    private int mDisplayRotation = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,30 +92,42 @@ public class MeshBuilderActivity extends Activity {
         if (displayManager != null) {
             displayManager.registerDisplayListener(new DisplayManager.DisplayListener() {
                 @Override
-                public void onDisplayAdded(int displayId) {}
+                public void onDisplayAdded(int displayId) {
+                }
 
                 @Override
                 public void onDisplayChanged(int displayId) {
                     synchronized (this) {
-                        setAndroidOrientation();
+                        setDisplayRotation();
                     }
                 }
 
                 @Override
-                public void onDisplayRemoved(int displayId) {}
+                public void onDisplayRemoved(int displayId) {
+                }
             }, null);
         }
         connectRenderer();
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-
-        setAndroidOrientation();
-
+    protected void onStart() {
+        super.onStart();
         mSurfaceView.onResume();
+
+        // Set render mode to RENDERMODE_CONTINUOUSLY to force getting onDraw callbacks until
+        // the Tango service is properly set-up and we start getting onFrameAvailable callbacks.
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
+        // Check and request camera permission at run time.
+        if (checkAndRequestPermissions()) {
+            bindTangoService();
+        }
+    }
+
+    /**
+     * Initialize Tango Service as a normal Android Service.
+     */
+    private void bindTangoService() {
         // Initialize Tango Service as a normal Android Service.
         // Since we call mTango.disconnect() in onPause, this will unbind Tango Service,
         // so every time when onResume gets called, we should create a new Tango object.
@@ -128,16 +146,21 @@ public class MeshBuilderActivity extends Activity {
                         startupTango();
                         mIsConnected = true;
                         mIsPaused = false;
+                        setDisplayRotation();
                     } catch (TangoOutOfDateException e) {
                         Log.e(TAG, getString(R.string.exception_out_of_date), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_out_of_date);
                     } catch (TangoErrorException e) {
                         Log.e(TAG, getString(R.string.exception_tango_error), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_tango_error);
                     } catch (TangoInvalidException e) {
                         Log.e(TAG, getString(R.string.exception_tango_invalid), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_tango_invalid);
                     } catch (SecurityException e) {
                         // Dataset permissions are required. If they are not available,
                         // SecurityException is thrown.
                         Log.e(TAG, getString(R.string.exception_tango_permission), e);
+                        showsToastAndFinishOnUiThread(R.string.exception_tango_permission);
                     }
                 }
             }
@@ -145,8 +168,8 @@ public class MeshBuilderActivity extends Activity {
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
+    protected void onStop() {
+        super.onStop();
         mSurfaceView.onPause();
         // Synchronize against disconnecting while the service is being used in the OpenGL thread or
         // in the UI thread.
@@ -274,7 +297,7 @@ public class MeshBuilderActivity extends Activity {
                                         TangoPoseData.COORDINATE_FRAME_DEVICE,
                                         TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
                                         TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                        mDeviceToDisplayRotation);
+                                        mDisplayRotation);
 
                         if (ssTdev.statusCode == TangoPoseData.POSE_VALID) {
                             // Update the camera pose from the renderer
@@ -352,8 +375,89 @@ public class MeshBuilderActivity extends Activity {
     /**
      * Set the display rotation.
      */
-    private void setAndroidOrientation() {
+    private void setDisplayRotation() {
         Display display = getWindowManager().getDefaultDisplay();
-        mDeviceToDisplayRotation = display.getRotation();
+        mDisplayRotation = display.getRotation();
+    }
+
+    /**
+     * Check we have the necessary permissions for this app, and ask for them if we haven't.
+     *
+     * @return True if we have the necessary permissions, false if we haven't.
+     */
+    private boolean checkAndRequestPermissions() {
+        if (!hasCameraPermission()) {
+            requestCameraPermission();
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Check we have the necessary permissions for this app.
+     */
+    private boolean hasCameraPermission() {
+        return ContextCompat.checkSelfPermission(this, CAMERA_PERMISSION) ==
+                PackageManager.PERMISSION_GRANTED;
+    }
+
+    /**
+     * Request the necessary permissions for this app.
+     */
+    private void requestCameraPermission() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, CAMERA_PERMISSION)) {
+            showRequestPermissionRationale();
+        } else {
+            ActivityCompat.requestPermissions(this, new String[]{CAMERA_PERMISSION},
+                    CAMERA_PERMISSION_CODE);
+        }
+    }
+
+    /**
+     * If the user has declined the permission before, we have to explain him the app needs this
+     * permission.
+     */
+    private void showRequestPermissionRationale() {
+        final AlertDialog dialog = new AlertDialog.Builder(this)
+                .setMessage("Java Mesh Builder Example requires camera permission")
+                .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        ActivityCompat.requestPermissions(MeshBuilderActivity.this,
+                                new String[]{CAMERA_PERMISSION}, CAMERA_PERMISSION_CODE);
+                    }
+                })
+                .create();
+        dialog.show();
+    }
+
+    /**
+     * Display toast on UI thread.
+     *
+     * @param resId The resource id of the string resource to use. Can be formatted text.
+     */
+    private void showsToastAndFinishOnUiThread(final int resId) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MeshBuilderActivity.this,
+                        getString(resId), Toast.LENGTH_LONG).show();
+                finish();
+            }
+        });
+    }
+
+    /**
+     * Result for requesting camera permission.
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                                           int[] grantResults) {
+        if (hasCameraPermission()) {
+            bindTangoService();
+        } else {
+            Toast.makeText(this, "Java Mesh Builder Example requires camera permission",
+                    Toast.LENGTH_LONG).show();
+        }
     }
 }

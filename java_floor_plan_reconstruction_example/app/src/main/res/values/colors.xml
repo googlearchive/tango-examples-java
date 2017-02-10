@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="explored_space" type="color">#d2d2d2</item>
+    <item name="furniture" type="color">#15A6D9</item>
+    <item name="user_marker" type="color">#be6A2875</item>
+</resources>
