@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * This is an adapter class which maps the ListView with a Data Source(Array of strings).
+ * This is an adapter class which maps the ListView with a data source (array of strings).
  */
 class AdfUuidArrayAdapter extends ArrayAdapter<String> {
     private List<AdfData> mAdfDataList;

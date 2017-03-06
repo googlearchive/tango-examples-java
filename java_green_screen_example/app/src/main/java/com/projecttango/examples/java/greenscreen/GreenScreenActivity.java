@@ -80,14 +80,14 @@ import com.projecttango.tangosupport.TangoSupport;
  * This example renders the point cloud of the depth camera into an OpenGL depth texture, and
  * renders the TangoRGB camera into an OpenGL texture.
  * It creates a standard Android {@code GLSurfaceView} with an OpenGL renderer and connects to
- * the Tango service with the appropriate configuration for Video rendering.
+ * the Tango Service with the appropriate configuration for video rendering.
  * Each time a new RGB video frame is available through the Tango APIs, it is updated to the
  * OpenGL texture and the corresponding timestamp is printed on the logcat.
  * It uses Tango Support library to synchronize the point cloud at the timestamp it was acquired to
  * the RGB camera at the timestamp it was updated. This is done through the
  * {@code CalculateRelativePose} method.
  * <p/>
- * The OpenGL code necessary to do the rendering is is {@code GreenScreenRenderer}.
+ * The OpenGL code necessary to do the rendering is {@code GreenScreenRenderer}.
  * The OpenGL code necessary to understand how to render the point cloud to a depth texture is
  * provided in {@code DepthTexture}.
  * The OpenGL code necessary to understand how to render the specific texture format
@@ -159,7 +159,7 @@ public class GreenScreenActivity extends AppCompatActivity {
         mSurfaceView.onResume();
 
         // Set render mode to RENDERMODE_CONTINUOUSLY to force getting onDraw callbacks until
-        // the Tango service is properly set-up and we start getting onFrameAvailable callbacks.
+        // the Tango Service is properly set up and we start getting onFrameAvailable callbacks.
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
         // Check and request permissions at run time.
         if (hasPermissions()) {
@@ -179,17 +179,15 @@ public class GreenScreenActivity extends AppCompatActivity {
         // will block here until all Tango callback calls are finished. If you lock against this
         // object in a Tango callback thread it will cause a deadlock.
         synchronized (this) {
-            if (mIsConnected) {
-                try {
-                    mIsConnected = false;
-                    mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
-                    // We need to invalidate the connected texture ID so that we cause a
-                    // re-connection in the OpenGL thread after resume
-                    mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
-                    mTango.disconnect();
-                } catch (TangoErrorException e) {
-                    Log.e(TAG, getString(R.string.exception_tango_error), e);
-                }
+            try {
+                mIsConnected = false;
+                mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
+                // We need to invalidate the connected texture ID so that we cause a
+                // re-connection in the OpenGL thread after resume.
+                mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
+                mTango.disconnect();
+            } catch (TangoErrorException e) {
+                Log.e(TAG, getString(R.string.exception_tango_error), e);
             }
         }
     }
@@ -198,14 +196,14 @@ public class GreenScreenActivity extends AppCompatActivity {
      * Initialize Tango Service as a normal Android Service.
      */
     private void bindTangoService() {
-        // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
-        // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
+        // Initialize Tango Service as a normal Android Service. Since we call mTango.disconnect()
+        // in onPause, this will unbind Tango Service, so every time onResume gets called we
         // should create a new Tango object.
         mTango = new Tango(GreenScreenActivity.this, new Runnable() {
             // Pass in a Runnable to be called from UI thread when Tango is ready, this Runnable
             // will be running on a new thread.
-            // When Tango is ready, we can call Tango functions safely here only when there is no UI
-            // thread changes involved.
+            // When Tango is ready, we can call Tango functions safely here only when there are no
+            // UI thread changes involved.
             @Override
             public void run() {
                 synchronized (GreenScreenActivity.this) {
@@ -242,10 +240,10 @@ public class GreenScreenActivity extends AppCompatActivity {
         config.putBoolean(TangoConfig.KEY_BOOLEAN_COLORCAMERA, true);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
         // NOTE: Low latency integration is necessary to achieve a precise alignment of
-        // virtual objects with the RBG image and produce a good AR effect.
+        // virtual objects with the RGB image and produce a good AR effect.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION, true);
         // Drift correction allows motion tracking to recover after it loses tracking.
-        // The drift corrected pose is is available through the frame pair with
+        // The drift corrected pose is available through the frame pair with
         // base frame AREA_DESCRIPTION and target frame DEVICE.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DRIFT_CORRECTION, true);
         config.putInt(TangoConfig.KEY_INT_DEPTH_MODE, TangoConfig.TANGO_DEPTH_MODE_POINT_CLOUD);
@@ -291,7 +289,7 @@ public class GreenScreenActivity extends AppCompatActivity {
                 if (cameraId == TangoCameraIntrinsics.TANGO_CAMERA_COLOR) {
                     // Now that we are receiving onFrameAvailable callbacks, we can switch
                     // to RENDERMODE_WHEN_DIRTY to drive the render loop from this callback.
-                    // This will result on a frame rate of  approximately 30FPS, in synchrony with
+                    // This will result in a frame rate of approximately 30FPS, in synchrony with
                     // the RGB camera driver.
                     // If you need to render at a higher rate (i.e.: if you want to render complex
                     // animations smoothly) you  can use RENDERMODE_CONTINUOUSLY throughout the
@@ -300,7 +298,7 @@ public class GreenScreenActivity extends AppCompatActivity {
                         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
                     }
 
-                    // Mark a camera frame is available for rendering in the OpenGL thread.
+                    // Mark a camera frame as available for rendering in the OpenGL thread.
                     mIsFrameAvailableTangoThread.set(true);
                     // Trigger an OpenGL render to update the OpenGL scene with the new RGB data.
                     mSurfaceView.requestRender();
@@ -313,8 +311,8 @@ public class GreenScreenActivity extends AppCompatActivity {
     }
 
     /**
-     * Here is where you would set-up your rendering logic. We're replacing it with a minimalistic,
-     * dummy example using a standard GLSurfaceView and a basic renderer, for illustration purposes
+     * Here is where you would set up your rendering logic. We're replacing it with a minimalistic,
+     * dummy example, using a standard GLSurfaceView and a basic renderer, for illustration purposes
      * only.
      */
     private void setupRenderer() {
@@ -327,7 +325,7 @@ public class GreenScreenActivity extends AppCompatActivity {
                         // This is the work that you would do on your main OpenGL render thread.
 
                         // We need to be careful to not run any Tango-dependent code in the
-                        // OpenGL thread unless we know the Tango service to be properly set-up
+                        // OpenGL thread unless we know the Tango Service to be properly set up
                         // and connected.
                         if (!mIsConnected) {
                             return;
@@ -339,13 +337,13 @@ public class GreenScreenActivity extends AppCompatActivity {
                             // Connect the Tango SDK to the OpenGL texture ID where we are
                             // going to render the camera.
                             // NOTE: This must be done after both the texture is generated
-                            // and the Tango service is connected.
+                            // and the Tango Service is connected.
                             if (mConnectedTextureIdGlThread != mRenderer.getTextureId()) {
                                 mTango.connectTextureId(TangoCameraIntrinsics.TANGO_CAMERA_COLOR,
                                         mRenderer.getTextureId());
                                 mConnectedTextureIdGlThread = mRenderer.getTextureId();
                                 Log.d(TAG, "connected to texture id: " + mRenderer.getTextureId());
-                                // Set-up scene camera projection to match RGB camera intrinsics.
+                                // Set up scene camera projection to match RGB camera intrinsics.
                                 mRenderer.setProjectionMatrix(
                                         projectionMatrixFromCameraIntrinsics(mIntrinsics));
                                 mRenderer.setCameraIntrinsics(mIntrinsics);
@@ -482,9 +480,9 @@ public class GreenScreenActivity extends AppCompatActivity {
     }
 
     /**
-     * Check we have the necessary permissions for this app, and ask for them if we haven't.
+     * Check to see if we have the necessary permissions for this app; ask for them if we don't.
      *
-     * @return True if we have the necessary permissions, false if we haven't.
+     * @return True if we have the necessary permissions, false if we don't.
      */
     private boolean checkAndRequestPermissions() {
         if (!hasPermissions()) {
@@ -495,7 +493,7 @@ public class GreenScreenActivity extends AppCompatActivity {
     }
 
     /**
-     * Check we have camera and write external storage permissions for this app.
+     * Check to see if we have camera and write external storage permissions for this app.
      */
     private boolean hasPermissions() {
         return ContextCompat.checkSelfPermission(this, CAMERA_PERMISSION) ==
@@ -518,7 +516,7 @@ public class GreenScreenActivity extends AppCompatActivity {
     }
 
     /**
-     * If the user has declined the permission before, we have to explain him the app needs this
+     * If the user has declined the permission before, we have to explain that the app needs this
      * permission.
      */
     private void showRequestPermissionRationale() {
@@ -695,5 +693,3 @@ public class GreenScreenActivity extends AppCompatActivity {
         }
     }
 }
-
-

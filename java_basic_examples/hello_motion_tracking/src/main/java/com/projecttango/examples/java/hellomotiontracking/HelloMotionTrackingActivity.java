@@ -36,7 +36,7 @@ import android.widget.Toast;
 import java.util.ArrayList;
 
 /**
- * Main Activity class for the Motion Tracking API Sample. Handles the connection to the Tango
+ * Main activity class for the Motion Tracking API sample. Handles the connection to the Tango
  * service and propagation of Tango pose data Layout view.
  */
 public class HelloMotionTrackingActivity extends Activity {
@@ -56,14 +56,14 @@ public class HelloMotionTrackingActivity extends Activity {
     protected void onResume() {
         super.onResume();
 
-        // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
-        // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
+        // Initialize Tango Service as a normal Android Service. Since we call mTango.disconnect()
+        // in onPause, this will unbind Tango Service, so every time onResume gets called we
         // should create a new Tango object.
         mTango = new Tango(HelloMotionTrackingActivity.this, new Runnable() {
-            // Pass in a Runnable to be called from UI thread when Tango is ready, this Runnable
+            // Pass in a Runnable to be called from UI thread when Tango is ready; this Runnable
             // will be running on a new thread.
-            // When Tango is ready, we can call Tango functions safely here only when there is no UI
-            // thread changes involved.
+            // When Tango is ready, we can call Tango functions safely here only when there are no
+            // UI thread changes involved.
             @Override
             public void run() {
                 synchronized (HelloMotionTrackingActivity.this) {
@@ -107,26 +107,26 @@ public class HelloMotionTrackingActivity extends Activity {
         TangoConfig config = tango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_MOTIONTRACKING, true);
 
-        // Tango service should automatically attempt to recover when it enters an invalid state.
+        // Tango Service should automatically attempt to recover when it enters an invalid state.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_AUTORECOVERY, true);
         return config;
     }
 
     /**
-     * Set up the callback listeners for the Tango service and obtain other parameters required
+     * Set up the callback listeners for the Tango Service and obtain other parameters required
      * after Tango connection.
      * Listen to new Pose data.
      */
     private void startupTango() {
-        // Lock configuration and connect to Tango
-        // Select coordinate frame pair
+        // Lock configuration and connect to Tango.
+        // Select coordinate frame pair.
         final ArrayList<TangoCoordinateFramePair> framePairs =
                 new ArrayList<TangoCoordinateFramePair>();
         framePairs.add(new TangoCoordinateFramePair(
                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                 TangoPoseData.COORDINATE_FRAME_DEVICE));
 
-        // Listen for new Tango data
+        // Listen for new Tango data.
         mTango.connectListener(framePairs, new OnTangoUpdateListener() {
             @Override
             public void onPoseAvailable(final TangoPoseData pose) {

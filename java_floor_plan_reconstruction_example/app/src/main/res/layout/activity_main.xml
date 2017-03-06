@@ -16,7 +16,6 @@
         android:layout_above="@+id/pause_button"
         />
 
-
     <TextView
         android:id="@+id/area_text"
         android:layout_width="wrap_content"

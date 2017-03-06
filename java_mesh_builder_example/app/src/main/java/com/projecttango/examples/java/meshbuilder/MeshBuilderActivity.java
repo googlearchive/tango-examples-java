@@ -116,7 +116,7 @@ public class MeshBuilderActivity extends Activity {
         mSurfaceView.onResume();
 
         // Set render mode to RENDERMODE_CONTINUOUSLY to force getting onDraw callbacks until
-        // the Tango service is properly set-up and we start getting onFrameAvailable callbacks.
+        // the Tango Service is properly set up and we start getting onFrameAvailable callbacks.
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
         // Check and request camera permission at run time.
         if (checkAndRequestPermissions()) {
@@ -130,7 +130,7 @@ public class MeshBuilderActivity extends Activity {
     private void bindTangoService() {
         // Initialize Tango Service as a normal Android Service.
         // Since we call mTango.disconnect() in onPause, this will unbind Tango Service,
-        // so every time when onResume gets called, we should create a new Tango object.
+        // so every time onResume gets called we should create a new Tango object.
         mTango = new Tango(MeshBuilderActivity.this, new Runnable() {
             // Pass in a Runnable to be called from UI thread when Tango is ready,
             // this Runnable will be running on a new thread.
@@ -175,15 +175,13 @@ public class MeshBuilderActivity extends Activity {
         // in the UI thread.
         synchronized (this) {
             try {
-                if (mIsConnected) {
-                    mTangoMesher.stopSceneReconstruction();
-                    mTango.disconnect();
-                    mTangoMesher.resetSceneReconstruction();
-                    mTangoMesher.release();
-                    mRenderer.clearMeshes();
-                    mIsConnected = false;
-                    mIsPaused = true;
-                }
+                mTangoMesher.stopSceneReconstruction();
+                mTango.disconnect();
+                mTangoMesher.resetSceneReconstruction();
+                mTangoMesher.release();
+                mRenderer.clearMeshes();
+                mIsConnected = false;
+                mIsPaused = true;
             } catch (TangoErrorException e) {
                 Log.e(TAG, getString(R.string.exception_tango_error), e);
             }
@@ -191,7 +189,7 @@ public class MeshBuilderActivity extends Activity {
     }
 
     /**
-     * Sets up the tango configuration object. Make sure mTango object is initialized before
+     * Sets up the Tango configuration object. Make sure mTango object is initialized before
      * making this call.
      */
     private TangoConfig setupTangoConfig(Tango tango) {
@@ -199,7 +197,7 @@ public class MeshBuilderActivity extends Activity {
         // IMU integration, depth, smooth pose and dataset recording.
         TangoConfig config = tango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
         // NOTE: Low latency integration is necessary to achieve a precise alignment of virtual
-        // objects with the RBG image and produce a good AR effect.
+        // objects with the RGB image and produce a good AR effect.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION, true);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_SMOOTH_POSE, true);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
@@ -210,12 +208,12 @@ public class MeshBuilderActivity extends Activity {
     }
 
     /**
-     * Set up the callback listeners for the Tango service and obtain other parameters required
+     * Set up the callback listeners for the Tango Service and obtain other parameters required
      * after Tango connection.
      * Listen to updates from the point cloud.
      */
     private void startupTango() {
-        // We need to check the Tango core is up to date.
+        // We need to ensure that the Tango core is up-to-date.
         checkTangoVersion();
         mTangoMesher = new TangoMesher(new TangoMesher.OnTangoMeshesAvailableListener() {
             @Override
@@ -231,7 +229,7 @@ public class MeshBuilderActivity extends Activity {
 
         mTangoMesher.startSceneReconstruction();
 
-        // Connect listeners to tango service and forward point cloud and camera information to
+        // Connect listeners to Tango Service and forward point cloud and camera information to
         // TangoMesher.
         List<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
         mTango.connectListener(framePairs, new Tango.OnTangoUpdateListener() {
@@ -277,14 +275,15 @@ public class MeshBuilderActivity extends Activity {
         mRenderer = new MeshBuilderRenderer(new MeshBuilderRenderer.RenderCallback() {
             @Override
             public void preRender() {
-                // NOTE: This is called from the OpenGL render thread, after all the renderer
-                // onRender callbacks had a chance to run and before scene objects are rendered
+                // NOTE: This is called from the OpenGL render thread after all the renderer
+                // onRender callbacks have a chance to run and before scene objects are rendered
                 // into the scene.
 
                 try {
                     // Synchronize against disconnecting while using the service.
                     synchronized (MeshBuilderActivity.this) {
-                        // Don't execute any tango API actions if we're not connected to the service
+                        // Don't execute any tango API actions if we're not connected to the
+                        // service.
                         if (!mIsConnected) {
                             return;
                         }
@@ -300,7 +299,7 @@ public class MeshBuilderActivity extends Activity {
                                         mDisplayRotation);
 
                         if (ssTdev.statusCode == TangoPoseData.POSE_VALID) {
-                            // Update the camera pose from the renderer
+                            // Update the camera pose from the renderer.
                             mRenderer.updateViewMatrix(ssTdev.matrix);
                         } else {
                             Log.w(TAG, "Can't get last camera pose");
@@ -339,7 +338,7 @@ public class MeshBuilderActivity extends Activity {
     }
 
     /**
-     * Updates the rendered mesh map is a new mesh vector is available.
+     * Updates the rendered mesh map if a new mesh vector is available.
      * This is run in the OpenGL thread.
      */
     private void updateMeshMap() {
@@ -358,7 +357,7 @@ public class MeshBuilderActivity extends Activity {
     }
 
     /**
-     * Check the minimum tango core version need by Java 3d reconstruction library.
+     * Check the minimum Tango core version needed by the Java 3D reconstruction library.
      */
     private void checkTangoVersion() {
         try {
@@ -381,9 +380,9 @@ public class MeshBuilderActivity extends Activity {
     }
 
     /**
-     * Check we have the necessary permissions for this app, and ask for them if we haven't.
+     * Check to see if we have the necessary permissions for this app; ask for them if we don't.
      *
-     * @return True if we have the necessary permissions, false if we haven't.
+     * @return True if we have the necessary permissions, false if we don't.
      */
     private boolean checkAndRequestPermissions() {
         if (!hasCameraPermission()) {
@@ -394,7 +393,7 @@ public class MeshBuilderActivity extends Activity {
     }
 
     /**
-     * Check we have the necessary permissions for this app.
+     * Check to see of we have the necessary permissions for this app.
      */
     private boolean hasCameraPermission() {
         return ContextCompat.checkSelfPermission(this, CAMERA_PERMISSION) ==
@@ -414,7 +413,7 @@ public class MeshBuilderActivity extends Activity {
     }
 
     /**
-     * If the user has declined the permission before, we have to explain him the app needs this
+     * If the user has declined the permission before, we have to explain that the app needs this
      * permission.
      */
     private void showRequestPermissionRationale() {

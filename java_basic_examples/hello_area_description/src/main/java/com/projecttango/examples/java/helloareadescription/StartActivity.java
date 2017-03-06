@@ -27,10 +27,10 @@ import android.widget.ToggleButton;
 
 /**
  * Start Activity for Area Description example. Gives the ability to choose a particular
- * configuration and also Manage Area Description Files (ADF).
+ * configuration and also manage Area Description Files (ADF).
  */
 public class StartActivity extends Activity {
-    // The unique key string for storing user's input.
+    // The unique key string for storing the user's input.
     public static final String USE_AREA_LEARNING =
             "com.projecttango.examples.java.helloareadescription.usearealearning";
     public static final String LOAD_ADF =
@@ -52,7 +52,7 @@ public class StartActivity extends Activity {
         setContentView(R.layout.activity_start);
         setTitle(R.string.app_name);
 
-        // Setup UI elements.
+        // Set up UI elements.
         mLearningModeToggleButton = (ToggleButton) findViewById(R.id.learning_mode);
         mLoadAdfToggleButton = (ToggleButton) findViewById(R.id.load_adf);
 
@@ -96,7 +96,7 @@ public class StartActivity extends Activity {
     }
 
     /**
-     * Start the main area description activity and pass in user's configuration.
+     * Start the main area description activity and pass in the user's configuration.
      */
     private void startAreaDescriptionActivity() {
         Intent startAdIntent = new Intent(this, HelloAreaDescriptionActivity.class);
@@ -118,12 +118,12 @@ public class StartActivity extends Activity {
         // The result of the permission activity.
         //
         // Note that when the permission activity is dismissed, the HelloAreaDescriptionActivity's
-        // onResume() callback is called. As the TangoService is connected in the onResume()
+        // onResume() callback is called. Because the Tango Service is connected in the onResume()
         // function, we do not call connect here.
         //
-        // Check which request we're responding to
+        // Check which request we're responding to.
         if (requestCode == REQUEST_CODE_TANGO_PERMISSION) {
-            // Make sure the request was successful
+            // Make sure the request was successful.
             if (resultCode == RESULT_CANCELED) {
                 Toast.makeText(this, R.string.arealearning_permission, Toast.LENGTH_SHORT).show();
                 finish();

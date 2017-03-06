@@ -22,7 +22,7 @@ import android.opengl.GLUtils;
 import android.opengl.Matrix;
 
 /**
- * A sphere that is renderer in AR using OpenGL.
+ * A sphere that is rendered in AR using OpenGL.
  */
 public class OpenGlSphere {
 

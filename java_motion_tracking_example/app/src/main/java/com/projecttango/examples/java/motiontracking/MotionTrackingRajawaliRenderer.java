@@ -115,16 +115,16 @@ public class MotionTrackingRajawaliRenderer extends RajawaliRenderer {
 
     /**
      * Update the scene camera based on the provided pose in Tango start of service frame.
-     * The camera pose should match the pose of the camera color at the time the last rendered RGB
-     * frame, which can be retrieved with this.getTimestamp();
+     * The camera pose should match the pose of the camera color at the time of the last rendered
+     * RGB frame, which can be retrieved with this.getTimestamp();
      * <p/>
-     * NOTE: This must be called from the OpenGL render thread - it is not thread safe.
+     * NOTE: This must be called from the OpenGL render thread;it is not thread safe.
      */
     public void updateRenderCameraPose(TangoPoseData cameraPose) {
         float[] rotation = cameraPose.getRotationAsFloats();
         float[] translation = cameraPose.getTranslationAsFloats();
         Quaternion quaternion = new Quaternion(rotation[3], rotation[0], rotation[1], rotation[2]);
-        // Conjugating the Quaternion is need because Rajawali uses left handed convention for
+        // Conjugating the Quaternion is need because Rajawali uses left-handed convention for
         // quaternions.
         getCurrentCamera().setRotation(quaternion.conjugate());
         getCurrentCamera().setPosition(translation[0], translation[1], translation[2]);

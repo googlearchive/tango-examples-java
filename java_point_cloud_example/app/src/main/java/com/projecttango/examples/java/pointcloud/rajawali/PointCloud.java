@@ -26,7 +26,7 @@ import java.nio.FloatBuffer;
  * Coloring is based on the light spectrum: closest points are in red, farthest in violet.
  */
 public class PointCloud extends Points {
-    // Maximum depth range used to calculate coloring (min = 0)
+    // Maximum depth range used to calculate coloring (min = 0).
     public static final float CLOUD_MAX_Z = 5;
 
     private float[] mColorArray;

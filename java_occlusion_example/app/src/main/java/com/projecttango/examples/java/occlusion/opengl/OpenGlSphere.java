@@ -25,7 +25,7 @@ import android.opengl.Matrix;
 import com.projecttango.examples.java.occlusion.R;
 
 /**
- * A sphere that is renderer in AR using OpenGL.
+ * A sphere that is rendered in AR using OpenGL.
  */
 public class OpenGlSphere {
 

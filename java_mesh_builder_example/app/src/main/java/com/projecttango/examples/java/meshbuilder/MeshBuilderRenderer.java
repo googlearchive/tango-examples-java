@@ -58,7 +58,7 @@ public class MeshBuilderRenderer implements GLSurfaceView.Renderer {
 
     @Override
     public void onSurfaceCreated(GL10 gl10, EGLConfig eglConfig) {
-        // Enable depth test to discard fragments that are behind of another fragment.
+        // Enable depth test to discard fragments that are behind another fragment.
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
         // Enable face culling to discard back facing triangles.
         GLES20.glEnable(GLES20.GL_CULL_FACE);
@@ -100,7 +100,7 @@ public class MeshBuilderRenderer implements GLSurfaceView.Renderer {
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mesh.vertexBufferId);
         GLES20.glVertexAttribPointer(mMeshMaterial.getPosHandle(), 3, GLES20.GL_FLOAT, false, 0, 0);
         GLES20.glEnableVertexAttribArray(mMeshMaterial.getPosHandle());
-        // Draw the mesh
+        // Draw the mesh.
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferId);
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, mesh.numFaces * 3, GLES20.GL_UNSIGNED_INT, 0);
     }
