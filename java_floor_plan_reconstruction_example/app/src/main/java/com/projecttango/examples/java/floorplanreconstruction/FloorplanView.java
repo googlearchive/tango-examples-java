@@ -25,6 +25,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -47,6 +48,7 @@ public class FloorplanView extends SurfaceView implements SurfaceHolder.Callback
 
     private volatile List<TangoPolygon> mPolygons = new ArrayList<>();
 
+    private Paint mBackgroundPaint;
     private Paint mWallPaint;
     private Paint mSpacePaint;
     private Paint mFurniturePaint;
@@ -59,6 +61,9 @@ public class FloorplanView extends SurfaceView implements SurfaceHolder.Callback
 
     private boolean mIsDrawing = false;
     private SurfaceHolder mSurfaceHolder;
+
+    private float mMinAreaSpace = 0f;
+    private float mMinAreaWall = 0f;
 
     /**
      * Custom render thread, running at a fixed 10Hz rate.
@@ -82,7 +87,7 @@ public class FloorplanView extends SurfaceView implements SurfaceHolder.Callback
     private RenderThread mDrawThread;
 
     /**
-     * Pre drawing callback.
+     * Pre-drawing callback.
      */
     public interface DrawingCallback {
         /**
@@ -109,11 +114,21 @@ public class FloorplanView extends SurfaceView implements SurfaceHolder.Callback
     }
 
     private void init() {
+        // Get parameters.
+        TypedValue typedValue = new TypedValue();
+        getResources().getValue(R.dimen.min_area_space, typedValue, true);
+        mMinAreaSpace = typedValue.getFloat();
+        getResources().getValue(R.dimen.min_area_wall, typedValue, true);
+        mMinAreaWall = typedValue.getFloat();
+
         // Pre-create graphics objects.
         mWallPaint = new Paint();
         mWallPaint.setColor(getResources().getColor(android.R.color.black));
         mWallPaint.setStyle(Paint.Style.STROKE);
         mWallPaint.setStrokeWidth(3);
+        mBackgroundPaint = new Paint();
+        mBackgroundPaint.setColor(getResources().getColor(android.R.color.white));
+        mBackgroundPaint.setStyle(Paint.Style.FILL);
         mSpacePaint = new Paint();
         mSpacePaint.setColor(getResources().getColor(R.color.explored_space));
         mSpacePaint.setStyle(Paint.Style.FILL);
@@ -177,35 +192,52 @@ public class FloorplanView extends SurfaceView implements SurfaceHolder.Callback
 
         // Draw all the polygons. Make a shallow copy in case mPolygons is reset while rendering.
         List<TangoPolygon> drawPolygons = mPolygons;
+        boolean largestSpaceDrawn = false;
         for (TangoPolygon polygon : drawPolygons) {
-            if (polygon.vertices2d.size() > 1) {
-                Paint paint;
-                switch(polygon.layer) {
-                    case TangoPolygon.TANGO_3DR_LAYER_FURNITURE:
-                        paint = mFurniturePaint;
-                        break;
-                    case TangoPolygon.TANGO_3DR_LAYER_SPACE:
-                        paint = mSpacePaint;
-                        break;
-                    case TangoPolygon.TANGO_3DR_LAYER_WALLS:
-                        paint = mWallPaint;
-                        break;
-                    default:
-                        Log.w(TAG, "Ignoring polygon with unknown layer value: " + polygon.layer);
+            Paint paint;
+            switch(polygon.layer) {
+                case TangoPolygon.TANGO_3DR_LAYER_FURNITURE:
+                    paint = mFurniturePaint;
+                    break;
+                case TangoPolygon.TANGO_3DR_LAYER_SPACE:
+                    // Only draw free space polygons larger than 2 square meter.
+                    // The goal of this is to suppress free space polygons in front of windows.
+                    // Always draw holes (=negative area) independent of surface area.
+                    if (polygon.area > 0) {
+                        if (largestSpaceDrawn && polygon.area < mMinAreaSpace) {
+                            continue;
+                        }
+                        largestSpaceDrawn = true;
+                    } 
+                    paint = mSpacePaint;
+                    break;
+                case TangoPolygon.TANGO_3DR_LAYER_WALLS:
+                    // Only draw wall polygons larger than 20cm x 20cm to suppress noise.
+                    if (Math.abs(polygon.area) < mMinAreaWall) {
                         continue;
-                }
-                Path path = new Path();
-                float[] p = polygon.vertices2d.get(0);
-                path.moveTo(p[0] * SCALE, p[1] * SCALE);
-                for (int i = 1; i < polygon.vertices2d.size(); i++) {
-                    float[] point = polygon.vertices2d.get(i);
-                    path.lineTo(point[0] * SCALE, point[1] * SCALE);
-                }
-                if (polygon.isClosed) {
-                    path.close();
-                }
-                canvas.drawPath(path, paint);
+                    }
+                    paint = mWallPaint;
+                    break;
+                default:
+                    Log.w(TAG, "Ignoring polygon with unknown layer value: " + polygon.layer);
+                    continue;
             }
+            if (polygon.area < 0.0) {
+                paint = mBackgroundPaint;
+            }
+            Path path = new Path();
+            float[] p = polygon.vertices2d.get(0);
+            // NOTE: We need to flip the Y axis since the polygon data is in Tango start of
+            // service frame (Y+ forward) and we want to draw image coordinates (Y+ 2D down).
+            path.moveTo(p[0] * SCALE, -1 * p[1] * SCALE);
+            for (int i = 1; i < polygon.vertices2d.size(); i++) {
+                float[] point = polygon.vertices2d.get(i);
+                path.lineTo(point[0] * SCALE, -1 * point[1] * SCALE);
+            }
+            if (polygon.isClosed) {
+                path.close();
+            }
+            canvas.drawPath(path, paint);
         }
 
         // Draw a user / device marker.

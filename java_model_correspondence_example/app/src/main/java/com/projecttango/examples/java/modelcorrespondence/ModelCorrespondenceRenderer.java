@@ -49,7 +49,7 @@ import com.projecttango.tangosupport.TangoSupport;
 /**
  * Simple example augmented reality renderer which displays spheres fixed in place for every
  * point measurement and a 3D model of a house in the position given by the found correspondence.
- * Whenever the user clicks on '+' button, a sphere is placed in the aimed position with the
+ * Whenever the user clicks on '+' button, a sphere is placed in the position aimed at with the
  * crosshair.
  */
 public class ModelCorrespondenceRenderer extends Renderer {
@@ -58,7 +58,7 @@ public class ModelCorrespondenceRenderer extends Renderer {
 
     private float[] textureCoords0 = new float[]{0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 0.0F};
 
-    // Augmented reality related fields
+    // Augmented reality related fields.
     private ATexture mTangoCameraTexture;
     private boolean mSceneCameraConfigured;
 
@@ -85,7 +85,7 @@ public class ModelCorrespondenceRenderer extends Renderer {
         Material tangoCameraMaterial = new Material();
         tangoCameraMaterial.setColorInfluence(0);
         // We need to use Rajawali's {@code StreamingTexture} since it sets up the texture
-        // for GL_TEXTURE_EXTERNAL_OES rendering
+        // for GL_TEXTURE_EXTERNAL_OES rendering.
         mTangoCameraTexture =
                 new StreamingTexture("camera", (StreamingTexture.ISurfaceListener) null);
         try {
@@ -109,7 +109,7 @@ public class ModelCorrespondenceRenderer extends Renderer {
         light.setPosition(3, 3, 3);
         getCurrentScene().addLight(light2);
 
-        // Set-up a materials.
+        // Set up a material.
         mSphereMaterial = new Material();
         mSphereMaterial.enableLighting(true);
         mSphereMaterial.setDiffuseMethod(new DiffuseMethod.Lambert());
@@ -136,8 +136,8 @@ public class ModelCorrespondenceRenderer extends Renderer {
     }
 
     /**
-     * Update background texture's UV coordinates when device orientation is changed. i.e change
-     * between landscape and portrait mode.
+     * Update background texture's UV coordinates when device orientation is changed (i.e., change
+     * between landscape and portrait mode).
      * This must be run in the OpenGL thread.
      */
     public void updateColorCameraTextureUvGlThread(int rotation) {
@@ -154,7 +154,7 @@ public class ModelCorrespondenceRenderer extends Renderer {
     /**
      * It returns the ID currently assigned to the texture where the Tango color camera contents
      * should be rendered.
-     * NOTE: This must be called from the OpenGL render thread - it is not thread safe.
+     * NOTE: This must be called from the OpenGL render thread; it is not thread safe.
      */
     public int getTextureId() {
         return mTangoCameraTexture == null ? -1 : mTangoCameraTexture.getTextureId();
@@ -185,7 +185,7 @@ public class ModelCorrespondenceRenderer extends Renderer {
     /**
      * Render the data model.
      * Render the next correspondence source point to be added as a green sphere. Render the
-     * correspondence destination points as red spheres. Render the 3d model in the position and
+     * correspondence destination points as red spheres. Render the 3D model in the position and
      * orientation given by the found correspondence transform.
      */
     public void updateModelRendering(HouseModel houseModel, float[] openGlTHouse,
@@ -242,16 +242,16 @@ public class ModelCorrespondenceRenderer extends Renderer {
 
     /**
      * Update the scene camera based on the provided pose in Tango start of service frame.
-     * The camera pose should match the pose of the camera color at the time the last rendered RGB
-     * frame, which can be retrieved with this.getTimestamp();
+     * The camera pose should match the pose of the camera color at the time of the last rendered
+     * RGB frame, which can be retrieved with this.getTimestamp();
      * <p/>
-     * NOTE: This must be called from the OpenGL render thread - it is not thread safe.
+     * NOTE: This must be called from the OpenGL render thread; it is not thread safe.
      */
     public void updateRenderCameraPose(TangoPoseData cameraPose) {
         float[] rotation = cameraPose.getRotationAsFloats();
         float[] translation = cameraPose.getTranslationAsFloats();
         Quaternion quaternion = new Quaternion(rotation[3], rotation[0], rotation[1], rotation[2]);
-        // Conjugating the Quaternion is need because Rajawali uses left handed convention for
+        // Conjugating the Quaternion is needed because Rajawali uses left-handed convention for
         // quaternions.
         getCurrentCamera().setRotation(quaternion.conjugate());
         getCurrentCamera().setPosition(translation[0], translation[1], translation[2]);

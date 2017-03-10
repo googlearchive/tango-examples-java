@@ -64,10 +64,10 @@ import com.projecttango.tangosupport.TangoPointCloudManager;
 import com.projecttango.tangosupport.TangoSupport;
 
 /**
- * An example showing how to build a very simple point to point measurement app
- * in Java. It uses the TangoSupportLibrary to do depth calculations using
- * the PointCloud data. Whenever the user clicks on the camera display, a point
- * is recorded from the PointCloud data closest to the point of the touch.
+ * An example showing how to build a very simple point-to-point measurement app
+ * in Java. It uses the Tango Support Library to do depth calculations using
+ * the point cloud data. Whenever the user clicks on the camera display, a point
+ * is recorded from the point cloud data closest to the point of the touch;
  * consecutive touches are used as the two points for a distance measurement.
  * <p/>
  * Note that it is important to include the KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION
@@ -100,8 +100,8 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
     private CheckBox mBilateralBox;
     private volatile TangoImageBuffer mCurrentImageBuffer;
 
-    // Texture rendering related fields
-    // NOTE: Naming indicates which thread is in charge of updating this variable
+    // Texture rendering related fields.
+    // NOTE: Naming indicates which thread is in charge of updating this variable.
     private int mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
     private AtomicBoolean mIsFrameAvailableTangoThread = new AtomicBoolean(false);
     private double mRgbTimestampGlThread;
@@ -170,20 +170,16 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
         // will block here until all Tango callback calls are finished. If you lock against this
         // object in a Tango callback thread it will cause a deadlock.
         synchronized (this) {
-            if (mIsConnected) {
-                try {
-                    mRenderer.getCurrentScene().clearFrameCallbacks();
-                    mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
-                    // We need to invalidate the connected texture ID so that we cause a
-                    // re-connection
-
-                    // in the OpenGL thread after resume
-                    mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
-                    mTango.disconnect();
-                    mIsConnected = false;
-                } catch (TangoErrorException e) {
-                    Log.e(TAG, getString(R.string.exception_tango_error), e);
-                }
+            try {
+                mRenderer.getCurrentScene().clearFrameCallbacks();
+                mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
+                // We need to invalidate the connected texture ID so that we cause a
+                // re-connection in the OpenGL thread after resume.
+                mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
+                mTango.disconnect();
+                mIsConnected = false;
+            } catch (TangoErrorException e) {
+                Log.e(TAG, getString(R.string.exception_tango_error), e);
             }
         }
     }
@@ -192,14 +188,14 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
      * Initialize Tango Service as a normal Android Service.
      */
     private void bindTangoService() {
-        // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
-        // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
+        // Initialize Tango Service as a normal Android Service. Since we call mTango.disconnect()
+        // in onPause, this will unbind Tango Service, so every time onResume gets called we
         // should create a new Tango object.
         mTango = new Tango(PointToPointActivity.this, new Runnable() {
-            // Pass in a Runnable to be called from UI thread when Tango is ready, this Runnable
+            // Pass in a Runnable to be called from UI thread when Tango is ready; this Runnable
             // will be running on a new thread.
-            // When Tango is ready, we can call Tango functions safely here only when there is no UI
-            // thread changes involved.
+            // When Tango is ready, we can call Tango functions safely here only when there are no
+            // UI thread changes involved.
             @Override
             public void run() {
                 // Synchronize against disconnecting while the service is being used in the OpenGL
@@ -230,7 +226,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
     }
 
     /**
-     * Sets up the tango configuration object. Make sure mTango object is initialized before
+     * Sets up the Tango configuration object. Make sure mTango object is initialized before
      * making this call.
      */
     private TangoConfig setupTangoConfig(Tango tango) {
@@ -245,7 +241,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
         config.putInt(TangoConfig.KEY_INT_DEPTH_MODE, TangoConfig.TANGO_DEPTH_MODE_POINT_CLOUD);
         // Drift correction allows motion tracking to recover after it loses tracking.
-        // The drift corrected pose is available through the frame pair with
+        // The drift-corrected pose is available through the frame pair with
         // base frame AREA_DESCRIPTION and target frame DEVICE.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DRIFT_CORRECTION, true);
 
@@ -253,9 +249,9 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
     }
 
     /**
-     * Set up the callback listeners for the Tango service and obtain other parameters required
+     * Set up the callback listeners for the Tango Service and obtain other parameters required
      * after Tango connection.
-     * Listen to updates from the RGB camera and Point Cloud.
+     * Listen to updates from the RGB camera and point cloud.
      */
     private void startupTango() {
         // No need to add any coordinate frame pairs since we are not
@@ -273,7 +269,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                 // Check if the frame available is for the camera we want and update its frame
                 // on the view.
                 if (cameraId == TangoCameraIntrinsics.TANGO_CAMERA_COLOR) {
-                    // Mark a camera frame is available for rendering in the OpenGL thread
+                    // Mark a camera frame as available for rendering in the OpenGL thread.
                     mIsFrameAvailableTangoThread.set(true);
                     mSurfaceView.requestRender();
                 }
@@ -326,19 +322,20 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
             @Override
             public void onPreFrame(long sceneTime, double deltaTime) {
                 // NOTE: This is called from the OpenGL render thread, after all the renderer
-                // onRender callbacks had a chance to run and before scene objects are rendered
+                // onRender callbacks have a chance to run and before scene objects are rendered
                 // into the scene.
 
                 try {
                     // Prevent concurrent access to {@code mIsFrameAvailableTangoThread} from the
                     // Tango callback thread and service disconnection from an onPause event.
                     synchronized (PointToPointActivity.this) {
-                        // Don't execute any tango API actions if we're not connected to the service
+                        // Don't execute any tango API actions if we're not connected to the
+                        // service.
                         if (!mIsConnected) {
                             return;
                         }
 
-                        // Set-up scene camera projection to match RGB camera intrinsics
+                        // Set up scene camera projection to match RGB camera intrinsics.
                         if (!mRenderer.isSceneCameraConfigured()) {
                             TangoCameraIntrinsics intrinsics =
                             TangoSupport.getCameraIntrinsicsBasedOnDisplayRotation(
@@ -349,7 +346,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                         }
 
                         // Connect the camera texture to the OpenGL Texture if necessary
-                        // NOTE: When the OpenGL context is recycled, Rajawali may re-generate the
+                        // NOTE: When the OpenGL context is recycled, Rajawali may regenerate the
                         // texture with a different ID.
                         if (mConnectedTextureIdGlThread != mRenderer.getTextureId()) {
                             mTango.connectTextureId(TangoCameraIntrinsics.TANGO_CAMERA_COLOR,
@@ -358,7 +355,8 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                             Log.d(TAG, "connected to texture id: " + mRenderer.getTextureId());
                         }
 
-                        // If there is a new RGB camera frame available, update the texture with it
+                        // If there is a new RGB camera frame available, update the texture with
+                        // it.
                         if (mIsFrameAvailableTangoThread.compareAndSet(true, false)) {
                             mRgbTimestampGlThread =
                                     mTango.updateTexture(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
@@ -371,7 +369,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                             //
                             // When drift correction mode is enabled in config file, we need
                             // to query the device with respect to Area Description pose in
-                            // order to use the drift corrected pose.
+                            // order to use the drift-corrected pose.
                             //
                             // Note that if you don't want to use the drift corrected pose, the
                             // normal device with respect to start of service pose is still
@@ -389,7 +387,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                                     TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
                                     mDisplayRotation);
                             if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
-                                // Update the camera pose from the renderer
+                                // Update the camera pose from the renderer.
                                 mRenderer.updateRenderCameraPose(lastFramePose);
                                 mCameraPoseTimestamp = lastFramePose.timestamp;
                             } else {
@@ -403,7 +401,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                             }
                         }
                     }
-                    // Avoid crashing the application due to unhandled exceptions
+                    // Avoid crashing the application due to unhandled exceptions.
                 } catch (TangoErrorException e) {
                     Log.e(TAG, "Tango API call error within the OpenGL render thread", e);
                 } catch (Throwable t) {
@@ -469,7 +467,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
             float v = motionEvent.getY() / view.getHeight();
 
             try {
-                // Place point near the clicked point using the latest point cloud data
+                // Place point near the clicked point using the latest point cloud data.
                 // Synchronize against concurrent access to the RGB timestamp in the OpenGL thread
                 // and a possible service disconnection due to an onPause event.
                 float[] rgbPoint;
@@ -478,7 +476,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                 }
                 if (rgbPoint != null) {
                     // Update a line endpoint to the touch location.
-                    // This update is made thread safe by the renderer
+                    // This update is made thread-safe by the renderer.
                     updateLine(rgbPoint);
                     mRenderer.setLine(generateEndpoints());
                 } else {
@@ -501,9 +499,9 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
     }
 
     /**
-     * Use the TangoSupport library with point cloud data to calculate the depth
+     * Use the Tango Support Library with point cloud data to calculate the depth
      * of the point closest to where the user touches the screen. It returns a
-     * Vector3 in openGL world space.
+     * Vector3 in OpenGL world space.
      */
     private float[] getDepthAtTouchPosition(float u, float v) {
         TangoPointCloudData pointCloud = mPointCloudManager.getLatestPointCloud();
@@ -654,9 +652,9 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
     }
 
     /**
-     * Check we have the necessary permissions for this app, and ask for them if we haven't.
+     * Check to see if we have the necessary permissions for this app; ask for them if we don't.
      *
-     * @return True if we have the necessary permissions, false if we haven't.
+     * @return True if we have the necessary permissions, false if we don't.
      */
     private boolean checkAndRequestPermissions() {
         if (!hasCameraPermission()) {
@@ -667,7 +665,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
     }
 
     /**
-     * Check we have the necessary permissions for this app.
+     * Check to see if we have the necessary permissions for this app.
      */
     private boolean hasCameraPermission() {
         return ContextCompat.checkSelfPermission(this, CAMERA_PERMISSION) ==
@@ -687,7 +685,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
     }
 
     /**
-     * If the user has declined the permission before, we have to explain him the app needs this
+     * If the user has declined the permission before, we have to explain that the app needs this
      * permission.
      */
     private void showRequestPermissionRationale() {

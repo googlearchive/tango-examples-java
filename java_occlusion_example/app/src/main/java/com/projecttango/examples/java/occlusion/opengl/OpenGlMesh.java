@@ -67,21 +67,21 @@ public class OpenGlMesh {
 
     public void createVbos() {
         mVbos = new int[3];
-        // Generate 3 buffers. Vertex buffer, texture buffer and index buffer.
+        // Generate three buffers: vertex buffer, texture buffer and index buffer.
         GLES20.glGenBuffers(3, mVbos, 0);
-        // Bind to vertex buffer
+        // Bind to vertex buffer.
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mVbos[0]);
         // Populate it.
         GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, mNumVertices * 3 * Float
                 .SIZE / 8, mVertex, GLES20.GL_STATIC_DRAW); // vertices of floats.
 
-        // Bind to texcoord buffer
+        // Bind to texcoord buffer.
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mVbos[1]);
         // Populate it.
         GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, mNumVertices * 2 * Float.SIZE / 8,
                 mTexCoord, GLES20.GL_STATIC_DRAW); // texcoord of floats.
 
-        // Bind to indices buffer
+        // Bind to indices buffer.
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, mVbos[2]);
         // Populate it.
         GLES20.glBufferData(GLES20.GL_ELEMENT_ARRAY_BUFFER, mNumIndices * Short.SIZE / 8,
@@ -114,7 +114,7 @@ public class OpenGlMesh {
         mTexCoord.put(textureCoords);
         mTexCoord.position(0);
         if (mVbos != null) {
-            // Bind to texcoord buffer
+            // Bind to texcoord buffer.
             GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mVbos[1]);
             // Populate it.
             GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, mNumVertices * 2 * Float

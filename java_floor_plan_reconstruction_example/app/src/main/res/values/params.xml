@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="min_area_space" format="float" type="dimen">2.0</item>
+    <item name="min_area_wall" format="float" type="dimen">0.04</item>
+</resources>

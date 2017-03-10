@@ -44,7 +44,7 @@ public class GridIndex {
     }
 
     /**
-     * Generates an hash from the grid index.
+     * Generates a hash from the grid index.
      * Arbitrarily chosen large prime integers LARGE_PRIME_X and LARGE_PRIME_Y are
      * chosen to hash the (x, y, z) coordinates of an index.
      */

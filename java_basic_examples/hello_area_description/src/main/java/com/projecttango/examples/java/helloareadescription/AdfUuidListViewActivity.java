@@ -38,7 +38,7 @@ import java.util.ArrayList;
 
 /**
  * This class lets you manage ADFs between this class's Application Package folder and API private
- * space. This show cases mainly three things: Import, Export, Delete an ADF file from API private
+ * space. This showcases three things: Import, Export, and Delete an ADF file from API private
  * space to any known and accessible file path.
  */
 public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialog.CallbackListener {
@@ -61,14 +61,14 @@ public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialo
         mAppSpaceMenuStrings = getResources().getStringArray(
                 R.array.set_dialog_menu_items_app_space);
 
-        // Get API ADF ListView Ready
+        // Get API ADF ListView ready.
         mTangoSpaceAdfListView = (ListView) findViewById(R.id.uuid_list_view_tango_space);
         mTangoSpaceAdfDataList = new ArrayList<AdfData>();
         mTangoSpaceAdfListAdapter = new AdfUuidArrayAdapter(this, mTangoSpaceAdfDataList);
         mTangoSpaceAdfListView.setAdapter(mTangoSpaceAdfListAdapter);
         registerForContextMenu(mTangoSpaceAdfListView);
 
-        // Get App Space ADF List View Ready
+        // Get App Space ADF ListView ready.
         mAppSpaceAdfListView = (ListView) findViewById(R.id.uuid_list_view_application_space);
         mAppSpaceAdfFolder = getAppSpaceAdfFolder();
         mAppSpaceAdfDataList = new ArrayList<AdfData>();
@@ -81,14 +81,14 @@ public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialo
     public void onResume() {
         super.onResume();
 
-        // Initialize Tango Service as a normal Android Service, since we call
+        // Initialize Tango Service as a normal Android Service. Since we call
         // mTango.disconnect() in onPause, this will unbind Tango Service, so
-        // everytime when onResume gets called, we should create a new Tango object.
+        // every time onResume gets called we should create a new Tango object.
         mTango = new Tango(AdfUuidListViewActivity.this, new Runnable() {
-            // Pass in a Runnable to be called from UI thread when Tango is ready,
+            // Pass in a Runnable to be called from UI thread when Tango is ready;
             // this Runnable will be running on a new thread.
             // When Tango is ready, we can call Tango functions safely here only
-            // when there is no UI thread changes involved.
+            // when there are no UI thread changes involved.
             @Override
             public void run() {
                 mIsTangoReady = true;
@@ -108,7 +108,7 @@ public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialo
     public void onPause() {
         super.onPause();
         synchronized (this) {
-            // Unbinds Tango Service
+            // Unbinds Tango Service.
             mTango.disconnect();
         }
         mIsTangoReady = false;
@@ -142,7 +142,7 @@ public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialo
         String itemName = (String) item.getTitle();
         int index = info.position;
 
-        // Rename the ADF from API storage
+        // Rename the ADF from API storage.
         if (itemName.equals(mTangoSpaceMenuStrings[0])) {
             // Delete the ADF from Tango space and update the Tango ADF Listview.
             showSetNameDialog(mTangoSpaceAdfDataList.get(index).uuid);
@@ -166,9 +166,9 @@ public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialo
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        // Check which request we're responding to
+        // Check which request we're responding to.
         if (requestCode == Tango.TANGO_INTENT_ACTIVITYCODE) {
-            // Make sure the request was successful
+            // Make sure the request was successful.
             if (resultCode == RESULT_CANCELED) {
                 Toast.makeText(this, R.string.no_permissions, Toast.LENGTH_LONG).show();
             }
@@ -293,7 +293,7 @@ public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialo
     }
 
     /**
-     * Updates the list of AdfData from Tango and App space, and sets it to the adapters.
+     * Updates the list of AdfData from Tango and App space and sets it to the adapters.
      */
     private void updateList() {
         // Update App space ADF Listview.

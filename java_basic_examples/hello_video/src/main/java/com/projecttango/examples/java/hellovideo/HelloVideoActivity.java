@@ -44,10 +44,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.projecttango.tangosupport.TangoSupport;
 
 /**
- * This is a stripped down simple example that shows how to use the Tango APIs to render the Tango
+ * This is a stripped-down simple example that shows how to use the Tango APIs to render the Tango
  * RGB camera into an OpenGL texture.
  * It creates a standard Android {@code GLSurfaceView} with a simple renderer and connects to
- * the Tango service with the appropriate configuration for Video rendering.
+ * the Tango service with the appropriate configuration for video rendering.
  * Each time a new RGB video frame is available through the Tango APIs, it is updated to the
  * OpenGL texture and the corresponding timestamp is printed on the logcat and on screen.
  * <p/>
@@ -70,7 +70,7 @@ public class HelloVideoActivity extends Activity {
     private TangoConfig mConfig;
     private boolean mIsConnected = false;
 
-    // NOTE: Naming indicates which thread is in charge of updating this variable
+    // NOTE: Naming indicates which thread is in charge of updating this variable.
     private int mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
     private AtomicBoolean mIsFrameAvailableTangoThread = new AtomicBoolean(false);
 
@@ -102,7 +102,7 @@ public class HelloVideoActivity extends Activity {
                 }
             }, null);
         }
-        // Set-up a dummy OpenGL renderer associated with this surface view
+        // Set up a dummy OpenGL renderer associated with this surface view.
         setupRenderer();
     }
 
@@ -112,14 +112,14 @@ public class HelloVideoActivity extends Activity {
         mSurfaceView.onResume();
 
         // Set render mode to RENDERMODE_CONTINUOUSLY to force getting onDraw callbacks until the
-        // Tango service is properly set-up and we start getting onFrameAvailable callbacks.
+        // Tango Service is properly set up and we start getting onFrameAvailable callbacks.
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
 
-        // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
-        // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
+        // Initialize Tango Service as a normal Android Service. Since we call mTango.disconnect()
+        // in onPause, this will unbind Tango Service, so every time onResume gets called we
         // should create a new Tango object.
         mTango = new Tango(HelloVideoActivity.this, new Runnable() {
-            // Pass in a Runnable to be called from UI thread when Tango is ready, this Runnable
+            // Pass in a Runnable to be called from UI thread when Tango is ready; this Runnable
             // will be running on a new thread.
             // When Tango is ready, we can call Tango functions safely here only when there is no UI
             // thread changes involved.
@@ -163,7 +163,7 @@ public class HelloVideoActivity extends Activity {
             try {
                 mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
                 // We need to invalidate the connected texture ID so that we cause a
-                // re-connection in the OpenGL thread after resume
+                // re-connection in the OpenGL thread after resume.
                 mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
                 mTango.disconnect();
                 mIsConnected = false;
@@ -174,27 +174,27 @@ public class HelloVideoActivity extends Activity {
     }
 
     /**
-     * Sets up the tango configuration object. Make sure mTango object is initialized before
+     * Sets up the Tango configuration object. Make sure mTango object is initialized before
      * making this call.
      */
     private TangoConfig setupTangoConfig(Tango tango) {
-        // Create a new Tango Configuration and enable the Camera API
+        // Create a new Tango configuration and enable the Camera API.
         TangoConfig config = tango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_COLORCAMERA, true);
         return config;
     }
 
     /**
-     * Set up the callback listeners for the Tango service and obtain other parameters required
+     * Set up the callback listeners for the Tango Service and obtain other parameters required
      * after Tango connection.
      * Listen to updates from the RGB camera.
      */
     private void startupTango() {
-        // Lock configuration and connect to Tango
-        // Select coordinate frame pair
+        // Lock configuration and connect to Tango.
+        // Select coordinate frame pair.
         ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
 
-        // Listen for new Tango data
+        // Listen for new Tango data.
         mTango.connectListener(framePairs, new OnTangoUpdateListener() {
             @Override
             public void onPoseAvailable(final TangoPoseData pose) {
@@ -225,9 +225,9 @@ public class HelloVideoActivity extends Activity {
                 if (cameraId == TangoCameraIntrinsics.TANGO_CAMERA_COLOR) {
                     // Now that we are receiving onFrameAvailable callbacks, we can switch
                     // to RENDERMODE_WHEN_DIRTY to drive the render loop from this callback.
-                    // This will result on a frame rate of  approximately 30FPS, in synchrony with
+                    // This will result in a frame rate of approximately 30FPS, in synchrony with
                     // the RGB camera driver.
-                    // If you need to render at a higher rate (i.e.: if you want to render complex
+                    // If you need to render at a higher rate (i.e., if you want to render complex
                     // animations smoothly) you  can use RENDERMODE_CONTINUOUSLY throughout the
                     // application lifecycle.
                     if (mSurfaceView.getRenderMode() != GLSurfaceView.RENDERMODE_WHEN_DIRTY) {
@@ -239,8 +239,8 @@ public class HelloVideoActivity extends Activity {
                     // the {@code updateTexture()} method to have the
                     // RGB data copied directly to the OpenGL texture at the native layer.
                     // Since that call needs to be done from the OpenGL thread, what we do here is
-                    // set-up a flag to tell the OpenGL thread to do that in the next run.
-                    // NOTE: Even if we are using a render by request method, this flag is still
+                    // set up a flag to tell the OpenGL thread to do that in the next run.
+                    // NOTE: Even if we are using a render-by-request method, this flag is still
                     // necessary since the OpenGL thread run requested below is not guaranteed
                     // to run in synchrony with this requesting call.
                     mIsFrameAvailableTangoThread.set(true);
@@ -252,8 +252,8 @@ public class HelloVideoActivity extends Activity {
     }
 
     /**
-     * Here is where you would set-up your rendering logic. We're replacing it with a minimalistic,
-     * dummy example using a standard GLSurfaceView and a basic renderer, for illustration purposes
+     * Here is where you would set up your rendering logic. We're replacing it with a minimalistic,
+     * dummy example, using a standard GLSurfaceView and a basic renderer, for illustration purposes
      * only.
      */
     private void setupRenderer() {
@@ -265,7 +265,7 @@ public class HelloVideoActivity extends Activity {
                 // This is the work that you would do on your main OpenGL render thread.
 
                 // We need to be careful to not run any Tango-dependent code in the OpenGL
-                // thread unless we know the Tango service to be properly set-up and connected.
+                // thread unless we know the Tango Service to be properly set up and connected.
                 if (!mIsConnected) {
                     return;
                 }
@@ -276,7 +276,7 @@ public class HelloVideoActivity extends Activity {
                     synchronized (HelloVideoActivity.this) {
                         // Connect the Tango SDK to the OpenGL texture ID where we are going to
                         // render the camera.
-                        // NOTE: This must be done after both the texture is generated and the Tango
+                        // NOTE: This must be done after the texture is generated and the Tango
                         // service is connected.
                         if (mConnectedTextureIdGlThread == INVALID_TEXTURE_ID) {
                             mConnectedTextureIdGlThread = mRenderer.getTextureId();
@@ -294,11 +294,11 @@ public class HelloVideoActivity extends Activity {
                             // rendered RGB frame was acquired.
 
                             // In order to see more details on how to use this timestamp to modify
-                            // the scene camera and achieve an augmented reality effect, please
+                            // the scene camera and achieve an augmented reality effect, 
                             // refer to java_augmented_reality_example and/or
                             // java_augmented_reality_opengl_example projects.
 
-                            // Log and display timestamp for informational purposes
+                            // Log and display timestamp for informational purposes.
                             Log.d(TAG, "Frame updated. Timestamp: " + rgbTimestamp);
 
                             // Updating the UI needs to be in a separate thread. Do it through a

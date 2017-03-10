@@ -61,7 +61,7 @@ public class PointCloudRajawaliRenderer extends RajawaliRenderer {
         mFrustumAxes = new FrustumAxes(3);
         getCurrentScene().addChild(mFrustumAxes);
 
-        // Indicate 4 floats per point since the point cloud data comes
+        // Indicate four floats per point since the point cloud data comes
         // in XYZC format.
         mPointCloud = new PointCloud(MAX_NUMBER_OF_POINTS, 4);
         getCurrentScene().addChild(mPointCloud);
@@ -81,7 +81,7 @@ public class PointCloudRajawaliRenderer extends RajawaliRenderer {
         mPointCloud.updateCloud(pointCloudData.numPoints, pointCloudData.points);
         Matrix4 openGlTdepthMatrix = new Matrix4(openGlTdepth);
         mPointCloud.setPosition(openGlTdepthMatrix.getTranslation());
-        // Conjugating the Quaternion is need because Rajawali uses left handed convention.
+        // Conjugating the Quaternion is needed because Rajawali uses left-handed convention.
         mPointCloud.setOrientation(new Quaternion().fromMatrix(openGlTdepthMatrix).conjugate());
     }
 
@@ -94,7 +94,7 @@ public class PointCloudRajawaliRenderer extends RajawaliRenderer {
         float[] translation = cameraPose.getTranslationAsFloats();
         Quaternion quaternion = new Quaternion(rotation[3], rotation[0], rotation[1], rotation[2]);
         mFrustumAxes.setPosition(translation[0], translation[1], translation[2]);
-        // Conjugating the Quaternion is need because Rajawali uses left handed convention for
+        // Conjugating the Quaternion is needed because Rajawali uses left-handed convention for
         // quaternions.
         mFrustumAxes.setOrientation(quaternion.conjugate());
         mTouchViewHandler.updateCamera(new Vector3(translation[0], translation[1], translation[2]),

@@ -63,14 +63,14 @@ import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * An example showing how to build a very simple application that allows the user to make a
- * correspondence between a model and world coordinates. It will allow to place a given model in
- * world coordinates and render it in augmented reality.
+ * correspondence between a model and world coordinates. It will allow you to place a given model
+ * in world coordinates and render it in augmented reality.
  * It uses the TangoSupportLibrary to find the correspondence similarity transform and to
  * measure depth points.
  * The model will be fixed at the upper left corner of the screen and will show which point must be
  * added next to make the correspondence. The correspondence points can be added with the '+'
- * button. Once all the correspondence points were added, the similiraty transform will be
- * calculated, and the model object will be placed in the desired location.
+ * button. Once all the correspondence points are added, the similarity transform is
+ * calculated and the model object is placed in the desired location.
  * Note that it is important to include the KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION
  * configuration parameter in order to achieve best results synchronizing the
  * Rajawali virtual world with the RGB camera.
@@ -102,9 +102,9 @@ public class ModelCorrespondenceActivity extends Activity {
     private HouseModel mHouseModel;
     // Transform of the house in OpenGl frame.
     private float[] mOpenGlTHouse;
-    // A flag indicating whether the model was updated and must be re rendered in the next loop.
+    // A flag indicating whether the model was updated and must be re-rendered in the next loop.
     private boolean mModelUpdated;
-    // If the correspondence was not done yet, the model object is fixed to the camera in the top
+    // If the correspondence is not done yet, the model object is fixed to the camera in the top
     // left corner.
     private boolean mCorrespondenceDone;
     // Rotation of the model around the Z axis when it is fixed to the camera. Used to show the next
@@ -112,8 +112,8 @@ public class ModelCorrespondenceActivity extends Activity {
     private float mModelZRotation;
     private ValueAnimator mZRotationAnimator;
 
-    // Texture rendering related fields
-    // NOTE: Naming indicates which thread is in charge of updating this variable
+    // Texture rendering related fields.
+    // NOTE: Naming indicates which thread is in charge of updating this variable.
     private int mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
     private AtomicBoolean mIsFrameAvailableTangoThread = new AtomicBoolean(false);
     private double mRgbTimestampGlThread;
@@ -175,31 +175,29 @@ public class ModelCorrespondenceActivity extends Activity {
         // Synchronize against disconnecting while the service is being used in the OpenGL thread or
         // in the UI thread.
         synchronized (this) {
-            if (mIsConnected) {
-                try {
-                    mRenderer.getCurrentScene().clearFrameCallbacks();
-                    mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
-                    // We need to invalidate the connected texture ID so that we cause a
-                    // re-connection in the OpenGL thread after resume
-                    mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
-                    mTango.disconnect();
-                    mIsConnected = false;
-                } catch (TangoErrorException e) {
-                    Log.e(TAG, getString(R.string.exception_tango_error), e);
-                }
+            try {
+                mRenderer.getCurrentScene().clearFrameCallbacks();
+                mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
+                // We need to invalidate the connected texture ID so that we cause a
+                // re-connection in the OpenGL thread after resume.
+                mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
+                mTango.disconnect();
+                mIsConnected = false;
+            } catch (TangoErrorException e) {
+                Log.e(TAG, getString(R.string.exception_tango_error), e);
             }
         }
     }
 
     private void bindTangoService() {
-        // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
-        // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
+        // Initialize Tango Service as a normal Android Service. Since we call mTango.disconnect()
+        // in onPause, this will unbind Tango Service, so every time onResume gets called we
         // should create a new Tango object.
         mTango = new Tango(ModelCorrespondenceActivity.this, new Runnable() {
-            // Pass in a Runnable to be called from UI thread when Tango is ready, this Runnable
+            // Pass in a Runnable to be called from UI thread when Tango is ready; this Runnable
             // will be running on a new thread.
-            // When Tango is ready, we can call Tango functions safely here only when there is no UI
-            // thread changes involved.
+            // When Tango is ready, we can call Tango functions safely here only when there are no
+            // UI thread changes involved.
             @Override
             public void run() {
                 // Synchronize against disconnecting while the service is being used in the OpenGL
@@ -228,7 +226,7 @@ public class ModelCorrespondenceActivity extends Activity {
         });
 
         // Reset status and correspondence every time we connect again to the service.
-        // If we didn't do it, then the old points wouldn't make sense.
+        // If we didn't do it, the old points wouldn't make sense.
         reset(null);
     }
 
@@ -241,7 +239,7 @@ public class ModelCorrespondenceActivity extends Activity {
         // IMU integration, color camera, and depth.
         TangoConfig config = tango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
         // NOTE: Low latency integration is necessary to achieve a
-        // precise alignment of virtual objects with the RBG image and
+        // precise alignment of virtual objects with the RGB image and
         // produce a good AR effect.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION, true);
         config.putBoolean(TangoConfig.KEY_BOOLEAN_COLORCAMERA, true);
@@ -252,7 +250,7 @@ public class ModelCorrespondenceActivity extends Activity {
     }
 
     /**
-     * Set up the callback listeners for the Tango service and obtain other parameters required
+     * Set up the callback listeners for the Tango Service and obtain other parameters required
      * after Tango connection.
      * Listen to updates from the RGB camera and Point Cloud.
      */
@@ -272,7 +270,7 @@ public class ModelCorrespondenceActivity extends Activity {
                 // Check if the frame available is for the camera we want and update its frame
                 // on the view.
                 if (cameraId == TangoCameraIntrinsics.TANGO_CAMERA_COLOR) {
-                    // Mark a camera frame is available for rendering in the OpenGL thread
+                    // Mark a camera frame as available for rendering in the OpenGL thread
                     mIsFrameAvailableTangoThread.set(true);
                     mSurfaceView.requestRender();
                 }
@@ -310,12 +308,13 @@ public class ModelCorrespondenceActivity extends Activity {
                 // callback thread and service disconnection from an onPause event.
                 try {
                     synchronized (ModelCorrespondenceActivity.this) {
-                        // Don't execute any tango API actions if we're not connected to the service
+                        // Don't execute any Tango API actions if we're not connected to the
+                        // service.
                         if (!mIsConnected) {
                             return;
                         }
 
-                        // Set-up scene camera projection to match RGB camera intrinsics
+                        // Set up scene camera projection to match RGB camera intrinsics.
                         if (!mRenderer.isSceneCameraConfigured()) {
                             TangoCameraIntrinsics intrinsics =
                                     TangoSupport.getCameraIntrinsicsBasedOnDisplayRotation(
@@ -325,7 +324,7 @@ public class ModelCorrespondenceActivity extends Activity {
                                     projectionMatrixFromCameraIntrinsics(intrinsics));
                         }
 
-                        // Connect the camera texture to the OpenGL Texture if necessary
+                        // Connect the camera texture to the OpenGL Texture if necessary.
                         // NOTE: When the OpenGL context is recycled, Rajawali may re-generate the
                         // texture with a different ID.
                         if (mConnectedTextureIdGlThread != mRenderer.getTextureId()) {
@@ -335,7 +334,8 @@ public class ModelCorrespondenceActivity extends Activity {
                             Log.d(TAG, "connected to texture id: " + mRenderer.getTextureId());
                         }
 
-                        // If there is a new RGB camera frame available, update the texture with it
+                        // If there is a new RGB camera frame available, update the texture with
+                        // it.
                         if (mIsFrameAvailableTangoThread.compareAndSet(true, false)) {
                             mRgbTimestampGlThread =
                                     mTango.updateTexture(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
@@ -353,7 +353,7 @@ public class ModelCorrespondenceActivity extends Activity {
                                     mDisplayRotation);
 
                             if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
-                                // Update the camera pose from the renderer
+                                // Update the camera pose from the renderer.
                                 mRenderer.updateRenderCameraPose(lastFramePose);
                                 mCameraPoseTimestamp = lastFramePose.timestamp;
                                 // While the correspondence is not done, fix the model to the upper
@@ -389,14 +389,14 @@ public class ModelCorrespondenceActivity extends Activity {
                             }
                         }
 
-                        // If the model was updated then it must be re rendered.
+                        // If the model was updated then it must be re-rendered.
                         if (mModelUpdated) {
                             mRenderer.updateModelRendering(mHouseModel, mOpenGlTHouse,
                                     mDestPointList);
                             mModelUpdated = false;
                         }
                     }
-                    // Avoid crashing the application due to unhandled exceptions
+                    // Avoid crashing the application due to unhandled exceptions.
                 } catch (TangoErrorException e) {
                     Log.e(TAG, "Tango API call error within the OpenGL render thread", e);
                 } catch (Throwable t) {
@@ -479,7 +479,7 @@ public class ModelCorrespondenceActivity extends Activity {
                     Toast.makeText(this, "Could not measure depth point", Toast.LENGTH_LONG).show();
                     Log.w(TAG, "Could not measure point");
                 }
-                // If it's the last point, then find the correspondence.
+                // If it's the last point, find the correspondence.
                 if (mDestPointList.size() == mHouseModel.getNumberOfPoints()) {
                     findCorrespondence();
                     mAddButton.setVisibility(View.GONE);
@@ -694,9 +694,9 @@ public class ModelCorrespondenceActivity extends Activity {
     }
 
     /**
-     * Check we have the necessary permissions for this app, and ask for them if we haven't.
+     * Check to see if we have the necessary permissions for this app; ask for them if we don't.
      *
-     * @return True if we have the necessary permissions, false if we haven't.
+     * @return True if we have the necessary permissions, false if we don't.
      */
     private boolean checkAndRequestPermissions() {
         if (!hasCameraPermission()) {
@@ -707,7 +707,7 @@ public class ModelCorrespondenceActivity extends Activity {
     }
 
     /**
-     * Check we have the necessary permissions for this app.
+     * Check to see if we have the necessary permissions for this app.
      */
     private boolean hasCameraPermission() {
         return ContextCompat.checkSelfPermission(this, CAMERA_PERMISSION) ==
@@ -727,7 +727,7 @@ public class ModelCorrespondenceActivity extends Activity {
     }
 
     /**
-     * If the user has declined the permission before, we have to explain him the app needs this
+     * If the user has declined the permission before, we have to explain that the app needs this
      * permission.
      */
     private void showRequestPermissionRationale() {

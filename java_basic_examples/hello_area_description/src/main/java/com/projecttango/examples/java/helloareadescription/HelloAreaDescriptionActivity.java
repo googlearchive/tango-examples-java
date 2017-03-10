@@ -42,7 +42,7 @@ import android.widget.Toast;
 import java.util.ArrayList;
 
 /**
- * Main Activity class for the Area Description example. Handles the connection to the Tango service
+ * Main Activity class for the Area Description example. Handles the connection to the Tango Service
  * and propagation of Tango pose data to Layout view.
  */
 public class HelloAreaDescriptionActivity extends Activity implements
@@ -85,14 +85,14 @@ public class HelloAreaDescriptionActivity extends Activity implements
     protected void onResume() {
         super.onResume();
 
-        // Initialize Tango Service as a normal Android Service, since we call mTango.disconnect()
-        // in onPause, this will unbind Tango Service, so every time when onResume gets called, we
+        // Initialize Tango Service as a normal Android Service. Since we call mTango.disconnect()
+        // in onPause, this will unbind Tango Service, so every time onResume gets called we
         // should create a new Tango object.
         mTango = new Tango(HelloAreaDescriptionActivity.this, new Runnable() {
-            // Pass in a Runnable to be called from UI thread when Tango is ready, this Runnable
+            // Pass in a Runnable to be called from UI thread when Tango is ready; this Runnable
             // will be running on a new thread.
-            // When Tango is ready, we can call Tango functions safely here only when there is no UI
-            // thread changes involved.
+            // When Tango is ready, we can call Tango functions safely here only when there are no
+            // UI thread changes involved.
             @Override
             public void run() {
                 synchronized (HelloAreaDescriptionActivity.this) {
@@ -135,7 +135,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
     protected void onPause() {
         super.onPause();
 
-        // Clear the relocalization state: we don't know where the device will be since our app
+        // Clear the relocalization state; we don't know where the device will be since our app
         // will be paused.
         mIsRelocalized = false;
         synchronized (this) {
@@ -149,8 +149,8 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
     /**
      * Sets Texts views to display statistics of Poses being received. This also sets the buttons
-     * used in the UI. Please note that this needs to be called after TangoService and Config
-     * objects are initialized since we use them for the SDK related stuff like version number
+     * used in the UI. Note that this needs to be called after TangoService and Config
+     * objects are initialized since we use them for the SDK-related stuff like version number,
      * etc.
      */
     private void setupTextViewsAndButtons(Tango tango, boolean isLearningMode, boolean isLoadAdf) {
@@ -168,7 +168,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
         if (isLoadAdf) {
             ArrayList<String> fullUuidList;
-            // Returns a list of ADFs with their UUIDs
+            // Returns a list of ADFs with their UUIDs.
             fullUuidList = tango.listAreaDescriptions();
             if (fullUuidList.size() == 0) {
                 mUuidTextView.setText(R.string.no_uuid);
@@ -181,13 +181,13 @@ public class HelloAreaDescriptionActivity extends Activity implements
     }
 
     /**
-     * Sets up the tango configuration object. Make sure mTango object is initialized before
+     * Sets up the Tango configuration object. Make sure mTango object is initialized before
      * making this call.
      */
     private TangoConfig setTangoConfig(Tango tango, boolean isLearningMode, boolean isLoadAdf) {
         // Use default configuration for Tango Service.
         TangoConfig config = tango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
-        // Check if learning mode
+        // Check if learning mode.
         if (isLearningMode) {
             // Set learning mode to config.
             config.putBoolean(TangoConfig.KEY_BOOLEAN_LEARNINGMODE, true);
@@ -208,11 +208,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
     }
 
     /**
-     * Set up the callback listeners for the Tango service and obtain other parameters required
+     * Set up the callback listeners for the Tango Service and obtain other parameters required
      * after Tango connection.
      */
     private void startupTango() {
-        // Set Tango Listeners for Poses Device wrt Start of Service, Device wrt
+        // Set Tango listeners for Poses Device wrt Start of Service, Device wrt
         // ADF and Start of Service wrt ADF.
         ArrayList<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
         framePairs.add(new TangoCoordinateFramePair(
@@ -229,11 +229,11 @@ public class HelloAreaDescriptionActivity extends Activity implements
 
             @Override
             public void onPoseAvailable(TangoPoseData pose) {
-                // Make sure to have atomic access to Tango Data so that UI loop doesn't interfere
+                // Make sure to have atomic access to Tango data so that UI loop doesn't interfere
                 // while Pose call back is updating the data.
                 synchronized (mSharedLock) {
                     // Check for Device wrt ADF pose, Device wrt Start of Service pose, Start of
-                    // Service wrt ADF pose (This pose determines if the device is relocalized or
+                    // Service wrt ADF pose (this pose determines if the device is relocalized or
                     // not).
                     if (pose.baseFrame == TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION
                             && pose.targetFrame == TangoPoseData

@@ -52,7 +52,7 @@ public class PlaneFittingRenderer extends Renderer {
 
     private float[] textureCoords0 = new float[]{0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 0.0F};
 
-    // Augmented Reality related fields
+    // Augmented Reality related fields.
     private ATexture mTangoCameraTexture;
     private boolean mSceneCameraConfigured;
 
@@ -77,7 +77,7 @@ public class PlaneFittingRenderer extends Renderer {
         Material tangoCameraMaterial = new Material();
         tangoCameraMaterial.setColorInfluence(0);
         // We need to use Rajawali's {@code StreamingTexture} since it sets up the texture
-        // for GL_TEXTURE_EXTERNAL_OES rendering
+        // for GL_TEXTURE_EXTERNAL_OES rendering.
         mTangoCameraTexture =
                 new StreamingTexture("camera", (StreamingTexture.ISurfaceListener) null);
         try {
@@ -95,7 +95,7 @@ public class PlaneFittingRenderer extends Renderer {
         light.setPosition(3, 2, 4);
         getCurrentScene().addLight(light);
 
-        // Set-up a material: green with application of the light and
+        // Set up a material: green with application of the light and
         // instructions.
         Material material = new Material();
         material.setColor(0xff009900);
@@ -117,7 +117,7 @@ public class PlaneFittingRenderer extends Renderer {
     }
 
     /**
-     * Update background texture's UV coordinates when device orientation is changed. i.e change
+     * Update background texture's UV coordinates when device orientation is changed (i.e., change
      * between landscape and portrait mode.
      * This must be run in the OpenGL thread.
      */
@@ -134,13 +134,13 @@ public class PlaneFittingRenderer extends Renderer {
 
     @Override
     protected void onRender(long elapsedRealTime, double deltaTime) {
-        // Update the AR object if necessary
+        // Update the AR object if necessary.
         // Synchronize against concurrent access with the setter below.
         synchronized (this) {
             if (mObjectPoseUpdated) {
                 // Place the 3D object in the location of the detected plane.
                 mObject.setPosition(mObjectTransform.getTranslation());
-                // Note that Rajawali uses left-hand convetion for Quaternions so we need to
+                // Note that Rajawali uses left-hand convention for Quaternions so we need to
                 // specify a quaternion with rotation in the opposite direction.
                 mObject.setOrientation(new Quaternion().fromMatrix(mObjectTransform));
                 // Move it forward by half of the size of the cube to make it
@@ -164,16 +164,16 @@ public class PlaneFittingRenderer extends Renderer {
 
     /**
      * Update the scene camera based on the provided pose in Tango start of service frame.
-     * The camera pose should match the pose of the camera color at the time the last rendered RGB
-     * frame, which can be retrieved with this.getTimestamp();
+     * The camera pose should match the pose of the camera color at the time of the last rendered
+     * RGB frame, which can be retrieved with this.getTimestamp();
      * <p/>
-     * NOTE: This must be called from the OpenGL render thread - it is not thread safe.
+     * NOTE: This must be called from the OpenGL render thread; it is not thread safe.
      */
     public void updateRenderCameraPose(TangoPoseData cameraPose) {
         float[] rotation = cameraPose.getRotationAsFloats();
         float[] translation = cameraPose.getTranslationAsFloats();
         Quaternion quaternion = new Quaternion(rotation[3], rotation[0], rotation[1], rotation[2]);
-        // Conjugating the Quaternion is need because Rajawali uses left handed convention for
+        // Conjugating the Quaternion is needed because Rajawali uses left-handed convention for
         // quaternions.
         getCurrentCamera().setRotation(quaternion.conjugate());
         getCurrentCamera().setPosition(translation[0], translation[1], translation[2]);
@@ -182,7 +182,7 @@ public class PlaneFittingRenderer extends Renderer {
     /**
      * It returns the ID currently assigned to the texture where the Tango color camera contents
      * should be rendered.
-     * NOTE: This must be called from the OpenGL render thread - it is not thread safe.
+     * NOTE: This must be called from the OpenGL render thread; it is not thread safe.
      */
     public int getTextureId() {
         return mTangoCameraTexture == null ? -1 : mTangoCameraTexture.getTextureId();

@@ -35,7 +35,7 @@ import javax.microedition.khronos.opengles.GL10;
 /**
  * An OpenGL renderer that renders the Tango RGB camera texture and a depth texture to filter it.
  * The objects that are nearer than a threshold are rendered as the Tango RGB camera texture, and
- * those who are further away are renderer as a background image.
+ * those further away are rendered as a background image.
  */
 public class GreenScreenRenderer implements GLSurfaceView.Renderer {
     private static final String TAG = GreenScreenRenderer.class.getSimpleName();
@@ -72,9 +72,9 @@ public class GreenScreenRenderer implements GLSurfaceView.Renderer {
 
     @Override
     public void onSurfaceCreated(GL10 gl10, EGLConfig eglConfig) {
-        // Enable depth test to discard fragments that are behind of another fragment.
+        // Enable depth test to discard fragments that are behind another fragment.
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
-        // Enable face culling to discard back facing triangles.
+        // Enable face culling to discard back-facing triangles.
         GLES20.glEnable(GLES20.GL_CULL_FACE);
         GLES20.glCullFace(GLES20.GL_BACK);
         GLES20.glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
@@ -87,8 +87,8 @@ public class GreenScreenRenderer implements GLSurfaceView.Renderer {
     }
 
     /**
-     * Update background texture's UV coordinates when device orientation is changed. i.e change
-     * between landscape and portrait mode.
+     * Update background texture's UV coordinates when device orientation is changed (i.e., change
+     * between landscape and portrait mode).
      */
     public void updateColorCameraTextureUv(int rotation) {
         mGreenScreen.updateTextureUv(rotation);
@@ -140,7 +140,7 @@ public class GreenScreenRenderer implements GLSurfaceView.Renderer {
     /**
      * It returns the ID currently assigned to the texture where the Tango color camera contents
      * should be rendered.
-     * NOTE: This must be called from the OpenGL render thread - it is not thread safe.
+     * NOTE: This must be called from the OpenGL render thread; it is not thread safe.
      */
     public int getTextureId() {
         return mGreenScreen == null ? -1 : mGreenScreen.getTextureId();

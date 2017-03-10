@@ -35,9 +35,9 @@ import com.projecttango.tangosupport.TangoPointCloudManager;
 import com.projecttango.tangosupport.TangoSupport;
 
 /**
- * Uses the tango service data to build a floor plan 2D. Provides higher level functionality
+ * Uses the Tango Service data to build a floor plan 2D. Provides higher level functionality
  * built on top of the {@code Tango3dReconstruction}.
- * Given a point cloud it will report a callback with the floorplan polygons.
+ * Given a point cloud, it will report a callback with the floorplan polygons.
  * It abstracts all the needed thread management and pose requesting logic.
  */
 public class TangoFloorplanner extends Tango.OnTangoUpdateListener {
@@ -67,7 +67,7 @@ public class TangoFloorplanner extends Tango.OnTangoUpdateListener {
         // Configure the 3D reconstruction library to work in "floorplan" mode.
         config.putBoolean("use_floorplan", true);
         config.putBoolean("generate_color", false);
-        // Simplify the detected countours by allowing a maximum error of 5cm
+        // Simplify the detected countours by allowing a maximum error of 5cm.
         config.putDouble("floorplan_max_error", 0.05);
         mTango3dReconstruction = new Tango3dReconstruction(config);
         mPointCloudBuffer = new TangoPointCloudManager();
@@ -163,7 +163,7 @@ public class TangoFloorplanner extends Tango.OnTangoUpdateListener {
 
     /**
      * Receives the depth point cloud. This method retrieves and stores the depth camera pose
-     * and point cloud to later use it when updating the {@code Tango3dReconstruction}.
+     * and point cloud to use when updating the {@code Tango3dReconstruction}.
      *
      * @param tangoPointCloudData the depth point cloud.
      */

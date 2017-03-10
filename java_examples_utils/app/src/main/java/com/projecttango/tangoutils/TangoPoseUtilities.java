@@ -20,7 +20,7 @@ import com.google.atap.tangoservice.TangoPoseData;
 import java.text.DecimalFormat;
 
 /**
- * This is a utility class to format the Pose data in a way want to display the statistics in the
+ * This is a utility class to format the Pose data if you want to display the statistics in the
  * sample applications.
  */
 public class TangoPoseUtilities {

@@ -39,6 +39,7 @@ import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.Display;
 import android.view.View;
 import android.widget.Button;
@@ -77,10 +78,16 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
 
     private int mDisplayRotation = 0;
 
+    private float mMinAreaSpace = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        TypedValue typedValue = new TypedValue();
+        getResources().getValue(R.dimen.min_area_space, typedValue, true);
+        mMinAreaSpace = typedValue.getFloat();
 
         mPauseButton = (Button) findViewById(R.id.pause_button);
         mFloorplanView = (FloorplanView) findViewById(R.id.floorplan);
@@ -125,14 +132,12 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
         // in the UI thread.
         synchronized (this) {
             try {
-                if (mIsConnected) {
-                    mTangoFloorplanner.stopFloorplanning();
-                    mTango.disconnect();
-                    mTangoFloorplanner.resetFloorplan();
-                    mTangoFloorplanner.release();
-                    mIsConnected = false;
-                    mIsPaused = true;
-                }
+                mTangoFloorplanner.stopFloorplanning();
+                mTango.disconnect();
+                mTangoFloorplanner.resetFloorplan();
+                mTangoFloorplanner.release();
+                mIsConnected = false;
+                mIsPaused = true;
             } catch (TangoErrorException e) {
                 Log.e(TAG, getString(R.string.exception_tango_error), e);
             }
@@ -145,12 +150,12 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
     private void bindTangoService() {
         // Initialize Tango Service as a normal Android Service.
         // Since we call mTango.disconnect() in onPause, this will unbind Tango Service,
-        // so every time when onResume gets called, we should create a new Tango object.
+        // so every time onResume gets called we should create a new Tango object.
         mTango = new Tango(FloorPlanReconstructionActivity.this, new Runnable() {
             // Pass in a Runnable to be called from UI thread when Tango is ready,
             // this Runnable will be running on a new thread.
             // When Tango is ready, we can call Tango functions safely here only
-            // when there is no UI thread changes involved.
+            // when there are no UI thread changes involved.
             @Override
             public void run() {
                 synchronized (FloorPlanReconstructionActivity.this) {
@@ -178,7 +183,7 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
     }
 
     /**
-     * Sets up the tango configuration object. Make sure mTango object is initialized before
+     * Sets up the Tango configuration object. Make sure mTango object is initialized before
      * making this call.
      */
     private TangoConfig setupTangoConfig(Tango tango) {
@@ -186,14 +191,14 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
         // IMU integration, depth, smooth pose and dataset recording.
         TangoConfig config = tango.getConfig(TangoConfig.CONFIG_TYPE_DEFAULT);
         // NOTE: Low latency integration is necessary to achieve a precise alignment of virtual
-        // objects with the RBG image and produce a good AR effect.
+        // objects with the RGB image and produce a good AR effect.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
         config.putInt(TangoConfig.KEY_INT_DEPTH_MODE, TangoConfig.TANGO_DEPTH_MODE_POINT_CLOUD);
         return config;
     }
 
     /**
-     * Set up the callback listeners for the Tango service and obtain other parameters required
+     * Set up the callback listeners for the Tango Service and obtain other parameters required
      * after Tango connection.
      * Listen to updates from the point cloud.
      */
@@ -212,7 +217,7 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
 
         mTangoFloorplanner.startFloorplanning();
 
-        // Connect listeners to tango service and forward point cloud and camera information to
+        // Connect listeners to Tango Service and forward point cloud and camera information to
         // TangoFloorplanner.
         List<TangoCoordinateFramePair> framePairs = new ArrayList<TangoCoordinateFramePair>();
         mTango.connectListener(framePairs, new Tango.OnTangoUpdateListener() {
@@ -244,16 +249,16 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
     }
 
     /**
-     * Method called each time right before the floorplan is drawn. It allows using the Tango
-     * service to get the device position and orientation.
+     * Method called each time right before the floorplan is drawn. It allows use of the Tango
+     * Service to get the device position and orientation.
      */
     @Override
     public void onPreDrawing() {
         try {
             // Synchronize against disconnecting while using the service.
             synchronized (FloorPlanReconstructionActivity.this) {
-                // Don't execute any tango API actions if we're not connected to
-                // the service
+                // Don't execute any Tango API actions if we're not connected to
+                // the service.
                 if (!mIsConnected) {
                     return;
                 }
@@ -300,7 +305,12 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
         double area = 0;
         for (TangoPolygon polygon: polygons) {
             if (polygon.layer == TangoPolygon.TANGO_3DR_LAYER_SPACE) {
-                area += polygonArea(polygon);
+                // If there is more than one free space polygon, only count those
+                // that have an area larger than two square meters to suppress unconnected
+                // areas (which might occur in front of windows).
+                if (area == 0 || (polygon.area > mMinAreaSpace || polygon.area < 0)) {
+                    area += polygon.area;
+                }
             }
         }
         final String areaText = String.format("%.2f", area);
@@ -310,22 +320,6 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
                 mAreaText.setText(areaText);
             }
         });
-    }
-
-    /**
-     * Auxiliary function that uses Green's Theorem to calculate the area of a given polygon.
-     *
-     * {@see http://math.blogoverflow.com/2014/06/04/greens-theorem-and-area-of-polygons/}
-     */
-    private double polygonArea(TangoPolygon polygon) {
-        double area = 0;
-        int size = polygon.vertices2d.size();
-        for (int i = 0; i < size;  i++) {
-            float[] v0 = polygon.vertices2d.get(i);
-            float[] v1 = polygon.vertices2d.get((i + 1) % size);
-            area += (v1[0] - v0[0]) * (v0[1] + v1[1]) / 2.0;
-        }
-        return area;
     }
 
     public void onPauseButtonClick(View v) {
@@ -352,9 +346,9 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
     }
 
     /**
-     * Check we have the necessary permissions for this app, and ask for them if we haven't.
+     * Check to see if we have the necessary permissions for this app; ask for them if we don't.
      *
-     * @return True if we have the necessary permissions, false if we haven't.
+     * @return True if we have the necessary permissions, false if we don't.
      */
     private boolean checkAndRequestPermissions() {
         if (!hasCameraPermission()) {
@@ -365,7 +359,7 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
     }
 
     /**
-     * Check we have the necessary permissions for this app.
+     * Check to see if we have the necessary permissions for this app.
      */
     private boolean hasCameraPermission() {
         return ContextCompat.checkSelfPermission(this, CAMERA_PERMISSION) ==
@@ -385,7 +379,7 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
     }
 
     /**
-     * If the user has declined the permission before, we have to explain him the app needs this
+     * If the user has declined the permission before, we have to explain that the app needs this
      * permission.
      */
     private void showRequestPermissionRationale() {

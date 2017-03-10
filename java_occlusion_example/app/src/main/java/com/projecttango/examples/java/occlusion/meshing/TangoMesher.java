@@ -38,7 +38,7 @@ import com.projecttango.tangosupport.TangoPointCloudManager;
 import com.projecttango.tangosupport.TangoSupport;
 
 /**
- * Uses the tango service data to build 3D meshes. Provides higher level functionality built on top
+ * Uses the Tango Service data to build 3D meshes. Provides higher level functionality built on top
  * of the {@code Tango3dReconstruction}. Given a point cloud it will report a callback with the
  * generated meshes. No color is needed in this example.
  * It abstracts all the needed thread management and pose requesting logic.
@@ -176,12 +176,12 @@ public class TangoMesher extends Tango.OnTangoUpdateListener {
 
     @Override
     public void onXyzIjAvailable(final TangoXyzIjData var1) {
-        // do nothing.
+        // Do nothing.
     }
 
     /**
      * Receives the depth point cloud. This method retrieves and stores the depth camera pose
-     * and point cloud to later use it when updating the {@code Tango3dReconstruction}.
+     * and point cloud to later use when updating the {@code Tango3dReconstruction}.
      *
      * @param tangoPointCloudData the depth point cloud.
      */

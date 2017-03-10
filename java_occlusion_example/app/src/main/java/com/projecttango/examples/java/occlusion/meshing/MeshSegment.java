@@ -25,9 +25,9 @@ import android.opengl.GLES20;
  */
 public class MeshSegment {
 
-    // The service will always pass 4 bytes floats.
+    // The service will always pass four-byte floats.
     private static final int SIZE_OF_FLOAT = 4;
-    // The service will always pass 4 bytes integers.
+    // The service will always pass four-byte integers.
     private static final int SIZE_OF_INT = 4;
 
     public int vertexBufferId;
