@@ -350,6 +350,7 @@ public class ModelCorrespondenceActivity extends Activity {
                                     TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                                     TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
                                     mDisplayRotation);
 
                             if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
@@ -541,42 +542,43 @@ public class ModelCorrespondenceActivity extends Activity {
             return null;
         }
 
-        // We need to calculate the transform between the color camera at the
-        // time the user clicked and the depth camera at the time the depth
-        // cloud was acquired.
-        TangoPoseData colorTdepthPose = TangoSupport.calculateRelativePose(
-                rgbTimestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                pointCloud.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH);
-
-        // Get depth point with the latest available point cloud data.
-        double[] identityTranslation = {0.0, 0.0, 0.0};
-        double[] identityRotation = {0.0, 0.0, 0.0, 1.0};
-        float[] point = TangoSupport.getDepthAtPointNearestNeighbor(pointCloud,
-                colorTdepthPose.translation, colorTdepthPose.rotation, u, v, mDisplayRotation,
-                identityTranslation, identityRotation);
-
-        // Get the transform from depth camera to OpenGL world at the timestamp of the cloud.
-        TangoSupport.TangoMatrixTransformData transform =
-                TangoSupport.getMatrixTransformAtTime(pointCloud.timestamp,
-                        TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
-                        TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
-                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                        TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
-                        TangoSupport.ROTATION_IGNORED);
-        if (transform.statusCode == TangoPoseData.POSE_VALID) {
-            if (point == null) {
-                return null;
-            }
-
-            float[] depthPoint = new float[]{point[0], point[1], point[2], 1};
-            float[] openGlPoint = new float[4];
-            Matrix.multiplyMV(openGlPoint, 0, transform.matrix, 0, depthPoint, 0);
-
-            return openGlPoint;
-        } else {
-            Log.w(TAG, "Can't get depth camera transform at time: " + pointCloud.timestamp);
+        TangoPoseData openglTdepthPose = TangoSupport.getPoseAtTime(
+            pointCloud.timestamp,
+            TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+            TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
+            TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+            TangoSupport.ROTATION_IGNORED);
+        if (openglTdepthPose.statusCode != TangoPoseData.POSE_VALID) {
+            Log.w(TAG, "Could not get openglTdepth pose at time "
+                       + pointCloud.timestamp);
             return null;
         }
+
+        TangoPoseData openglTcolorPose = TangoSupport.getPoseAtTime(
+            rgbTimestamp,
+            TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+            TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
+            TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+            TangoSupport.ROTATION_IGNORED);
+        if (openglTcolorPose.statusCode != TangoPoseData.POSE_VALID) {
+            Log.w(TAG, "Could not get openglTcolor pose at time "
+                       + rgbTimestamp);
+            return null;
+        }
+
+        float[] openglPoint = TangoSupport.getDepthAtPointNearestNeighbor(
+            pointCloud,
+            openglTdepthPose.translation, openglTdepthPose.rotation,
+            u, v, mDisplayRotation,
+            openglTcolorPose.translation, openglTcolorPose.rotation);
+        if (openglPoint == null) {
+            // No point close to uv location.
+            return null;
+        }
+
+        return openglPoint;
     }
 
 

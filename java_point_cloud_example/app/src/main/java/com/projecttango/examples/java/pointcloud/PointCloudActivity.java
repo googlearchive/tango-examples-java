@@ -120,7 +120,7 @@ public class PointCloudActivity extends Activity {
     @Override
     protected void onStart() {
         super.onStart();
-        mSurfaceView.onResume();
+
         mTangoUx.start();
         // Check and request camera permission at run time.
         bindTangoService();
@@ -297,6 +297,7 @@ public class PointCloudActivity extends Activity {
                         TangoPoseData lastFramePose = TangoSupport.getPoseAtTime(0,
                                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                 TangoPoseData.COORDINATE_FRAME_DEVICE,
+                                TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
                                 TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
                                 mDisplayRotation);
                         if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {

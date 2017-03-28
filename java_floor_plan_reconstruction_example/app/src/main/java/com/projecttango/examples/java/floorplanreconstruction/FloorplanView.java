@@ -16,6 +16,7 @@
 
 package com.projecttango.examples.java.floorplanreconstruction;
 
+import com.google.atap.tango.reconstruction.TangoFloorplanLevel;
 import com.google.atap.tango.reconstruction.TangoPolygon;
 
 import android.content.Context;
@@ -246,7 +247,7 @@ public class FloorplanView extends SurfaceView implements SurfaceHolder.Callback
     }
 
     /**
-     * Sets the new floorplan polygons model.
+     * Sets the new floorplan polygons model and levels.
      */
     public void setFloorplan(List<TangoPolygon> polygons) {
         mPolygons = polygons;

@@ -135,7 +135,6 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
     @Override
     protected void onStart() {
         super.onStart();
-        mSurfaceView.onResume();
 
         // Check and request camera permission at run time.
         if (checkAndRequestPermissions()) {
@@ -146,7 +145,7 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
     @Override
     protected void onStop() {
         super.onStop();
-        mSurfaceView.onPause();
+
         // Synchronize against disconnecting while the service is being used in the OpenGL thread or
         // in the UI thread.
         synchronized (this) {
@@ -336,6 +335,7 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
                                     TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
                                     TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
                                     mDisplayRotation);
                             if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
                                 // Update the camera pose from the renderer.
@@ -459,39 +459,50 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
             return null;
         }
 
-        // We need to calculate the transform between the color camera at the
-        // time the user clicked and the depth camera at the time the depth
-        // cloud was acquired.
-        TangoPoseData depthTcolorPose = TangoSupport.calculateRelativePose(
-                pointCloud.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
-                rgbTimestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR);
-
-        // Perform plane fitting with the latest available point cloud data.
-        double[] identityTranslation = {0.0, 0.0, 0.0};
-        double[] identityRotation = {0.0, 0.0, 0.0, 1.0};
-        IntersectionPointPlaneModelPair intersectionPointPlaneModelPair =
-                TangoSupport.fitPlaneModelNearPoint(pointCloud,
-                        identityTranslation, identityRotation, u, v, mDisplayRotation,
-                        depthTcolorPose.translation, depthTcolorPose.rotation);
-
-        // Get the transform from depth camera to OpenGL world at the timestamp of the cloud.
-        TangoSupport.TangoMatrixTransformData transform =
-                TangoSupport.getMatrixTransformAtTime(pointCloud.timestamp,
-                        TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
-                        TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
-                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                        TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
-                        TangoSupport.ROTATION_IGNORED);
-        if (transform.statusCode == TangoPoseData.POSE_VALID) {
-            float[] openGlTPlane = calculatePlaneTransform(
-                    intersectionPointPlaneModelPair.intersectionPoint,
-                    intersectionPointPlaneModelPair.planeModel, transform.matrix);
-
-            return openGlTPlane;
-        } else {
-            Log.w(TAG, "Can't get depth camera transform at time " + pointCloud.timestamp);
+        // Get pose transforms for depth/color cameras from world frame in
+        // OpenGL engine space.
+        TangoPoseData openglToDepthPose = TangoSupport.getPoseAtTime(
+            pointCloud.timestamp,
+            TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+            TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
+            TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+            TangoSupport.ROTATION_IGNORED);
+        if (openglToDepthPose.statusCode != TangoPoseData.POSE_VALID) {
+            Log.d(TAG, "Could not get a valid pose from area description "
+                + "to depth camera at time " + pointCloud.timestamp);
             return null;
         }
+
+        TangoPoseData openglToColorPose = TangoSupport.getPoseAtTime(
+            rgbTimestamp,
+            TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+            TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
+            TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+            TangoSupport.ROTATION_IGNORED);
+        if (openglToDepthPose.statusCode != TangoPoseData.POSE_VALID) {
+            Log.d(TAG, "Could not get a valid pose from area description "
+                + "to color camera at time " + rgbTimestamp);
+            return null;
+        }
+
+        // Plane model is in OpenGL space due to input poses.
+        IntersectionPointPlaneModelPair intersectionPointPlaneModelPair =
+            TangoSupport.fitPlaneModelNearPoint(pointCloud,
+                openglToDepthPose.translation,
+                openglToDepthPose.rotation, u, v,
+                mDisplayRotation,
+                openglToColorPose.translation,
+                openglToColorPose.rotation);
+        // Convert plane model into 4x4 matrix. The first 3 elements of
+        // the plane model make up the normal vector.
+        float[] openglUp = new float[]{0, 1, 0, 0};
+        float[] openglToPlaneMatrix = matrixFromPointNormalUp(
+            intersectionPointPlaneModelPair.intersectionPoint,
+            intersectionPointPlaneModelPair.planeModel,
+            openglUp);
+        return openglToPlaneMatrix;
     }
 
     /**
@@ -511,26 +522,6 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
                 }
             }
         });
-    }
-
-    /**
-     * Calculate the pose of the plane based on the position and normal orientation of the plane
-     * and align it with gravity.
-     */
-    private float[] calculatePlaneTransform(double[] point, double normal[],
-                                            float[] openGlTdepth) {
-        // Vector aligned to gravity.
-        float[] openGlUp = new float[]{0, 1, 0, 0};
-        float[] depthTOpenGl = new float[16];
-        Matrix.invertM(depthTOpenGl, 0, openGlTdepth, 0);
-        float[] depthUp = new float[4];
-        Matrix.multiplyMV(depthUp, 0, depthTOpenGl, 0, openGlUp, 0);
-        // Create the plane matrix transform in depth frame from a point, the plane normal and the
-        // up vector.
-        float[] depthTplane = matrixFromPointNormalUp(point, normal, depthUp);
-        float[] openGlTplane = new float[16];
-        Matrix.multiplyMM(openGlTplane, 0, openGlTdepth, 0, depthTplane, 0);
-        return openGlTplane;
     }
 
     /**

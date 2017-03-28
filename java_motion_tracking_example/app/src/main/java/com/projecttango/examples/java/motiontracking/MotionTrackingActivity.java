@@ -82,7 +82,6 @@ public class MotionTrackingActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        mSurfaceView.onResume();
 
         // Initialize Tango Service as a normal Android Service. Since we call mTango.disconnect()
         // in onPause, this will unbind Tango Service, so every time onResume gets called we
@@ -120,7 +119,7 @@ public class MotionTrackingActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
-        mSurfaceView.onPause();
+
         mIsTangoPoseReady.compareAndSet(true, false);
         // Synchronize against disconnecting while the service is being used in the OpenGL thread or
         // in the UI thread.
@@ -218,6 +217,7 @@ public class MotionTrackingActivity extends Activity {
                                 TangoSupport.getPoseAtTime(0.0,
                                         TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                         TangoPoseData.COORDINATE_FRAME_DEVICE,
+                                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
                                         TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
                                         mDisplayRotation);
 
