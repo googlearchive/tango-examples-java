@@ -474,59 +474,42 @@ public class OcclusionActivity extends Activity implements View.OnTouchListener 
             return null;
         }
 
-        // We need to calculate the transform between the color camera at the
-        // time the user clicked and the depth camera at the time the depth
-        // cloud was acquired.
-        TangoPoseData depthTcolorPose = TangoSupport.calculateRelativePose(
-                pointCloud.timestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
-                rgbTimestamp, TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR);
-
-        // Perform plane fitting with the latest available point cloud data.
-        double[] identityTranslation = {0.0, 0.0, 0.0};
-        double[] identityRotation = {0.0, 0.0, 0.0, 1.0};
-        TangoSupport.IntersectionPointPlaneModelPair intersectionPointPlaneModelPair =
-                TangoSupport.fitPlaneModelNearPoint(pointCloud,
-                        identityTranslation, identityRotation, u, v, mDisplayRotation,
-                        depthTcolorPose.translation, depthTcolorPose.rotation);
-
-        // Get the transform from depth camera to OpenGL world at the timestamp of the cloud.
-        TangoSupport.TangoMatrixTransformData transform =
-                TangoSupport.getMatrixTransformAtTime(pointCloud.timestamp,
-                        TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
-                        TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
-                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                        TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
-                        TangoSupport.ROTATION_IGNORED);
-        if (transform.statusCode == TangoPoseData.POSE_VALID) {
-            float[] openGlTPlane = calculatePlaneTransform(
-                    intersectionPointPlaneModelPair.intersectionPoint,
-                    intersectionPointPlaneModelPair.planeModel, transform.matrix);
-
-            return openGlTPlane;
-        } else {
-            Log.w(TAG, "Can't get depth camera transform at time " + pointCloud.timestamp);
+        TangoPoseData openglTdepthPose = TangoSupport.getPoseAtTime(
+            pointCloud.timestamp,
+            TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+            TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
+            TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+            TangoSupport.ROTATION_IGNORED);
+        if (openglTdepthPose.statusCode != TangoPoseData.POSE_VALID) {
+            Log.w(TAG, "Cant get openglTdepth pose at time "
+                       + pointCloud.timestamp);
             return null;
         }
-    }
 
-    /**
-     * Calculate the pose of the plane based on the position and normal orientation of the plane
-     * and align it with gravity.
-     */
-    private float[] calculatePlaneTransform(double[] point, double normal[],
-                                            float[] openGlTdepth) {
-        // Vector aligned to gravity.
-        float[] openGlUp = new float[]{0, 1, 0, 0};
-        float[] depthTOpenGl = new float[16];
-        Matrix.invertM(depthTOpenGl, 0, openGlTdepth, 0);
-        float[] depthUp = new float[4];
-        Matrix.multiplyMV(depthUp, 0, depthTOpenGl, 0, openGlUp, 0);
-        // Create the plane matrix transform in depth frame from a point, the plane normal and the
-        // up vector.
-        float[] depthTplane = matrixFromPointNormalUp(point, normal, depthUp);
-        float[] openGlTplane = new float[16];
-        Matrix.multiplyMM(openGlTplane, 0, openGlTdepth, 0, depthTplane, 0);
-        return openGlTplane;
+        TangoPoseData openglTcolorPose = TangoSupport.getPoseAtTime(
+            rgbTimestamp,
+            TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+            TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
+            TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+            TangoSupport.ROTATION_IGNORED);
+        if (openglTcolorPose.statusCode != TangoPoseData.POSE_VALID) {
+            Log.w(TAG, "Cannot get openglTcolor pose at time "
+                       + rgbTimestamp);
+            return null;
+        }
+
+        TangoSupport.IntersectionPointPlaneModelPair pointPlaneModel =
+            TangoSupport.fitPlaneModelNearPoint(pointCloud,
+                openglTdepthPose.translation, openglTdepthPose.rotation,
+                u, v, mDisplayRotation,
+                openglTcolorPose.translation, openglTcolorPose.rotation);
+        float[] openglUp = new float[]{0, 1, 0, 0};
+        float[] openglTplane = matrixFromPointNormalUp(
+            pointPlaneModel.intersectionPoint, pointPlaneModel.planeModel,
+            openglUp);
+        return openglTplane;
     }
 
     /**

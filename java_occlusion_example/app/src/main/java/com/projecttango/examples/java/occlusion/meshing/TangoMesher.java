@@ -100,6 +100,7 @@ public class TangoMesher extends Tango.OnTangoUpdateListener {
                                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                 TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
                                 TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+                                TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
                                 TangoSupport.ROTATION_IGNORED);
                         if (depthPose.statusCode != TangoPoseData.POSE_VALID) {
                             Log.e(TAG, "couldn't extract a valid depth pose");

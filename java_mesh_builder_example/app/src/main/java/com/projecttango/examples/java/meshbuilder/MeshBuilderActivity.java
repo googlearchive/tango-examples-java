@@ -40,6 +40,7 @@ import android.content.pm.PackageManager;
 import android.hardware.display.DisplayManager;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
+import android.support.annotation.UiThread;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
@@ -146,6 +147,12 @@ public class MeshBuilderActivity extends Activity {
                         startupTango();
                         mIsConnected = true;
                         mIsPaused = false;
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                pauseOrResumeReconstruction(mIsPaused);
+                            }
+                        });
                         setDisplayRotation();
                     } catch (TangoOutOfDateException e) {
                         Log.e(TAG, getString(R.string.exception_out_of_date), e);
@@ -319,14 +326,19 @@ public class MeshBuilderActivity extends Activity {
 
     public void onPauseButtonClick(View v) {
         if (mTangoMesher != null) {
-            if (mIsPaused) {
-                mTangoMesher.startSceneReconstruction();
-                mPauseButton.setText("Pause");
-            } else {
-                mTangoMesher.stopSceneReconstruction();
-                mPauseButton.setText("Resume");
-            }
             mIsPaused = !mIsPaused;
+            pauseOrResumeReconstruction(mIsPaused);
+        }
+    }
+
+    @UiThread
+    private void pauseOrResumeReconstruction(boolean isPaused){
+        if (!isPaused) {
+            mTangoMesher.startSceneReconstruction();
+            mPauseButton.setText("Pause");
+        } else {
+            mTangoMesher.stopSceneReconstruction();
+            mPauseButton.setText("Resume");
         }
     }
 

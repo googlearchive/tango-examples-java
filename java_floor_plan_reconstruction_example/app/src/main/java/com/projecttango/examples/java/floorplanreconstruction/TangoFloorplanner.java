@@ -17,6 +17,7 @@ package com.projecttango.examples.java.floorplanreconstruction;
 
 import com.google.atap.tango.reconstruction.Tango3dReconstruction;
 import com.google.atap.tango.reconstruction.Tango3dReconstructionConfig;
+import com.google.atap.tango.reconstruction.TangoFloorplanLevel;
 import com.google.atap.tango.reconstruction.TangoPolygon;
 import com.google.atap.tangoservice.Tango;
 import com.google.atap.tangoservice.TangoCameraIntrinsics;
@@ -58,7 +59,7 @@ public class TangoFloorplanner extends Tango.OnTangoUpdateListener {
      * Callback for when meshes are available.
      */
     public interface OnFloorplanAvailableListener {
-        void onFloorplanAvailable(List<TangoPolygon> polygons);
+        void onFloorplanAvailable(List<TangoPolygon> polygons, List<TangoFloorplanLevel> levels);
     }
 
     public TangoFloorplanner(OnFloorplanAvailableListener callback) {
@@ -84,6 +85,8 @@ public class TangoFloorplanner extends Tango.OnTangoUpdateListener {
             mRunnableCallback = new Runnable() {
                 @Override
                 public void run() {
+                    List<TangoPolygon> polygons;
+                    List<TangoFloorplanLevel> levels;
                     // Synchronize access to mTango3dReconstruction. This runs in TangoFloorplanner
                     // thread.
                     synchronized (TangoFloorplanner.this) {
@@ -101,6 +104,7 @@ public class TangoFloorplanner extends Tango.OnTangoUpdateListener {
                                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                 TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
                                 TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+                                TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
                                 TangoSupport.ROTATION_IGNORED);
                         if (depthPose.statusCode != TangoPoseData.POSE_VALID) {
                             Log.e(TAG, "couldn't extract a valid depth pose");
@@ -111,11 +115,13 @@ public class TangoFloorplanner extends Tango.OnTangoUpdateListener {
                         mTango3dReconstruction.updateFloorplan(cloudData, depthPose);
 
                         // Extract the full set of floorplan polygons.
-                        List<TangoPolygon> polygons = mTango3dReconstruction.extractFloorplan();
+                        polygons = mTango3dReconstruction.extractFloorplan();
 
-                        // Provide the new floorplan polygons to the app via callback.
-                        mCallback.onFloorplanAvailable(polygons);
+                        // Extract the full set of floorplan levels.
+                        levels = mTango3dReconstruction.extractFloorplanLevels();
                     }
+                    // Provide the new floorplan polygons to the app via callback.
+                    mCallback.onFloorplanAvailable(polygons, levels);
                 }
             };
         }

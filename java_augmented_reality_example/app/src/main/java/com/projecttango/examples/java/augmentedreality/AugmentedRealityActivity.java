@@ -128,7 +128,6 @@ public class AugmentedRealityActivity extends Activity {
     @Override
     protected void onStart() {
         super.onStart();
-        mSurfaceView.onResume();
 
         // Set render mode to RENDERMODE_CONTINUOUSLY to force getting onDraw callbacks until
         // the Tango service is properly set up and we start getting onFrameAvailable callbacks.
@@ -142,7 +141,7 @@ public class AugmentedRealityActivity extends Activity {
     @Override
     public void onStop() {
         super.onStop();
-        mSurfaceView.onPause();
+
         // Synchronize against disconnecting while the service is being used in the OpenGL thread or
         // in the UI thread.
         // NOTE: DO NOT lock against this same object in the Tango callback thread. Tango.disconnect
@@ -339,6 +338,7 @@ public class AugmentedRealityActivity extends Activity {
                                     mRgbTimestampGlThread,
                                     TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
+                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
                                     TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
                                     mDisplayRotation);
                             if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {

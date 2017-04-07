@@ -16,6 +16,7 @@
 
 package com.projecttango.examples.java.floorplanreconstruction;
 
+import com.google.atap.tango.reconstruction.TangoFloorplanLevel;
 import com.google.atap.tango.reconstruction.TangoPolygon;
 import com.google.atap.tangoservice.Tango;
 import com.google.atap.tangoservice.TangoCameraIntrinsics;
@@ -36,6 +37,7 @@ import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.hardware.display.DisplayManager;
 import android.os.Bundle;
+import android.support.annotation.UiThread;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
@@ -54,10 +56,10 @@ import com.projecttango.tangosupport.TangoSupport;
 /**
  * An example showing how to use the 3D reconstruction floor planning features to create a
  * floor plan in Java.
- *
+ * <p/>
  * This sample uses the APIs that extract a set of simplified 2D polygons and renders them on a
  * SurfaceView. The device orientation is used to automatically translate and rotate the map.
- *
+ * <p/>
  * Rendering is done in a simplistic way, using the canvas API over a SurfaceView.
  */
 public class FloorPlanReconstructionActivity extends Activity implements FloorplanView
@@ -75,6 +77,8 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
     private Button mPauseButton;
     private FloorplanView mFloorplanView;
     private TextView mAreaText;
+    private TextView mHeightText;
+    private TextView mDistanceText;
 
     private int mDisplayRotation = 0;
 
@@ -93,6 +97,8 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
         mFloorplanView = (FloorplanView) findViewById(R.id.floorplan);
         mFloorplanView.registerCallback(this);
         mAreaText = (TextView) findViewById(R.id.area_text);
+        mHeightText = (TextView) findViewById(R.id.height_text);
+        mDistanceText = (TextView) findViewById(R.id.floordistance_text);
 
         DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
         if (displayManager != null) {
@@ -166,6 +172,12 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
                         startupTango();
                         mIsConnected = true;
                         mIsPaused = false;
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                pauseOrResumeFloorplanning(mIsPaused);
+                            }
+                        });
                         setDisplayRotation();
                     } catch (TangoOutOfDateException e) {
                         Log.e(TAG, getString(R.string.exception_out_of_date), e);
@@ -206,8 +218,10 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
         mTangoFloorplanner = new TangoFloorplanner(new TangoFloorplanner
                 .OnFloorplanAvailableListener() {
             @Override
-            public void onFloorplanAvailable(List<TangoPolygon> polygons) {
+            public void onFloorplanAvailable(List<TangoPolygon> polygons,
+                                             List<TangoFloorplanLevel> levels) {
                 mFloorplanView.setFloorplan(polygons);
+                updateFloorAndCeiling(levels);
                 calculateAndUpdateArea(polygons);
             }
         });
@@ -268,6 +282,7 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
                         TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                         TangoPoseData.COORDINATE_FRAME_DEVICE,
                         TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
                         mDisplayRotation);
 
                 if (devicePose.statusCode == TangoPoseData.POSE_VALID) {
@@ -303,7 +318,7 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
      */
     private void calculateAndUpdateArea(List<TangoPolygon> polygons) {
         double area = 0;
-        for (TangoPolygon polygon: polygons) {
+        for (TangoPolygon polygon : polygons) {
             if (polygon.layer == TangoPolygon.TANGO_3DR_LAYER_SPACE) {
                 // If there is more than one free space polygon, only count those
                 // that have an area larger than two square meters to suppress unconnected
@@ -322,15 +337,58 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
         });
     }
 
+    /**
+     * Given the Floorplan levels, calculate the ceiling height and the current distance from the
+     * device to the floor.
+     */
+    private void updateFloorAndCeiling(List<TangoFloorplanLevel> levels) {
+        if (levels.size() > 0) {
+            // Currently only one level is supported by the floorplanning API.
+            TangoFloorplanLevel level = levels.get(0);
+            float ceilingHeight = level.maxZ - level.minZ;
+            final String ceilingHeightText = String.format("%.2f", ceilingHeight);
+            // Query current device pose and calculate the distance from it to the floor.
+            TangoPoseData devicePose;
+            // Synchronize against disconnecting while using the service.
+            synchronized (FloorPlanReconstructionActivity.this) {
+                // Don't execute any Tango API actions if we're not connected to
+                // the service.
+                if (!mIsConnected) {
+                    return;
+                }
+                devicePose = TangoSupport.getPoseAtTime(0.0,
+                        TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+                        TangoPoseData.COORDINATE_FRAME_DEVICE,
+                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                        mDisplayRotation);
+            }
+            float devToFloorDistance = devicePose.getTranslationAsFloats()[1] - level.minZ;
+            final String distanceText = String.format("%.2f", devToFloorDistance);
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mHeightText.setText(ceilingHeightText);
+                    mDistanceText.setText(distanceText);
+                }
+            });
+        }
+    }
+
     public void onPauseButtonClick(View v) {
-        if (mIsPaused) {
+        mIsPaused = !mIsPaused;
+        pauseOrResumeFloorplanning(mIsPaused);
+    }
+
+    @UiThread
+    private void pauseOrResumeFloorplanning(boolean isPaused){
+        if (!isPaused) {
             mTangoFloorplanner.startFloorplanning();
             mPauseButton.setText("Pause");
         } else {
             mTangoFloorplanner.stopFloorplanning();
             mPauseButton.setText("Resume");
         }
-        mIsPaused = !mIsPaused;
     }
 
     public void onClearButtonClicked(View v) {
