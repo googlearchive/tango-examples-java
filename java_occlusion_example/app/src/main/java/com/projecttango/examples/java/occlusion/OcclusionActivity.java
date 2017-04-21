@@ -141,13 +141,17 @@ public class OcclusionActivity extends Activity implements View.OnTouchListener 
         // in the UI thread.
         synchronized (this) {
             try {
-                mTangoMesher.stopSceneReconstruction();
+                if (mTangoMesher != null) {
+                    mTangoMesher.stopSceneReconstruction();
+                    mTangoMesher.resetSceneReconstruction();
+                    mTangoMesher.release();
+                }
+                if (mTango != null) {
+                    mTango.disconnect();
+                }
                 // We need to invalidate the connected texture ID so that we cause a
                 // re-connection in the OpenGL thread after resume
                 mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
-                mTango.disconnect();
-                mTangoMesher.resetSceneReconstruction();
-                mTangoMesher.release();
                 mIsConnected = false;
             } catch (TangoErrorException e) {
                 Log.e(TAG, getString(R.string.exception_tango_error), e);

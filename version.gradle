@@ -1,0 +1,5 @@
+allprojects {
+    ext {
+        release_version = '1.53'
+    }
+}

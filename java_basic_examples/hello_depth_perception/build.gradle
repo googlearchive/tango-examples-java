@@ -23,18 +23,10 @@ android {
     }
 }
 
-def external_lib_prefix = null
-if (project.hasProperty("Tango.catkin_devel_prefix")) {
-    external_lib_prefix = project.property("Tango.catkin_devel_prefix")
-} else {
-    // Building in standalone sample form.
-    external_lib_prefix = "../../TangoReleaseLibs"
-}
 
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    testCompile 'junit:junit:4.12'
-    compile 'com.android.support:appcompat-v7:23.2.0'
-    compile fileTree(dir: external_lib_prefix + '/jar', include: ['**/*.jar'])
+    apply from: '../../version.gradle'
+    compile "com.google.tango:sdk-base:${release_version}"
+    compile "com.android.support:appcompat-v7:23.2.0"
 }

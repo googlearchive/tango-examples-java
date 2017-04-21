@@ -24,23 +24,11 @@ android {
 }
 
 
-def external_lib_prefix = null
-if (project.hasProperty("Tango.catkin_devel_prefix")) {
-    external_lib_prefix = project.property("Tango.catkin_devel_prefix")
-} else {
-    // Building in standalone sample form.
-    external_lib_prefix = "../../TangoReleaseLibs"
-}
-
-repositories {
-    flatDir {
-        dirs external_lib_prefix + '/aar'
-    }
-}
-
 dependencies {
-    compile 'org.rajawali3d:rajawali:1.0.325@aar'
-    compile 'com.android.support:appcompat-v7:23.0.0'
-    compile (name: 'tango_support_java_lib', ext: 'aar')
-    compile fileTree(dir: external_lib_prefix + '/jar', include: ['**/*.jar'])
+    apply from: '../../version.gradle'
+    compile "com.google.tango:sdk-base:${release_version}"
+    compile "com.google.tango:support-base:${release_version}"
+    compile "com.google.tango:support-reconstruction:${release_version}"
+    compile "org.rajawali3d:rajawali:1.0.325@aar"
+    compile "com.android.support:appcompat-v7:23.0.0"
 }
