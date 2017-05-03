@@ -122,7 +122,6 @@ public class PointCloudActivity extends Activity {
         super.onStart();
 
         mTangoUx.start();
-        // Check and request camera permission at run time.
         bindTangoService();
     }
 

@@ -182,10 +182,14 @@ public class MeshBuilderActivity extends Activity {
         // in the UI thread.
         synchronized (this) {
             try {
-                mTangoMesher.stopSceneReconstruction();
-                mTango.disconnect();
-                mTangoMesher.resetSceneReconstruction();
-                mTangoMesher.release();
+                if (mTangoMesher != null) {
+                    mTangoMesher.stopSceneReconstruction();
+                    mTangoMesher.resetSceneReconstruction();
+                    mTangoMesher.release();
+                }
+                if (mTango != null) {
+                    mTango.disconnect();
+                }
                 mRenderer.clearMeshes();
                 mIsConnected = false;
                 mIsPaused = true;

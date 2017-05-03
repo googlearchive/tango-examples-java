@@ -149,13 +149,16 @@ public class AugmentedRealityActivity extends Activity {
         // object in a Tango callback thread it will cause a deadlock.
         synchronized (this) {
             try {
-                mIsConnected = false;
-                mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
+                // mTango may be null if the app is closed before permissions are granted.
+                if (mTango != null) {
+                    mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
+                    mTango.disconnect();
+                }
                 // We need to invalidate the connected texture ID so that we cause a
                 // re-connection in the OpenGL thread after resume.
                 mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
-                mTango.disconnect();
                 mTango = null;
+                mIsConnected = false;
             } catch (TangoErrorException e) {
                 Log.e(TAG, getString(R.string.exception_tango_error), e);
             }

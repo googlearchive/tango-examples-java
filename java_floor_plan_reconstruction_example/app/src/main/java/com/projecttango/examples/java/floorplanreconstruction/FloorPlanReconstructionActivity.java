@@ -138,10 +138,14 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
         // in the UI thread.
         synchronized (this) {
             try {
-                mTangoFloorplanner.stopFloorplanning();
-                mTango.disconnect();
-                mTangoFloorplanner.resetFloorplan();
-                mTangoFloorplanner.release();
+                if (mTangoFloorplanner != null) {
+                    mTangoFloorplanner.stopFloorplanning();
+                    mTangoFloorplanner.resetFloorplan();
+                    mTangoFloorplanner.release();
+                }
+                if (mTango != null) {
+                    mTango.disconnect();
+                }
                 mIsConnected = false;
                 mIsPaused = true;
             } catch (TangoErrorException e) {

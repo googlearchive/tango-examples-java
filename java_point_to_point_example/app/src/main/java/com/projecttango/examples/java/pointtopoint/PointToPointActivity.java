@@ -171,11 +171,13 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
         synchronized (this) {
             try {
                 mRenderer.getCurrentScene().clearFrameCallbacks();
-                mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
+                if (mTango != null) {
+                    mTango.disconnectCamera(TangoCameraIntrinsics.TANGO_CAMERA_COLOR);
+                    mTango.disconnect();
+                }
                 // We need to invalidate the connected texture ID so that we cause a
                 // re-connection in the OpenGL thread after resume.
                 mConnectedTextureIdGlThread = INVALID_TEXTURE_ID;
-                mTango.disconnect();
                 mIsConnected = false;
             } catch (TangoErrorException e) {
                 Log.e(TAG, getString(R.string.exception_tango_error), e);
