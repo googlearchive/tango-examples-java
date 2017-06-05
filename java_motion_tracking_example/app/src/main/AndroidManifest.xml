@@ -22,6 +22,7 @@
             android:name=".MotionTrackingActivity"
             android:label="@string/app_name_long"
             android:screenOrientation="fullSensor"
+            android:configChanges="orientation|screenSize"
             android:icon="@drawable/ic_launcher">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

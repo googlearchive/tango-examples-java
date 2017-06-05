@@ -182,10 +182,10 @@ public class AugmentedRealityActivity extends Activity {
                 // OpenGL thread or in the UI thread.
                 synchronized (AugmentedRealityActivity.this) {
                     try {
-                        TangoSupport.initialize();
                         mConfig = setupTangoConfig(mTango);
                         mTango.connect(mConfig);
                         startupTango();
+                        TangoSupport.initialize(mTango);
                         mIsConnected = true;
                         setDisplayRotation();
                     } catch (TangoOutOfDateException e) {

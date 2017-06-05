@@ -141,10 +141,10 @@ public class MeshBuilderActivity extends Activity {
             public void run() {
                 synchronized (MeshBuilderActivity.this) {
                     try {
-                        TangoSupport.initialize();
                         mConfig = setupTangoConfig(mTango);
                         mTango.connect(mConfig);
                         startupTango();
+                        TangoSupport.initialize(mTango);
                         mIsConnected = true;
                         mIsPaused = false;
                         runOnUiThread(new Runnable() {

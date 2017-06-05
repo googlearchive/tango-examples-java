@@ -210,10 +210,10 @@ public class GreenScreenActivity extends AppCompatActivity {
             public void run() {
                 synchronized (GreenScreenActivity.this) {
                     try {
-                        TangoSupport.initialize();
                         mConfig = setupTangoConfig(mTango);
                         mTango.connect(mConfig);
                         startupTango();
+                        TangoSupport.initialize(mTango);
                         mIsConnected = true;
                         setDisplayRotation();
                     } catch (TangoOutOfDateException e) {

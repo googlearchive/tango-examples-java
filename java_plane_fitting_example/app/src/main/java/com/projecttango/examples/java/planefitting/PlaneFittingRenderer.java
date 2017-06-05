@@ -15,14 +15,12 @@
  */
 package com.projecttango.examples.java.planefitting;
 
-import com.google.atap.tangoservice.TangoCameraIntrinsics;
 import com.google.atap.tangoservice.TangoPoseData;
 
 import android.content.Context;
-
+import android.graphics.Color;
 import android.util.Log;
 import android.view.MotionEvent;
-import android.view.Surface;
 
 import org.rajawali3d.Object3D;
 import org.rajawali3d.lights.DirectionalLight;
@@ -33,10 +31,13 @@ import org.rajawali3d.materials.textures.StreamingTexture;
 import org.rajawali3d.materials.textures.Texture;
 import org.rajawali3d.math.Matrix4;
 import org.rajawali3d.math.Quaternion;
+import org.rajawali3d.math.vector.Vector3;
 import org.rajawali3d.primitives.Cube;
+import org.rajawali3d.primitives.Line3D;
 import org.rajawali3d.primitives.ScreenQuad;
 import org.rajawali3d.renderer.Renderer;
 
+import java.util.Stack;
 import javax.microedition.khronos.opengles.GL10;
 
 import com.projecttango.tangosupport.TangoSupport;
@@ -47,8 +48,16 @@ import com.projecttango.tangosupport.TangoSupport;
  * method.
  */
 public class PlaneFittingRenderer extends Renderer {
-    private static final float CUBE_SIDE_LENGTH = 0.5f;
     private static final String TAG = PlaneFittingRenderer.class.getSimpleName();
+    private static final float CUBE_SIDE_LENGTH = 0.5f;
+    private static final float AXIS_THICKNESS = 20.0f;
+
+    private static final Matrix4 DEPTH_T_OPENGL = new Matrix4(new float[] {
+            1.0f,  0.0f, 0.0f, 0.0f,
+            0.0f,  0.0f, 1.0f, 0.0f,
+            0.0f, -1.0f, 0.0f, 0.0f,
+            0.0f,  0.0f, 0.0f, 1.0f
+    });
 
     private float[] textureCoords0 = new float[]{0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 0.0F};
 
@@ -95,23 +104,54 @@ public class PlaneFittingRenderer extends Renderer {
         light.setPosition(3, 2, 4);
         getCurrentScene().addLight(light);
 
-        // Set up a material: green with application of the light and
-        // instructions.
-        Material material = new Material();
-        material.setColor(0xff009900);
+        // Build a Axis and a cube to represent plane's transformation.
+
+        Cube cube = new Cube(CUBE_SIDE_LENGTH);
+        Material cubeMaterial = new Material();
+        cubeMaterial.setColor(0xff009900);
+        cubeMaterial.setColorInfluence(0.2f);
+        cubeMaterial.enableLighting(true);
+        cubeMaterial.setDiffuseMethod(new DiffuseMethod.Lambert());
         try {
             Texture t = new Texture("instructions", R.drawable.instructions);
-            material.addTexture(t);
+            cubeMaterial.addTexture(t);
         } catch (ATexture.TextureException e) {
-            e.printStackTrace();
+            e.printStackTrace();;
         }
-        material.setColorInfluence(0.1f);
-        material.enableLighting(true);
-        material.setDiffuseMethod(new DiffuseMethod.Lambert());
+        cube.setMaterial(cubeMaterial);
 
-        // Build a Cube and place it initially three meters forward from the origin.
-        mObject = new Cube(CUBE_SIDE_LENGTH);
-        mObject.setMaterial(material);
+        Line3D xLine3d, yLine3d, zLine3d;
+        Material lineMaterial = new Material();
+
+        Stack<Vector3> xpoints = new Stack<Vector3>();
+        xpoints.push(new Vector3(CUBE_SIDE_LENGTH, 0.0f, 0.0f));
+        xpoints.push(new Vector3(0.0f, 0.0f, 0.0f));
+
+        Stack<Vector3> ypoints = new Stack<Vector3>();
+        ypoints.push(new Vector3(0.0f, 0.0f, 0.0f));
+        ypoints.push(new Vector3(0.0f, CUBE_SIDE_LENGTH, 0.0f));
+
+        Stack<Vector3> zpoints = new Stack<Vector3>();
+        zpoints.push(new Vector3(0.0f, 0.0f, 0.0f));
+        zpoints.push(new Vector3(0.0f, 0.0f, CUBE_SIDE_LENGTH));
+
+        xLine3d = new Line3D(xpoints, AXIS_THICKNESS, Color.RED);
+        xLine3d.setMaterial(lineMaterial);
+
+        yLine3d = new Line3D(ypoints, AXIS_THICKNESS, Color.GREEN);
+        yLine3d.setMaterial(lineMaterial);
+
+        zLine3d = new Line3D(zpoints, AXIS_THICKNESS, Color.BLUE);
+        zLine3d.setMaterial(lineMaterial);
+
+        mObject = new Object3D();
+        mObject.addChild(xLine3d);
+        mObject.addChild(yLine3d);
+        mObject.addChild(zLine3d);
+        mObject.addChild(cube);
+        cube.moveUp(CUBE_SIDE_LENGTH / 2.0);
+        cube.moveForward(CUBE_SIDE_LENGTH / 2.0);
+        cube.moveRight(CUBE_SIDE_LENGTH / 2.0);
         mObject.setPosition(0, 0, -3);
         getCurrentScene().addChild(mObject);
     }
@@ -145,7 +185,6 @@ public class PlaneFittingRenderer extends Renderer {
                 mObject.setOrientation(new Quaternion().fromMatrix(mObjectTransform));
                 // Move it forward by half of the size of the cube to make it
                 // flush with the plane surface.
-                mObject.moveForward(CUBE_SIDE_LENGTH / 2.0f);
                 mObjectPoseUpdated = false;
             }
         }
@@ -157,8 +196,14 @@ public class PlaneFittingRenderer extends Renderer {
      * Save the updated plane fit pose to update the AR object on the next render pass.
      * This is synchronized against concurrent access in the render loop above.
      */
-    public synchronized void updateObjectPose(float[] planeFitTransform) {
-        mObjectTransform = new Matrix4(planeFitTransform);
+    public synchronized void updateObjectPose(
+            float[] openglTDepthArr,
+            float[] mDepthTPlaneArr) {
+        Matrix4 openglTDepth = new Matrix4(openglTDepthArr);
+        Matrix4 openglTPlane =
+                openglTDepth.multiply(new Matrix4(mDepthTPlaneArr));
+
+        mObjectTransform = openglTPlane.multiply(DEPTH_T_OPENGL);;
         mObjectPoseUpdated = true;
     }
 
