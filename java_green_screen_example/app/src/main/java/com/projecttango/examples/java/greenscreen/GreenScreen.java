@@ -16,13 +16,12 @@
 
 package com.projecttango.examples.java.greenscreen;
 
+import com.google.tango.support.TangoSupport;
+
 import android.graphics.Bitmap;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.GLUtils;
-import android.view.Surface;
-
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * A preview of the RGB camera rendered as background filtered by a depth texture using OpenGL.

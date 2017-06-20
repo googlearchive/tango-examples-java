@@ -26,13 +26,14 @@ import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
+import com.google.tango.support.TangoSupport;
 
 import android.app.Activity;
+import android.hardware.display.DisplayManager;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Display;
-import android.view.WindowManager;
 import android.widget.Toast;
 
 import org.rajawali3d.scene.ASceneFrameCallback;
@@ -40,8 +41,6 @@ import org.rajawali3d.surface.RajawaliSurfaceView;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * Main Activity class for the Motion Tracking API Sample. Handles the connection to the Tango
@@ -69,11 +68,28 @@ public class MotionTrackingActivity extends Activity {
         mSurfaceView = (RajawaliSurfaceView) findViewById(R.id.gl_surface_view);
         mRenderer = new MotionTrackingRajawaliRenderer(this);
 
-        // Get current display orientation. Note that each time display orientation
-        // changes, the onCreate function will be called again.
-        WindowManager mWindowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-        Display mDisplay = mWindowManager.getDefaultDisplay();
-        mDisplayRotation = mDisplay.getRotation();
+        // Register a listener to get the current display orientation. If we don't manage this
+        // event, the activity will be destroyed and recreated on each rotation, forcing the
+        // disconnection from the Tango Service.
+        DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+        if (displayManager != null) {
+            displayManager.registerDisplayListener(new DisplayManager.DisplayListener() {
+                @Override
+                public void onDisplayAdded(int displayId) {
+                }
+
+                @Override
+                public void onDisplayChanged(int displayId) {
+                    synchronized (this) {
+                        setDisplayRotation();
+                    }
+                }
+
+                @Override
+                public void onDisplayRemoved(int displayId) {
+                }
+            }, null);
+        }
 
         // Configure OpenGL renderer.
         setupRenderer();
@@ -97,10 +113,11 @@ public class MotionTrackingActivity extends Activity {
                 // thread or in the UI thread.
                 synchronized (MotionTrackingActivity.this) {
                     try {
-                        TangoSupport.initialize();
                         mConfig = setupTangoConfig(mTango);
                         mTango.connect(mConfig);
                         startupTango();
+                        TangoSupport.initialize(mTango);
+                        setDisplayRotation();
                     } catch (TangoOutOfDateException e) {
                         Log.e(TAG, getString(R.string.exception_out_of_date), e);
                         showsToastAndFinishOnUiThread(R.string.exception_out_of_date);
@@ -164,11 +181,10 @@ public class MotionTrackingActivity extends Activity {
         mTango.connectListener(framePairs, new Tango.OnTangoUpdateListener() {
             @Override
             public void onPoseAvailable(final TangoPoseData pose) {
-                synchronized (MotionTrackingActivity.this) {
-                    // When we receive the first onPoseAvailable callback, we know the device has
-                    // located itself.
-                    mIsTangoPoseReady.compareAndSet(false, true);
-                }
+                // As noted above, do not synchronize against MotionTrackingActivity.this.
+                // When we receive the first onPoseAvailable callback, we know the device has
+                // located itself.
+                mIsTangoPoseReady.compareAndSet(false, true);
             }
 
             @Override
@@ -217,8 +233,8 @@ public class MotionTrackingActivity extends Activity {
                                 TangoSupport.getPoseAtTime(0.0,
                                         TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                         TangoPoseData.COORDINATE_FRAME_DEVICE,
-                                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                        TangoSupport.ENGINE_OPENGL,
+                                        TangoSupport.ENGINE_OPENGL,
                                         mDisplayRotation);
 
                         if (pose.statusCode == TangoPoseData.POSE_VALID) {
@@ -250,6 +266,14 @@ public class MotionTrackingActivity extends Activity {
         mSurfaceView.setSurfaceRenderer(mRenderer);
         // Set render mode to RENDERMODE_CONTINUOUSLY.
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
+    }
+
+    /**
+     * Set the current display rotation.
+     */
+    private void setDisplayRotation() {
+        Display display = getWindowManager().getDefaultDisplay();
+        mDisplayRotation = display.getRotation();
     }
 
     /**

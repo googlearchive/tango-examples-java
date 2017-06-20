@@ -68,7 +68,7 @@ public class HelloAreaDescriptionActivity extends Activity implements
     // Long-running task to save the ADF.
     private SaveAdfTask mSaveAdfTask;
 
-    private static final double UPDATE_INTERVAL_MS = 100.0;
+    private static final double UPDATE_INTERVAL_MS = 1000.0;
 
     private final Object mSharedLock = new Object();
 

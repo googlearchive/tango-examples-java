@@ -17,7 +17,6 @@ package com.projecttango.examples.java.pointcloud;
 
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
-import com.google.atap.tangoservice.TangoXyzIjData;
 
 import android.content.Context;
 import android.graphics.Color;

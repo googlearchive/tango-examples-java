@@ -29,6 +29,10 @@ import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
+import com.google.tango.depthinterpolation.TangoDepthInterpolation;
+import com.google.tango.support.TangoPointCloudManager;
+import com.google.tango.support.TangoSupport;
+import com.google.tango.transformhelpers.TangoTransformHelper;
 
 import android.Manifest;
 import android.animation.ValueAnimator;
@@ -36,7 +40,6 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
-import android.hardware.Camera;
 import android.hardware.display.DisplayManager;
 import android.opengl.Matrix;
 import android.os.Bundle;
@@ -57,9 +60,6 @@ import org.rajawali3d.view.SurfaceView;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.projecttango.tangosupport.TangoPointCloudManager;
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * An example showing how to build a very simple application that allows the user to make a
@@ -133,7 +133,6 @@ public class ModelCorrespondenceActivity extends Activity {
         mSurfaceView.setSurfaceRenderer(mRenderer);
         // Set ZOrderOnTop to false so the other views don't get hidden by the SurfaceView.
         mSurfaceView.setZOrderOnTop(false);
-        mTango = new Tango(this);
         mPointCloudManager = new TangoPointCloudManager();
         mCrosshair = (ImageView) findViewById(R.id.crosshair);
         mCrosshair.setColorFilter(getResources().getColor(R.color.crosshair_ready));
@@ -206,10 +205,10 @@ public class ModelCorrespondenceActivity extends Activity {
                 // thread or in the UI thread.
                 synchronized (ModelCorrespondenceActivity.this) {
                     try {
-                        TangoSupport.initialize();
                         mConfig = setupTangoConfig(mTango);
                         mTango.connect(mConfig);
                         startupTango();
+                        TangoSupport.initialize(mTango);
                         connectRenderer();
                         mIsConnected = true;
                         setDisplayRotation();
@@ -351,8 +350,8 @@ public class ModelCorrespondenceActivity extends Activity {
                                     mRgbTimestampGlThread,
                                     TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                    TangoSupport.ENGINE_OPENGL,
+                                    TangoSupport.ENGINE_OPENGL,
                                     mDisplayRotation);
 
                             if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
@@ -362,13 +361,13 @@ public class ModelCorrespondenceActivity extends Activity {
                                 // While the correspondence is not done, fix the model to the upper
                                 // right corner of the screen by following the camera.
                                 if (!mCorrespondenceDone) {
-                                    TangoSupport.TangoMatrixTransformData transform =
+                                    TangoSupport.MatrixTransformData transform =
                                             TangoSupport.getMatrixTransformAtTime(
                                                     mCameraPoseTimestamp,
                                                     TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                                    TangoSupport.ENGINE_OPENGL,
+                                                    TangoSupport.ENGINE_OPENGL,
                                                     mDisplayRotation);
                                     if (transform.statusCode == TangoPoseData.POSE_VALID) {
                                         // Place it in the top left corner, and rotate and scale it
@@ -548,8 +547,8 @@ public class ModelCorrespondenceActivity extends Activity {
             pointCloud.timestamp,
             TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
             TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
-            TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+            TangoSupport.ENGINE_OPENGL,
+            TangoSupport.ENGINE_TANGO,
             TangoSupport.ROTATION_IGNORED);
         if (openglTdepthPose.statusCode != TangoPoseData.POSE_VALID) {
             Log.w(TAG, "Could not get openglTdepth pose at time "
@@ -561,8 +560,8 @@ public class ModelCorrespondenceActivity extends Activity {
             rgbTimestamp,
             TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
             TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-            TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+            TangoSupport.ENGINE_OPENGL,
+            TangoSupport.ENGINE_TANGO,
             TangoSupport.ROTATION_IGNORED);
         if (openglTcolorPose.statusCode != TangoPoseData.POSE_VALID) {
             Log.w(TAG, "Could not get openglTcolor pose at time "
@@ -570,7 +569,7 @@ public class ModelCorrespondenceActivity extends Activity {
             return null;
         }
 
-        float[] openglPoint = TangoSupport.getDepthAtPointNearestNeighbor(
+        float[] openglPoint = TangoDepthInterpolation.getDepthAtPointNearestNeighbor(
             pointCloud,
             openglTdepthPose.translation, openglTdepthPose.rotation,
             u, v, mDisplayRotation,
@@ -609,7 +608,7 @@ public class ModelCorrespondenceActivity extends Activity {
         }
 
         // Find the correspondence similarity transform.
-        double[] output = TangoSupport.findCorrespondenceSimilarityTransform(src, dest);
+        double[] output = TangoTransformHelper.findCorrespondenceSimilarityTransform(src, dest);
         // Place the model in the desired location.
         transformModel(toFloatArray(output));
     }

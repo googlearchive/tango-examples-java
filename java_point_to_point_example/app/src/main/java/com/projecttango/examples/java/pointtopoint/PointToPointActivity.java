@@ -30,13 +30,16 @@ import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 import com.google.atap.tangoservice.experimental.TangoImageBuffer;
+import com.google.tango.depthinterpolation.TangoDepthInterpolation;
+import com.google.tango.support.TangoPointCloudManager;
+import com.google.tango.support.TangoSupport;
+import com.google.tango.transformhelpers.TangoTransformHelper;
 
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
-import android.hardware.Camera;
 import android.hardware.display.DisplayManager;
 import android.opengl.Matrix;
 import android.os.Bundle;
@@ -60,9 +63,6 @@ import java.util.ArrayList;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.projecttango.tangosupport.TangoPointCloudManager;
-import com.projecttango.tangosupport.TangoSupport;
-
 /**
  * An example showing how to build a very simple point-to-point measurement app
  * in Java. It uses the Tango Support Library to do depth calculations using
@@ -78,6 +78,16 @@ import com.projecttango.tangosupport.TangoSupport;
  * see java_augmented_reality_example or java_hello_video_example.
  */
 public class PointToPointActivity extends Activity implements View.OnTouchListener {
+    private class MeasuredPoint {
+        public double mTimestamp;
+        public float[] mDepthTPoint;
+
+        public MeasuredPoint(double timestamp, float[] depthTPoint) {
+            mTimestamp = timestamp;
+            mDepthTPoint = depthTPoint;
+        }
+    }
+
     private static final String TAG = PointToPointActivity.class.getSimpleName();
 
     private static final String CAMERA_PERMISSION = Manifest.permission.CAMERA;
@@ -96,7 +106,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
     private TangoConfig mConfig;
     private boolean mIsConnected = false;
     private double mCameraPoseTimestamp = 0;
-    private TextView mDistanceMeasure;
+    private TextView mDistanceTextview;
     private CheckBox mBilateralBox;
     private volatile TangoImageBuffer mCurrentImageBuffer;
 
@@ -106,8 +116,16 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
     private AtomicBoolean mIsFrameAvailableTangoThread = new AtomicBoolean(false);
     private double mRgbTimestampGlThread;
 
-    private float[][] mLinePoints = new float[2][3];
     private boolean mPointSwitch = true;
+
+    // Two measured points in Depth Camera space.
+    private MeasuredPoint[] mMeasuredPoints = new MeasuredPoint[2];
+
+    // Two measured points in OpenGL space, we used a stack to hold the data is because rajawalli
+    // LineRenderer expects a stack of points to be passed in. This is render ready data format from
+    // Rajawalli's perspective.
+    private Stack<Vector3> mMeasurePoitnsInOpenGLSpace = new Stack<Vector3>();
+    private float mMeasuredDistance = 0.0f;
 
     // Handles the debug text UI update loop.
     private Handler mHandler = new Handler();
@@ -123,10 +141,10 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
         mSurfaceView.setSurfaceRenderer(mRenderer);
         mSurfaceView.setOnTouchListener(this);
         mPointCloudManager = new TangoPointCloudManager();
-        mDistanceMeasure = (TextView) findViewById(R.id.distance_textview);
+        mDistanceTextview = (TextView) findViewById(R.id.distance_textview);
         mBilateralBox = (CheckBox) findViewById(R.id.check_box);
-        mLinePoints[0] = null;
-        mLinePoints[1] = null;
+        mMeasuredPoints[0] = null;
+        mMeasuredPoints[1] = null;
 
         DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
         if (displayManager != null) {
@@ -203,10 +221,10 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                 // thread or in the UI thread.
                 synchronized (PointToPointActivity.this) {
                     try {
-                        TangoSupport.initialize();
                         mConfig = setupTangoConfig(mTango);
                         mTango.connect(mConfig);
                         startupTango();
+                        TangoSupport.initialize(mTango);
                         connectRenderer();
                         mIsConnected = true;
                         setDisplayRotation();
@@ -242,8 +260,6 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
         config.putInt(TangoConfig.KEY_INT_DEPTH_MODE, TangoConfig.TANGO_DEPTH_MODE_POINT_CLOUD);
         // Drift correction allows motion tracking to recover after it loses tracking.
-        // The drift-corrected pose is available through the frame pair with
-        // base frame AREA_DESCRIPTION and target frame DEVICE.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DRIFT_CORRECTION, true);
 
         return config;
@@ -307,7 +323,8 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                         clone.flip();
                         return new TangoImageBuffer(imageBuffer.width, imageBuffer.height,
                                 imageBuffer.stride, imageBuffer.frameNumber,
-                                imageBuffer.timestamp, imageBuffer.format, clone);
+                                imageBuffer.timestamp, imageBuffer.format, clone,
+                                imageBuffer.exposureDurationNs);
                     }
                 });
     }
@@ -383,10 +400,10 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                             // frame.
                             TangoPoseData lastFramePose = TangoSupport.getPoseAtTime(
                                     mRgbTimestampGlThread,
-                                    TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+                                    TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                    TangoSupport.ENGINE_OPENGL,
+                                    TangoSupport.ENGINE_OPENGL,
                                     mDisplayRotation);
                             if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
                                 // Update the camera pose from the renderer.
@@ -401,6 +418,56 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                                 Log.w(TAG, "Can't get device pose at time: " +
                                         mRgbTimestampGlThread);
                             }
+
+                            // If both points have been measured, we transform the points to OpenGL
+                            // space, and send it to mRenderer to render.
+                            if (mMeasuredPoints[0] != null && mMeasuredPoints[1] != null) {
+                                // To make sure drift correct pose is also applied to virtual
+                                // object (measured points).
+                                // We need to re-query the Start of Service to Depth camera
+                                // pose every frame. Note that you will need to use the timestamp
+                                // at the time when the points were measured to query the pose.
+                                TangoSupport.MatrixTransformData openglTDepthArr0 =
+                                        TangoSupport.getMatrixTransformAtTime(
+                                                mMeasuredPoints[0].mTimestamp,
+                                                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+                                                TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
+                                                TangoSupport.ENGINE_OPENGL,
+                                                TangoSupport.ENGINE_TANGO,
+                                                TangoSupport.ROTATION_IGNORED);
+
+                                TangoSupport.MatrixTransformData openglTDepthArr1 =
+                                        TangoSupport.getMatrixTransformAtTime(
+                                                mMeasuredPoints[1].mTimestamp,
+                                                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
+                                                TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
+                                                TangoSupport.ENGINE_OPENGL,
+                                                TangoSupport.ENGINE_TANGO,
+                                                TangoSupport.ROTATION_IGNORED);
+
+                                if (openglTDepthArr0.statusCode == TangoPoseData.POSE_VALID &&
+                                    openglTDepthArr1.statusCode == TangoPoseData.POSE_VALID) {
+                                        mMeasurePoitnsInOpenGLSpace.clear();
+                                        float[] p0 = TangoTransformHelper.transformPoint(
+                                                openglTDepthArr0.matrix,
+                                                mMeasuredPoints[0].mDepthTPoint);
+                                        float[] p1 = TangoTransformHelper.transformPoint(
+                                                openglTDepthArr1.matrix,
+                                                mMeasuredPoints[1].mDepthTPoint);
+
+                                        mMeasurePoitnsInOpenGLSpace.push(
+                                                new Vector3(p0[0], p0[1], p0[2]));
+                                        mMeasurePoitnsInOpenGLSpace.push(
+                                                new Vector3(p1[0], p1[1], p1[2]));
+
+                                        mMeasuredDistance = (float) Math.sqrt(
+                                                Math.pow(p0[0] - p1[0], 2) +
+                                                Math.pow(p0[1] - p1[1], 2) +
+                                                Math.pow(p0[2] - p1[2], 2));
+                                }
+                            }
+
+                            mRenderer.setLine(mMeasurePoitnsInOpenGLSpace);
                         }
                     }
                     // Avoid crashing the application due to unhandled exceptions.
@@ -472,15 +539,14 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                 // Place point near the clicked point using the latest point cloud data.
                 // Synchronize against concurrent access to the RGB timestamp in the OpenGL thread
                 // and a possible service disconnection due to an onPause event.
-                float[] rgbPoint;
+                MeasuredPoint newMeasuredPoint;
                 synchronized (this) {
-                    rgbPoint = getDepthAtTouchPosition(u, v);
+                    newMeasuredPoint = getDepthAtTouchPosition(u, v);
                 }
-                if (rgbPoint != null) {
+                if (newMeasuredPoint != null) {
                     // Update a line endpoint to the touch location.
                     // This update is made thread-safe by the renderer.
-                    updateLine(rgbPoint);
-                    mRenderer.setLine(generateEndpoints());
+                    updateLine(newMeasuredPoint);
                 } else {
                     Log.w(TAG, "Point was null.");
                 }
@@ -505,7 +571,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
      * of the point closest to where the user touches the screen. It returns a
      * Vector3 in OpenGL world space.
      */
-    private float[] getDepthAtTouchPosition(float u, float v) {
+    private MeasuredPoint getDepthAtTouchPosition(float u, float v) {
         TangoPointCloudData pointCloud = mPointCloudManager.getLatestPointCloud();
         if (pointCloud == null) {
             return null;
@@ -519,122 +585,83 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
             rgbTimestamp = mRgbTimestampGlThread; // GPU.
         }
 
-        // Get pose transforms for openGL to depth/color cameras.
-        TangoPoseData oglTdepthPose = TangoSupport.getPoseAtTime(
-            pointCloud.timestamp,
-            TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
-            TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
-            TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
-            TangoSupport.ROTATION_IGNORED);
-        if (oglTdepthPose.statusCode != TangoPoseData.POSE_VALID) {
-            Log.w(TAG, "Could not get depth camera transform at time "
-                       + pointCloud.timestamp);
-            return null;
-        }
-        TangoPoseData oglTcolorPose = TangoSupport.getPoseAtTime(
-            rgbTimestamp,
-            TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
-            TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-            TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
-            TangoSupport.ROTATION_IGNORED);
-        if (oglTcolorPose.statusCode != TangoPoseData.POSE_VALID) {
+        TangoPoseData depthlTcolorPose = TangoSupport.getPoseAtTime(
+                rgbTimestamp,
+                TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
+                TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
+                TangoSupport.ENGINE_TANGO,
+                TangoSupport.ENGINE_TANGO,
+                TangoSupport.ROTATION_IGNORED);
+        if (depthlTcolorPose.statusCode != TangoPoseData.POSE_VALID) {
             Log.w(TAG, "Could not get color camera transform at time "
                        + rgbTimestamp);
             return null;
         }
 
-        float[] openglPoint;
+        float[] depthPoint;
         if (mBilateralBox.isChecked()) {
-            openglPoint = TangoSupport.getDepthAtPointBilateral(pointCloud,
-                oglTdepthPose.translation, oglTdepthPose.rotation,
-                imageBuffer, u, v, mDisplayRotation, oglTcolorPose.translation,
-                oglTcolorPose.rotation);
+            depthPoint = TangoDepthInterpolation.getDepthAtPointBilateral(
+                    pointCloud,
+                    new double[] {0.0, 0.0, 0.0},
+                    new double[] {0.0, 0.0, 0.0, 1.0},
+                    imageBuffer,
+                    u, v,
+                    mDisplayRotation,
+                    depthlTcolorPose.translation,
+                    depthlTcolorPose.rotation);
         } else {
-            openglPoint = TangoSupport.getDepthAtPointNearestNeighbor(
-                pointCloud, oglTdepthPose.translation, oglTdepthPose.rotation,
-                u, v, mDisplayRotation, oglTcolorPose.translation,
-                oglTcolorPose.rotation);
+            depthPoint = TangoDepthInterpolation.getDepthAtPointNearestNeighbor(
+                    pointCloud,
+                    new double[] {0.0, 0.0, 0.0},
+                    new double[] {0.0, 0.0, 0.0, 1.0},
+                    u, v,
+                    mDisplayRotation,
+                    depthlTcolorPose.translation,
+                    depthlTcolorPose.rotation);
         }
-        if (openglPoint == null) {
+
+        if (depthPoint == null) {
             return null;
         }
-        return openglPoint;
+
+        return new MeasuredPoint(rgbTimestamp, depthPoint);
     }
 
     /**
      * Update the oldest line endpoint to the value passed into this function.
      * This will also flag the line for update on the next render pass.
      */
-    private synchronized void updateLine(float[] worldPoint) {
+    private synchronized void updateLine(MeasuredPoint newPoint) {
         if (mPointSwitch) {
             mPointSwitch = !mPointSwitch;
-            mLinePoints[0] = worldPoint;
+            mMeasuredPoints[0] = newPoint;
             return;
         }
         mPointSwitch = !mPointSwitch;
-        mLinePoints[1] = worldPoint;
-    }
-
-    /**
-     * Return the endpoints of the line as a Stack of Vector3 objects. Returns
-     * null if the line is not visible.
-     */
-    private synchronized Stack<Vector3> generateEndpoints() {
-
-        // Place the line based on the two points.
-        if (mLinePoints[0] != null && mLinePoints[1] != null) {
-            Stack<Vector3> points = new Stack<Vector3>();
-            points.push(new Vector3(mLinePoints[0][0], mLinePoints[0][1], mLinePoints[0][2]));
-            points.push(new Vector3(mLinePoints[1][0], mLinePoints[1][1], mLinePoints[1][2]));
-            return points;
-        }
-        return null;
+        mMeasuredPoints[1] = newPoint;
     }
 
     /*
      * Remove all the points from the Scene.
      */
     private synchronized void clearLine() {
-        mLinePoints[0] = null;
-        mLinePoints[1] = null;
+        mMeasuredPoints[0] = null;
+        mMeasuredPoints[1] = null;
         mPointSwitch = true;
         mRenderer.setLine(null);
-    }
-
-    /**
-     * Create a String containing a human-readable description of the
-     * distance between endpoints.
-     */
-    private synchronized String getPointSeparation() {
-        if (mLinePoints[0] == null || mLinePoints[1] == null) {
-            return "Null";
-        }
-        float[] p1 = mLinePoints[0];
-        float[] p2 = mLinePoints[1];
-        double separation = Math.sqrt(
-                Math.pow(p1[0] - p2[0], 2) +
-                        Math.pow(p1[1] - p2[1], 2) +
-                        Math.pow(p1[2] - p2[2], 2));
-        return String.format("%.2f", separation) + " meters";
     }
 
     // Debug text UI update loop, updating at 10Hz.
     private Runnable mUpdateUiLoopRunnable = new Runnable() {
         public void run() {
-            updateUi();
+            try {
+                mDistanceTextview.setText(String.format("%.2f", mMeasuredDistance) + " meters");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             mHandler.postDelayed(this, UPDATE_UI_INTERVAL_MS);
         }
     };
-
-    private synchronized void updateUi() {
-        try {
-            mDistanceMeasure.setText(getPointSeparation());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     /**
      * Set the color camera background texture rotation and save the display rotation.

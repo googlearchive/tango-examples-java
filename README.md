@@ -45,6 +45,9 @@ example code can focus on the Tango-specific aspects of the application.
    to stay affixed in space.
  * **java_floor_plan_example** - Create a floor plan by
    using the depth sensor to detect and mesure walls in a room.
+ * **java_marker_detection_example** - Build an augmented reality appliction
+   to detect AR markers in real world, and to render the boundaries and poses of
+   markers.
  * **java_model_correspondence_example** - Create a mapping
    between a virtual 3D object and selected points in the real world.
  * **java_motion_tracking_example** - Use Tango motion

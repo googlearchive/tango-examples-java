@@ -29,12 +29,12 @@ import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 import com.google.atap.tangoservice.experimental.TangoImageBuffer;
+import com.google.tango.support.TangoSupport;
 
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.hardware.display.DisplayManager;
@@ -51,8 +51,6 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * An example showing how to build a very simple application that allows the user to create a mesh
@@ -141,10 +139,10 @@ public class MeshBuilderActivity extends Activity {
             public void run() {
                 synchronized (MeshBuilderActivity.this) {
                     try {
-                        TangoSupport.initialize();
                         mConfig = setupTangoConfig(mTango);
                         mTango.connect(mConfig);
                         startupTango();
+                        TangoSupport.initialize(mTango);
                         mIsConnected = true;
                         mIsPaused = false;
                         runOnUiThread(new Runnable() {
@@ -186,6 +184,7 @@ public class MeshBuilderActivity extends Activity {
                     mTangoMesher.stopSceneReconstruction();
                     mTangoMesher.resetSceneReconstruction();
                     mTangoMesher.release();
+                    mTangoMesher = null;
                 }
                 if (mTango != null) {
                     mTango.disconnect();
@@ -301,12 +300,12 @@ public class MeshBuilderActivity extends Activity {
 
                         // Calculate the camera color pose at the camera frame update time in
                         // OpenGL engine.
-                        TangoSupport.TangoMatrixTransformData ssTdev =
+                        TangoSupport.MatrixTransformData ssTdev =
                                 TangoSupport.getMatrixTransformAtTime(
                                         0.0, TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                         TangoPoseData.COORDINATE_FRAME_DEVICE,
-                                        TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
-                                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                        TangoSupport.ENGINE_TANGO,
+                                        TangoSupport.ENGINE_OPENGL,
                                         mDisplayRotation);
 
                         if (ssTdev.statusCode == TangoPoseData.POSE_VALID) {

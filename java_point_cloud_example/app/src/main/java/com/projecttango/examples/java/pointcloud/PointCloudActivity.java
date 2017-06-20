@@ -25,6 +25,12 @@ import com.google.atap.tangoservice.TangoInvalidException;
 import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
+import com.google.tango.support.TangoPointCloudManager;
+import com.google.tango.support.TangoSupport;
+import com.google.tango.ux.TangoUx;
+import com.google.tango.ux.UxExceptionEvent;
+import com.google.tango.ux.UxExceptionEventListener;
+
 
 import android.app.Activity;
 import android.hardware.display.DisplayManager;
@@ -42,12 +48,6 @@ import org.rajawali3d.surface.RajawaliSurfaceView;
 import java.nio.FloatBuffer;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-
-import com.projecttango.tangosupport.TangoPointCloudManager;
-import com.projecttango.tangosupport.TangoSupport;
-import com.projecttango.tangosupport.ux.TangoUx;
-import com.projecttango.tangosupport.ux.UxExceptionEvent;
-import com.projecttango.tangosupport.ux.UxExceptionEventListener;
 
 /**
  * Main Activity class for the Point Cloud Sample. Handles the connection to the {@link Tango}
@@ -163,10 +163,10 @@ public class PointCloudActivity extends Activity {
                 // thread or in the UI thread.
                 synchronized (PointCloudActivity.this) {
                     try {
-                        TangoSupport.initialize();
                         mConfig = setupTangoConfig(mTango);
                         mTango.connect(mConfig);
                         startupTango();
+                        TangoSupport.initialize(mTango);
                         mIsConnected = true;
                         setDisplayRotation();
                     } catch (TangoOutOfDateException e) {
@@ -276,12 +276,12 @@ public class PointCloudActivity extends Activity {
                     TangoPointCloudData pointCloud = mPointCloudManager.getLatestPointCloud();
                     if (pointCloud != null) {
                         // Calculate the depth camera pose at the last point cloud update.
-                        TangoSupport.TangoMatrixTransformData transform =
+                        TangoSupport.MatrixTransformData transform =
                                 TangoSupport.getMatrixTransformAtTime(pointCloud.timestamp,
                                         TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                         TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
-                                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                        TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+                                        TangoSupport.ENGINE_OPENGL,
+                                        TangoSupport.ENGINE_TANGO,
                                         TangoSupport.ROTATION_IGNORED);
                         if (transform.statusCode == TangoPoseData.POSE_VALID) {
                             mRenderer.updatePointCloud(pointCloud, transform.matrix);
@@ -296,8 +296,8 @@ public class PointCloudActivity extends Activity {
                         TangoPoseData lastFramePose = TangoSupport.getPoseAtTime(0,
                                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                 TangoPoseData.COORDINATE_FRAME_DEVICE,
-                                TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                TangoSupport.ENGINE_OPENGL,
+                                TangoSupport.ENGINE_OPENGL,
                                 mDisplayRotation);
                         if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
                             mRenderer.updateCameraPose(lastFramePose);

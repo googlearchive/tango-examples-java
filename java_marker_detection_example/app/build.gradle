@@ -1,0 +1,34 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 23
+    buildToolsVersion "21.1.2"
+
+    defaultConfig {
+        applicationId "com.projecttango.experiments.markerdetectionsample"
+        minSdkVersion 19
+        targetSdkVersion 23
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+
+        lintOptions {
+            abortOnError false
+        }
+    }
+}
+
+
+dependencies {
+    apply from: '../../version.gradle'
+    compile "com.google.tango:sdk-base:${release_version}"
+    compile "com.google.tango:sdk-support:${release_version}"
+    compile "com.google.tango:sdk-markers:${release_version}"
+    compile "org.rajawali3d:rajawali:1.1.668@aar"
+    compile "com.android.support:appcompat-v7:23.0.0"
+}

@@ -28,6 +28,8 @@ import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
+import com.google.tango.support.TangoPointCloudManager;
+import com.google.tango.support.TangoSupport;
 
 import android.Manifest;
 import android.animation.Animator;
@@ -39,7 +41,6 @@ import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.hardware.Camera;
 import android.hardware.display.DisplayManager;
 import android.media.MediaActionSound;
 import android.opengl.GLSurfaceView;
@@ -66,9 +67,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.projecttango.tangosupport.TangoPointCloudManager;
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * This is an example that shows how to use the Tango APIs to get a Green Screen (Chroma key)
@@ -210,10 +208,10 @@ public class GreenScreenActivity extends AppCompatActivity {
             public void run() {
                 synchronized (GreenScreenActivity.this) {
                     try {
-                        TangoSupport.initialize();
                         mConfig = setupTangoConfig(mTango);
                         mTango.connect(mConfig);
                         startupTango();
+                        TangoSupport.initialize(mTango);
                         mIsConnected = true;
                         setDisplayRotation();
                     } catch (TangoOutOfDateException e) {

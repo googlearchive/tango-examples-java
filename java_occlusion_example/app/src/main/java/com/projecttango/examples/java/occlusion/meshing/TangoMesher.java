@@ -26,6 +26,8 @@ import com.google.atap.tangoservice.TangoEvent;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
+import com.google.tango.support.TangoPointCloudManager;
+import com.google.tango.support.TangoSupport;
 
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -33,9 +35,6 @@ import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import com.projecttango.tangosupport.TangoPointCloudManager;
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * Uses the Tango Service data to build 3D meshes. Provides higher level functionality built on top
@@ -99,8 +98,8 @@ public class TangoMesher extends Tango.OnTangoUpdateListener {
                         TangoPoseData depthPose = TangoSupport.getPoseAtTime(cloudData.timestamp,
                                 TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                 TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
-                                TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
-                                TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+                                TangoSupport.ENGINE_TANGO,
+                                TangoSupport.ENGINE_TANGO,
                                 TangoSupport.ROTATION_IGNORED);
                         if (depthPose.statusCode != TangoPoseData.POSE_VALID) {
                             Log.e(TAG, "couldn't extract a valid depth pose");

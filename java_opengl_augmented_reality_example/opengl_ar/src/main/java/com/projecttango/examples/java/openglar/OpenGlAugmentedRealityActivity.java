@@ -27,13 +27,13 @@ import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
+import com.google.tango.support.TangoSupport;
 
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
-import android.hardware.Camera;
 import android.hardware.display.DisplayManager;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
@@ -42,13 +42,10 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.Display;
-import android.view.Surface;
 import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * This is a simple example that shows how to use the Tango APIs to create an augmented reality
@@ -187,10 +184,10 @@ public class OpenGlAugmentedRealityActivity extends Activity {
                 // thread or in the UI thread.
                 synchronized (OpenGlAugmentedRealityActivity.this) {
                     try {
-                        TangoSupport.initialize();
                         mConfig = setupTangoConfig(mTango);
                         mTango.connect(mConfig);
                         startupTango();
+                        TangoSupport.initialize(mTango);
                         mIsConnected = true;
                         setDisplayRotation();
                     } catch (TangoOutOfDateException e) {
@@ -221,8 +218,6 @@ public class OpenGlAugmentedRealityActivity extends Activity {
         // virtual objects with the RGB image and produce a good AR effect.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION, true);
         // Drift correction allows motion tracking to recover after it loses tracking.
-        // The drift corrected pose is available through the frame pair with
-        // base frame AREA_DESCRIPTION and target frame DEVICE.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DRIFT_CORRECTION, true);
 
         return config;
@@ -341,22 +336,14 @@ public class OpenGlAugmentedRealityActivity extends Activity {
 
                                     // Get the transform from color camera to Start of Service
                                     // at the timestamp of the RGB image in OpenGL coordinates.
-                                    //
-                                    // When drift correction mode is enabled in config file, we need
-                                    // to query the device with respect to Area Description pose in
-                                    // order to use the drift-corrected pose.
-                                    //
-                                    // Note that if you don't want to use the drift corrected pose,
-                                    // the normal device with respect to start of service pose is
-                                    // still available.
-                                    TangoSupport.TangoMatrixTransformData transform =
+                                    TangoSupport.MatrixTransformData transform =
                                             TangoSupport.getMatrixTransformAtTime(
                                                     mRgbTimestampGlThread,
                                                     TangoPoseData
-                                                            .COORDINATE_FRAME_AREA_DESCRIPTION,
+                                                            .COORDINATE_FRAME_START_OF_SERVICE,
                                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                                    TangoSupport.ENGINE_OPENGL,
+                                                    TangoSupport.ENGINE_OPENGL,
                                                     mDisplayRotation);
                                     if (transform.statusCode == TangoPoseData.POSE_VALID) {
 

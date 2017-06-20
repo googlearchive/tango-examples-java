@@ -29,6 +29,7 @@ import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
+import com.google.tango.support.TangoSupport;
 
 import android.Manifest;
 import android.app.Activity;
@@ -50,8 +51,6 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * An example showing how to use the 3D reconstruction floor planning features to create a
@@ -142,6 +141,7 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
                     mTangoFloorplanner.stopFloorplanning();
                     mTangoFloorplanner.resetFloorplan();
                     mTangoFloorplanner.release();
+                    mTangoFloorplanner = null;
                 }
                 if (mTango != null) {
                     mTango.disconnect();
@@ -170,10 +170,10 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
             public void run() {
                 synchronized (FloorPlanReconstructionActivity.this) {
                     try {
-                        TangoSupport.initialize();
                         mConfig = setupTangoConfig(mTango);
                         mTango.connect(mConfig);
                         startupTango();
+                        TangoSupport.initialize(mTango);
                         mIsConnected = true;
                         mIsPaused = false;
                         runOnUiThread(new Runnable() {
@@ -285,8 +285,8 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
                 TangoPoseData devicePose = TangoSupport.getPoseAtTime(0.0,
                         TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                         TangoPoseData.COORDINATE_FRAME_DEVICE,
-                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                        TangoSupport.ENGINE_OPENGL,
+                        TangoSupport.ENGINE_OPENGL,
                         mDisplayRotation);
 
                 if (devicePose.statusCode == TangoPoseData.POSE_VALID) {
@@ -297,7 +297,7 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
                             deviceOrientation[1], deviceOrientation[2],
                             deviceOrientation[3]);
 
-                    mFloorplanView.updateCameraMatrix(devicePosition[0], -devicePosition[2],
+                    mFloorplanView.updateCameraMatrix(devicePosition[0], devicePosition[2],
                             yawRadians);
                 } else {
                     Log.w(TAG, "Can't get last device pose");
@@ -363,8 +363,8 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
                 devicePose = TangoSupport.getPoseAtTime(0.0,
                         TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                         TangoPoseData.COORDINATE_FRAME_DEVICE,
-                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                        TangoSupport.ENGINE_OPENGL,
+                        TangoSupport.ENGINE_OPENGL,
                         mDisplayRotation);
             }
             float devToFloorDistance = devicePose.getTranslationAsFloats()[1] - level.minZ;

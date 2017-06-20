@@ -16,7 +16,6 @@
 package com.projecttango.examples.java.occlusion;
 
 import com.google.atap.tango.mesh.TangoMesh;
-import com.google.atap.tangoservice.TangoCameraIntrinsics;
 
 import android.annotation.SuppressLint;
 import android.content.Context;

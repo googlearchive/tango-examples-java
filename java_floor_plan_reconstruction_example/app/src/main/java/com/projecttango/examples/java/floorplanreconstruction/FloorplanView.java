@@ -16,7 +16,6 @@
 
 package com.projecttango.examples.java.floorplanreconstruction;
 
-import com.google.atap.tango.reconstruction.TangoFloorplanLevel;
 import com.google.atap.tango.reconstruction.TangoPolygon;
 
 import android.content.Context;
@@ -24,12 +23,14 @@ import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.support.v4.view.MotionEventCompat;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.View;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +47,7 @@ public class FloorplanView extends SurfaceView implements SurfaceHolder.Callback
 
     // Scale between meters and pixels. Hardcoded to a reasonable default.
     private static final float SCALE = 100f;
+    private static final int INVALID_POINTER_ID = -1;
 
     private volatile List<TangoPolygon> mPolygons = new ArrayList<>();
 
@@ -54,11 +56,29 @@ public class FloorplanView extends SurfaceView implements SurfaceHolder.Callback
     private Paint mSpacePaint;
     private Paint mFurniturePaint;
     private Paint mUserMarkerPaint;
+    private ScaleGestureDetector mScaleDetector;
 
     private Path mUserMarkerPath;
 
-    private Matrix mCamera;
-    private Matrix mCameraInverse;
+    // Pan and Zoom matrix.
+    private Matrix mPanAndZoomMatrix;
+    // The fixed camera matrix does not include the translation that comes from the user dragging
+    // the plan around.
+    private Matrix mFixedCameraMatrix;
+    private Matrix mFixedCameraInverse;
+
+    // The ‘active pointer’ is the one currently moving our object.
+    private int mActivePointerId = INVALID_POINTER_ID;
+
+    // Position of the last touch event.
+    private float mLastTouchX;
+    private float mLastTouchY;
+
+    // Position of the user marker relative to its start position, in screen coordinates.
+    private float mDragX = 0;
+    private float mDragY = 0;
+
+    private float mScaleFactor = 1.f;
 
     private boolean mIsDrawing = false;
     private SurfaceHolder mSurfaceHolder;
@@ -101,20 +121,22 @@ public class FloorplanView extends SurfaceView implements SurfaceHolder.Callback
 
     public FloorplanView(Context context) {
         super(context);
-        init();
+        init(context);
     }
 
     public FloorplanView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        init();
+        init(context);
     }
 
     public FloorplanView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init();
+        init(context);
     }
 
-    private void init() {
+    private void init(Context context) {
+        mScaleDetector = new ScaleGestureDetector(context, new ScaleListener());
+
         // Get parameters.
         TypedValue typedValue = new TypedValue();
         getResources().getValue(R.dimen.min_area_space, typedValue, true);
@@ -149,8 +171,9 @@ public class FloorplanView extends SurfaceView implements SurfaceHolder.Callback
         mUserMarkerPath.lineTo(-0.4f * SCALE, -0.5f  * SCALE);
         mUserMarkerPath.lineTo(0.4f  * SCALE, -0.5f * SCALE);
         mUserMarkerPath.lineTo(0, 0);
-        mCamera = new Matrix();
-        mCameraInverse = new Matrix();
+        mPanAndZoomMatrix = new Matrix();
+        mFixedCameraMatrix = new Matrix();
+        mFixedCameraInverse = new Matrix();
 
         // Register for surface callback events.
         getHolder().addCallback(this);
@@ -188,8 +211,10 @@ public class FloorplanView extends SurfaceView implements SurfaceHolder.Callback
         float translationY = canvas.getHeight() / 2f;
         canvas.translate(translationX, translationY);
 
+        updatePanAndZoomMatrix();
+        canvas.concat(mPanAndZoomMatrix);
         // Update position and orientation based on the device position and orientation.
-        canvas.concat(mCamera);
+        canvas.concat(mFixedCameraMatrix);
 
         // Draw all the polygons. Make a shallow copy in case mPolygons is reset while rendering.
         List<TangoPolygon> drawPolygons = mPolygons;
@@ -242,7 +267,7 @@ public class FloorplanView extends SurfaceView implements SurfaceHolder.Callback
         }
 
         // Draw a user / device marker.
-        canvas.concat(mCameraInverse);
+        canvas.concat(mFixedCameraInverse);
         canvas.drawPath(mUserMarkerPath, mUserMarkerPaint);
     }
 
@@ -262,9 +287,123 @@ public class FloorplanView extends SurfaceView implements SurfaceHolder.Callback
      * current device position and orientation.
      */
     public void updateCameraMatrix(float translationX, float translationY, float yawRadians) {
-        mCamera.setTranslate(-translationX * SCALE, translationY * SCALE);
-        mCamera.preRotate((float) Math.toDegrees(yawRadians), translationX * SCALE, -translationY
-                * SCALE);
-        mCamera.invert(mCameraInverse);
+        mFixedCameraMatrix.setTranslate(-translationX * SCALE, -translationY * SCALE);
+        mFixedCameraMatrix.preRotate((float) Math.toDegrees(yawRadians), translationX * SCALE,
+                translationY * SCALE);
+        mFixedCameraMatrix.invert(mFixedCameraInverse);
+    }
+
+    /**
+     * Updates the pan and zoom matrix with the most recent drag and scale information.
+     */
+    private void updatePanAndZoomMatrix() {
+        float dragX;
+        float dragY;
+        float scaleFactor;
+        // Synchronize before reading fields that can be changed in a different thread.
+        synchronized (this) {
+            dragX = mDragX;
+            dragY = mDragY;
+            scaleFactor = mScaleFactor;
+        }
+        mPanAndZoomMatrix.setTranslate(dragX, dragY);
+        mPanAndZoomMatrix.postScale(scaleFactor, scaleFactor);
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent ev) {
+        // Let the ScaleGestureDetector inspect all events.
+        mScaleDetector.onTouchEvent(ev);
+
+        final int action = MotionEventCompat.getActionMasked(ev);
+
+        switch (action) {
+            case MotionEvent.ACTION_DOWN: {
+                final int pointerIndex = MotionEventCompat.getActionIndex(ev);
+                final float x = MotionEventCompat.getX(ev, pointerIndex);
+                final float y = MotionEventCompat.getY(ev, pointerIndex);
+
+                // Remember where we started (for dragging)
+                mLastTouchX = x;
+                mLastTouchY = y;
+                // Save the ID of this pointer (for dragging)
+                mActivePointerId = MotionEventCompat.getPointerId(ev, 0);
+                break;
+            }
+
+            case MotionEvent.ACTION_MOVE: {
+                // Find the index of the active pointer and fetch its position
+                final int pointerIndex =
+                        MotionEventCompat.findPointerIndex(ev, mActivePointerId);
+
+                final float x = MotionEventCompat.getX(ev, pointerIndex);
+                final float y = MotionEventCompat.getY(ev, pointerIndex);
+
+                // Calculate the distance moved
+                final float dx = x - mLastTouchX;
+                final float dy = y - mLastTouchY;
+
+                // Synchronize while changing the drag variables, since they are read in the
+                // renderer thread.
+                synchronized (this) {
+                    mDragX += dx;
+                    mDragY += dy;
+                }
+
+                invalidate();
+
+                // Remember this touch position for the next move event
+                mLastTouchX = x;
+                mLastTouchY = y;
+
+                break;
+            }
+
+            case MotionEvent.ACTION_UP: {
+                mActivePointerId = INVALID_POINTER_ID;
+                break;
+            }
+
+            case MotionEvent.ACTION_CANCEL: {
+                mActivePointerId = INVALID_POINTER_ID;
+                break;
+            }
+
+            case MotionEvent.ACTION_POINTER_UP: {
+                final int pointerIndex = MotionEventCompat.getActionIndex(ev);
+                final int pointerId = MotionEventCompat.getPointerId(ev, pointerIndex);
+
+                if (pointerId == mActivePointerId) {
+                    // This was our active pointer going up. Choose a new
+                    // active pointer and adjust accordingly.
+                    final int newPointerIndex = pointerIndex == 0 ? 1 : 0;
+                    mLastTouchX = MotionEventCompat.getX(ev, newPointerIndex);
+                    mLastTouchY = MotionEventCompat.getY(ev, newPointerIndex);
+                    mActivePointerId = MotionEventCompat.getPointerId(ev, newPointerIndex);
+                }
+                break;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * A class to handle the scale gestures.
+     */
+    private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
+        private final float mMinScaleFactor = 0.1f;
+        private final float mMaxScaleFactor = 5.f;
+
+        @Override
+        public boolean onScale(ScaleGestureDetector detector) {
+            // Synchronize while changing the scale factor, since it is read in the renderer thread.
+            synchronized (FloorplanView.this) {
+                mScaleFactor *= detector.getScaleFactor();
+                // Don't let the object get too small or too large.
+                mScaleFactor = Math.max(mMinScaleFactor, Math.min(mScaleFactor, mMaxScaleFactor));
+            }
+            invalidate();
+            return true;
+        }
     }
 }

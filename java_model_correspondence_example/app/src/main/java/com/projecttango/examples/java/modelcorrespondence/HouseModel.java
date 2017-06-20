@@ -18,9 +18,6 @@ package com.projecttango.examples.java.modelcorrespondence;
 
 import android.opengl.Matrix;
 
-import org.rajawali3d.math.Matrix4;
-import org.rajawali3d.math.vector.Vector3;
-
 import java.util.ArrayList;
 import java.util.List;
 
