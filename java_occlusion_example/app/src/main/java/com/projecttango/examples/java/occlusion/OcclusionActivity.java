@@ -178,10 +178,10 @@ public class OcclusionActivity extends Activity implements View.OnTouchListener 
                 public void run() {
                     try {
                         synchronized (OcclusionActivity.this) {
-                            TangoSupport.initialize();
                             mConfig = setupTangoConfig(mTango);
                             mTango.connect(mConfig);
                             startupTango();
+                            TangoSupport.initialize(mTango);
                             mIsConnected = true;
                             setDisplayRotation();
                         }

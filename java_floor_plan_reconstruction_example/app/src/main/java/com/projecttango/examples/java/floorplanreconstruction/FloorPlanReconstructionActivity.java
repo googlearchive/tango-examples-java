@@ -170,10 +170,10 @@ public class FloorPlanReconstructionActivity extends Activity implements Floorpl
             public void run() {
                 synchronized (FloorPlanReconstructionActivity.this) {
                     try {
-                        TangoSupport.initialize();
                         mConfig = setupTangoConfig(mTango);
                         mTango.connect(mConfig);
                         startupTango();
+                        TangoSupport.initialize(mTango);
                         mIsConnected = true;
                         mIsPaused = false;
                         runOnUiThread(new Runnable() {

@@ -206,10 +206,10 @@ public class ModelCorrespondenceActivity extends Activity {
                 // thread or in the UI thread.
                 synchronized (ModelCorrespondenceActivity.this) {
                     try {
-                        TangoSupport.initialize();
                         mConfig = setupTangoConfig(mTango);
                         mTango.connect(mConfig);
                         startupTango();
+                        TangoSupport.initialize(mTango);
                         connectRenderer();
                         mIsConnected = true;
                         setDisplayRotation();

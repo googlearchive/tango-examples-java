@@ -129,10 +129,10 @@ public class HelloVideoActivity extends Activity {
                 // the OpenGL thread or in the UI thread.
                 synchronized (HelloVideoActivity.this) {
                     try {
-                        TangoSupport.initialize();
                         mConfig = setupTangoConfig(mTango);
                         mTango.connect(mConfig);
                         startupTango();
+                        TangoSupport.initialize(mTango);
                         mIsConnected = true;
                         setDisplayRotation();
                     } catch (TangoOutOfDateException e) {
