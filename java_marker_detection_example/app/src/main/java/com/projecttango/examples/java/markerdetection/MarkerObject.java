@@ -15,6 +15,8 @@
  */
 package com.projecttango.examples.java.markerdetection;
 
+import com.google.tango.markers.TangoMarkers;
+
 import android.graphics.Color;
 
 import org.rajawali3d.materials.Material;
@@ -24,24 +26,78 @@ import org.rajawali3d.primitives.Line3D;
 import org.rajawali3d.scene.Scene;
 
 import java.util.Stack;
-
-import com.projecttango.tangosupport.TangoSupport;
 /**
  * Rajawali object which represents a marker.
  */
 public class MarkerObject {
     // 3D object for bounding box of the marker.
-    private Line3D mRect;
+    private MutableLine3D mRect;
 
     // 3D object for three axes of the marker local frame.
-    private Line3D mAxisX;
-    private Line3D mAxisY;
-    private Line3D mAxisZ;
+    private MutableLine3D mAxisX;
+    private MutableLine3D mAxisY;
+    private MutableLine3D mAxisZ;
+
+    // If the object is visible.
+    private boolean mIsVisible;
 
     /**
-     * Construct marker object from a marker.
+     * Construct marker object.
      */
-    public MarkerObject(TangoSupport.Marker marker) {
+    public MarkerObject() {
+        // Line width for drawing the axes and bounding rectangle.
+        final float axisLineWidth = 10.f;
+        final float rectLineWidth = 5.f;
+
+        // An array that contains two dummy points to form one line segment.
+        Stack<Vector3> points = new Stack<Vector3>();
+        points.add(new Vector3());
+        points.add(new Vector3());
+
+        // A generic matrial to make Rajawali happy.
+        Material material = new Material();
+
+        // X axis
+        mAxisX = new MutableLine3D(points, axisLineWidth, Color.RED);
+        mAxisX.setMaterial(material);
+
+        // Y axis
+        mAxisY = new MutableLine3D(points, axisLineWidth, Color.GREEN);
+        mAxisY.setMaterial(material);
+
+        // Z axis
+        mAxisZ = new MutableLine3D(points, axisLineWidth, Color.BLUE);
+        mAxisZ.setMaterial(material);
+
+        // Rectangle for the bounding box.
+        // Add 6 more(8 in total) points to form 4 line segments.
+        points.add(new Vector3());
+        points.add(new Vector3());
+        points.add(new Vector3());
+        points.add(new Vector3());
+        points.add(new Vector3());
+        points.add(new Vector3());
+        mRect = new MutableLine3D(points, rectLineWidth, Color.CYAN);
+        mRect.setMaterial(material);
+
+        // Hide the object until it is detected.
+        setVisible(false);
+    }
+
+    /**
+     * Add all 3D objects of a marker as children of the input scene.
+     */
+    public void addToScene(Scene scene) {
+        scene.addChild(mAxisX);
+        scene.addChild(mAxisY);
+        scene.addChild(mAxisZ);
+        scene.addChild(mRect);
+    }
+
+    /**
+     * Update the geometry of the marker.
+     */
+    public void updateGeometry(TangoMarkers.Marker marker) {
         // Create marker center and four corners.
         Vector3 center =
                 new Vector3(marker.translation[0], marker.translation[1], marker.translation[2]);
@@ -61,35 +117,27 @@ public class MarkerObject {
         // Calculate marker size in meters, assuming square-shape markers.
         double markerSize = cornerTopLeft.distanceTo(cornerTopRight);
 
-        // Line width for drawing the axes and bounding rectangle.
-        final float axisLineWidth = 10.f;
-        final float rectLineWidth = 5.f;
-
         Stack<Vector3> points = new Stack<Vector3>();
-        Material material = new Material();
 
         // X axis
         Vector3 xAxis = q.multiply(new Vector3(markerSize / 3, 0, 0));
         points.add(center);
         points.add(Vector3.addAndCreate(center, xAxis));
-        mAxisX = new Line3D(points, axisLineWidth, Color.RED);
-        mAxisX.setMaterial(material);
+        mAxisX.updateVertices(points);
 
         // Y axis
         points.clear();
         Vector3 yAxis = q.multiply(new Vector3(0, markerSize / 3, 0));
         points.add(center);
         points.add(Vector3.addAndCreate(center, yAxis));
-        mAxisY = new Line3D(points, axisLineWidth, Color.GREEN);
-        mAxisY.setMaterial(material);
+        mAxisY.updateVertices(points);
 
         // Z axis
         points.clear();
         Vector3 zAxis = q.multiply(new Vector3(0, 0, markerSize / 3));
         points.add(center);
         points.add(Vector3.addAndCreate(center, zAxis));
-        mAxisZ = new Line3D(points, axisLineWidth, Color.BLUE);
-        mAxisZ.setMaterial(material);
+        mAxisZ.updateVertices(points);
 
         // Rect
         points.clear();
@@ -101,27 +149,22 @@ public class MarkerObject {
         points.add(cornerTopLeft);
         points.add(cornerTopLeft);
         points.add(cornerBottomLeft);
-        mRect = new Line3D(points, rectLineWidth, Color.CYAN);
-        mRect.setMaterial(material);
+        mRect.updateVertices(points);
+
+        // Make it visible
+        if (!mIsVisible) {
+            setVisible(true);
+        }
     }
 
     /**
-     * Add all 3D objects of a marker as children of the input scene.
+     * Set visibility of the marker object.
      */
-    public void addToScene(Scene scene) {
-        scene.addChild(mAxisX);
-        scene.addChild(mAxisY);
-        scene.addChild(mAxisZ);
-        scene.addChild(mRect);
-    }
-
-    /**
-     * Remove all 3D objects of a marker from the input scene.
-     */
-    public void removeFromScene(Scene scene) {
-        scene.removeChild(mAxisX);
-        scene.removeChild(mAxisY);
-        scene.removeChild(mAxisZ);
-        scene.removeChild(mRect);
+    public void setVisible(boolean visible) {
+        mRect.setVisible(visible);
+        mAxisX.setVisible(visible);
+        mAxisY.setVisible(visible);
+        mAxisZ.setVisible(visible);
+        mIsVisible = visible;
     }
 }

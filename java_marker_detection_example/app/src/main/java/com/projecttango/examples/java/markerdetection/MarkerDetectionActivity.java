@@ -30,6 +30,8 @@ import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 import com.google.atap.tangoservice.experimental.TangoImageBuffer;
+import com.google.tango.markers.TangoMarkers;
+import com.google.tango.support.TangoSupport;
 
 import android.Manifest;
 import android.app.Activity;
@@ -40,6 +42,9 @@ import android.hardware.display.DisplayManager;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
@@ -53,8 +58,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * This is a simple example that shows how to use the Tango APIs to detect markers within camera
@@ -74,6 +77,8 @@ public class MarkerDetectionActivity extends Activity {
     private static final String CAMERA_PERMISSION = Manifest.permission.CAMERA;
     private static final int CAMERA_PERMISSION_CODE = 0;
 
+    private static final float MARKER_SIZE = 0.1395f;
+
     private SurfaceView mSurfaceView;
     private MarkerDetectionRenderer mRenderer;
     private Tango mTango;
@@ -81,6 +86,11 @@ public class MarkerDetectionActivity extends Activity {
     private boolean mIsConnected = false;
     private double mCameraPoseTimestamp = 0;
     private volatile TangoImageBuffer mCurrentImageBuffer;
+    private volatile List<TangoMarkers.Marker> mMarkerList;
+
+    private HandlerThread mMarkerDetectionThread;
+    private Handler mMarkerDetectionHandler;
+    private AtomicBoolean mIsMarkerDetectionThreadRunning = new AtomicBoolean(false);
 
     // Texture rendering related fields.
     // NOTE: Naming indicates which thread is in charge of updating this variable.
@@ -117,7 +127,18 @@ public class MarkerDetectionActivity extends Activity {
             }, null);
         }
 
+        // Create thread for marker detection algorithm.
+        mMarkerDetectionThread = new HandlerThread("MarkerDetection");
+        mMarkerDetectionThread.start();
+        mMarkerDetectionHandler = new Handler(mMarkerDetectionThread.getLooper());
+
         setupRenderer();
+    }
+
+    @Override
+    protected void onDestroy() {
+        mMarkerDetectionThread.quit();
+        super.onDestroy();
     }
 
     @Override
@@ -211,8 +232,6 @@ public class MarkerDetectionActivity extends Activity {
         // virtual objects with the RBG image and produce a good AR effect.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION, true);
         // Drift correction allows motion tracking to recover after it loses tracking.
-        // The drift-corrected pose is available through the frame pair with
-        // base frame AREA_DESCRIPTION and target frame DEVICE.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DRIFT_CORRECTION, true);
         return config;
     }
@@ -274,7 +293,10 @@ public class MarkerDetectionActivity extends Activity {
             TangoCameraIntrinsics.TANGO_CAMERA_COLOR, new Tango.OnFrameAvailableListener() {
               @Override
               public void onFrameAvailable(TangoImageBuffer tangoImageBuffer, int i) {
-                mCurrentImageBuffer = copyImageBuffer(tangoImageBuffer);
+                  mCurrentImageBuffer = copyImageBuffer(tangoImageBuffer);
+
+                  // Detect markers in background thread
+                  detectMarkers();
               }
 
               TangoImageBuffer copyImageBuffer(TangoImageBuffer imageBuffer) {
@@ -285,7 +307,7 @@ public class MarkerDetectionActivity extends Activity {
                 clone.flip();
                 return new TangoImageBuffer(imageBuffer.width, imageBuffer.height,
                     imageBuffer.stride, imageBuffer.frameNumber, imageBuffer.timestamp,
-                    imageBuffer.format, clone);
+                    imageBuffer.format, clone, imageBuffer.exposureDurationNs);
               }
             });
     }
@@ -343,50 +365,20 @@ public class MarkerDetectionActivity extends Activity {
                         if (mRgbTimestampGlThread > mCameraPoseTimestamp) {
                             // Calculate the camera color pose at the camera frame update time in
                             // OpenGL engine.
-                            //
-                            // When drift correction mode is enabled in config file, we must query
-                            // the device with respect to Area Description pose in order to use the
-                            // drift corrected pose.
-                            //
-                            // Note that if you don't want to use the drift corrected pose, the
-                            // normal device with respect to start of service pose is available.
                             TangoPoseData lastFramePose = TangoSupport.getPoseAtTime(
                                     mRgbTimestampGlThread,
                                     TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                    TangoSupport.ENGINE_OPENGL,
+                                    TangoSupport.ENGINE_OPENGL,
                                     mDisplayRotation);
                             if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
                                 // Update the camera pose from the renderer
                                 mRenderer.updateRenderCameraPose(lastFramePose);
                                 mCameraPoseTimestamp = lastFramePose.timestamp;
 
-                                // Detect markers within the current image buffer.
-                                TangoSupport.MarkerParam param = new TangoSupport.MarkerParam();
-                                param.type = TangoSupport.TANGO_MARKER_ARTAG;
-                                param.markerSize = 0.1395;
-
-                                TangoPoseData worldTcamera = TangoSupport.getPoseAtTime(
-                                    mCurrentImageBuffer.timestamp,
-                                    TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
-                                    TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
-                                    TangoSupport.ROTATION_IGNORED);
-                                try {
-                                    List<TangoSupport.Marker> markerList =
-                                        TangoSupport.detectMarkers(
-                                            mCurrentImageBuffer,
-                                            TangoCameraIntrinsics.TANGO_CAMERA_COLOR,
-                                            worldTcamera.translation,
-                                            worldTcamera.rotation,
-                                            param);
-
-                                    mRenderer.updateMarkers(markerList);
-                                } catch (TangoException e) {
-                                    e.printStackTrace();
-                                }
+                                // Update renderer with new markers.
+                                mRenderer.updateMarkers(mMarkerList);
                             } else {
                                 // When the pose status is not valid, it indicates the tracking has
                                 // been lost. In this case, we simply stop rendering.
@@ -424,6 +416,45 @@ public class MarkerDetectionActivity extends Activity {
         });
 
         mSurfaceView.setSurfaceRenderer(mRenderer);
+    }
+
+    /**
+     * Detect markers from the current image buffer. The function executes the
+     * detection algorithm in a thread, and avoids reentry by using a lock.
+     */
+    public void detectMarkers() {
+        // Do not start if there is an unfinished task.
+        if (mIsMarkerDetectionThreadRunning.compareAndSet(false, true)) {
+            mMarkerDetectionHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        TangoPoseData worldTcamera = TangoSupport.getPoseAtTime(
+                            mCurrentImageBuffer.timestamp,
+                            TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+                            TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
+                            TangoSupport.ENGINE_OPENGL,
+                            TangoSupport.ENGINE_TANGO,
+                            TangoSupport.ROTATION_IGNORED);
+
+                        // Detect markers within the current image buffer.
+                        TangoMarkers.DetectParam param = new TangoMarkers.DetectParam();
+                        param.type = TangoMarkers.MARKER_ARTAG;
+                        param.markerSize = MARKER_SIZE;
+
+                        mMarkerList = TangoMarkers.detectMarkers(
+                            mCurrentImageBuffer,
+                            TangoCameraIntrinsics.TANGO_CAMERA_COLOR,
+                            worldTcamera.translation,
+                            worldTcamera.rotation, param);
+                    } catch (TangoException e) {
+                        e.printStackTrace();
+                    }
+
+                    mIsMarkerDetectionThreadRunning.set(false);
+                }
+            });
+        }
     }
 
     /**

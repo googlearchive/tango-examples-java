@@ -15,6 +15,8 @@
  */
 package com.projecttango.examples.java.hellovideo;
 
+import com.google.tango.support.TangoSupport;
+
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
@@ -27,8 +29,6 @@ import java.nio.ShortBuffer;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
-
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * A simple OpenGL renderer that renders the Tango RGB camera texture on a full-screen background.

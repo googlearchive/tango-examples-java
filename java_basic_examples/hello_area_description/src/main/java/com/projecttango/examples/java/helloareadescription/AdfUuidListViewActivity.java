@@ -173,7 +173,6 @@ public class AdfUuidListViewActivity extends Activity implements SetAdfNameDialo
                 Toast.makeText(this, R.string.no_permissions, Toast.LENGTH_LONG).show();
             }
         }
-        updateList();
     }
 
     /**

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-   Copyright 2016 Google Inc.
+   Copyright 2017 Google Inc.
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
    limitations under the License.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.projecttango.examples.java.augmentedreality"
+    package="com.projecttango.examples.java.markerdetection"
     android:versionCode="0"
     android:versionName="0" >
 
@@ -23,7 +23,7 @@
         android:minSdkVersion="19"
         android:targetSdkVersion="23" />
 
-    <uses-permission android:name="android.permission.CAMERA" />
+     <uses-permission android:name="android.permission.CAMERA" />
 
     <application
         android:allowBackup="true"
@@ -34,7 +34,7 @@
             android:name="com.projecttango.libtango_device2"
             android:required="true" />
         <activity
-            android:name=".AugmentedRealityActivity"
+            android:name=".MarkerDetectionActivity"
             android:label="@string/app_name_long"
             android:configChanges="orientation|screenSize">
             <intent-filter android:label="@string/app_name">

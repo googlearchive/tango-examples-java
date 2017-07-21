@@ -26,6 +26,7 @@ import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
+import com.google.tango.support.TangoSupport;
 
 import android.app.Activity;
 import android.hardware.display.DisplayManager;
@@ -33,7 +34,6 @@ import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Display;
-import android.view.WindowManager;
 import android.widget.Toast;
 
 import org.rajawali3d.scene.ASceneFrameCallback;
@@ -41,8 +41,6 @@ import org.rajawali3d.surface.RajawaliSurfaceView;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * Main Activity class for the Motion Tracking API Sample. Handles the connection to the Tango
@@ -235,8 +233,8 @@ public class MotionTrackingActivity extends Activity {
                                 TangoSupport.getPoseAtTime(0.0,
                                         TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                         TangoPoseData.COORDINATE_FRAME_DEVICE,
-                                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                        TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                        TangoSupport.ENGINE_OPENGL,
+                                        TangoSupport.ENGINE_OPENGL,
                                         mDisplayRotation);
 
                         if (pose.statusCode == TangoPoseData.POSE_VALID) {

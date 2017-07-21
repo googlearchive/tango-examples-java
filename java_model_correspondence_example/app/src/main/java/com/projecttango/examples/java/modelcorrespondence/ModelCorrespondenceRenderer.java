@@ -16,12 +16,12 @@
 package com.projecttango.examples.java.modelcorrespondence;
 
 import com.google.atap.tangoservice.TangoPoseData;
+import com.google.tango.support.TangoSupport;
 
 import android.content.Context;
 import android.graphics.Color;
 import android.util.Log;
 import android.view.MotionEvent;
-import android.view.Surface;
 
 import org.rajawali3d.Object3D;
 import org.rajawali3d.lights.DirectionalLight;
@@ -43,8 +43,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.microedition.khronos.opengles.GL10;
-
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * Simple example augmented reality renderer which displays spheres fixed in place for every

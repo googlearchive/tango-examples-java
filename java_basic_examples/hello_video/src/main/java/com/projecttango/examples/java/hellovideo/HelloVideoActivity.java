@@ -28,6 +28,7 @@ import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
+import com.google.tango.support.TangoSupport;
 
 import android.app.Activity;
 import android.hardware.display.DisplayManager;
@@ -40,8 +41,6 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * This is a stripped-down simple example that shows how to use the Tango APIs to render the Tango

@@ -28,6 +28,7 @@ import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
+import com.google.tango.support.TangoSupport;
 
 import android.Manifest;
 import android.app.Activity;
@@ -42,6 +43,8 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.Display;
+import android.view.MotionEvent;
+import android.view.View;
 import android.widget.Toast;
 
 import org.rajawali3d.scene.ASceneFrameCallback;
@@ -49,8 +52,6 @@ import org.rajawali3d.view.SurfaceView;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * This is a simple example that shows how to use the Tango APIs to create an augmented reality (AR)
@@ -73,7 +74,7 @@ import com.projecttango.tangosupport.TangoSupport;
  * If you're looking for a more stripped down example that doesn't use a rendering library like
  * Rajawali, see java_hello_video_example.
  */
-public class AugmentedRealityActivity extends Activity {
+public class AugmentedRealityActivity extends Activity implements View.OnTouchListener {
     private static final String TAG = AugmentedRealityActivity.class.getSimpleName();
     private static final int INVALID_TEXTURE_ID = 0;
 
@@ -100,6 +101,7 @@ public class AugmentedRealityActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mSurfaceView = (SurfaceView) findViewById(R.id.surfaceview);
+        mSurfaceView.setOnTouchListener(this);
         mRenderer = new AugmentedRealityRenderer(this);
 
         DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
@@ -197,6 +199,8 @@ public class AugmentedRealityActivity extends Activity {
                     } catch (TangoInvalidException e) {
                         Log.e(TAG, getString(R.string.exception_tango_invalid), e);
                         showsToastAndFinishOnUiThread(R.string.exception_tango_invalid);
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
                 }
             }
@@ -216,8 +220,6 @@ public class AugmentedRealityActivity extends Activity {
         // virtual objects with the RBG image and produce a good AR effect.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_LOWLATENCYIMUINTEGRATION, true);
         // Drift correction allows motion tracking to recover after it loses tracking.
-        // The drift-corrected pose is available through the frame pair with
-        // base frame AREA_DESCRIPTION and target frame DEVICE.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DRIFT_CORRECTION, true);
         return config;
     }
@@ -330,19 +332,12 @@ public class AugmentedRealityActivity extends Activity {
                         if (mRgbTimestampGlThread > mCameraPoseTimestamp) {
                             // Calculate the camera color pose at the camera frame update time in
                             // OpenGL engine.
-                            //
-                            // When drift correction mode is enabled in config file, we must query
-                            // the device with respect to Area Description pose in order to use the
-                            // drift corrected pose.
-                            //
-                            // Note that if you don't want to use the drift corrected pose, the
-                            // normal device with respect to start of service pose is available.
                             TangoPoseData lastFramePose = TangoSupport.getPoseAtTime(
                                     mRgbTimestampGlThread,
-                                    TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+                                    TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                    TangoSupport.ENGINE_OPENGL,
+                                    TangoSupport.ENGINE_OPENGL,
                                     mDisplayRotation);
                             if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
                                 // Update the camera pose from the renderer
@@ -520,5 +515,11 @@ public class AugmentedRealityActivity extends Activity {
                 finish();
             }
         });
+    }
+
+    @Override
+    public boolean onTouch(View view, MotionEvent motionEvent) {
+        mRenderer.onTouchEvent(motionEvent);
+        return true;
     }
 }

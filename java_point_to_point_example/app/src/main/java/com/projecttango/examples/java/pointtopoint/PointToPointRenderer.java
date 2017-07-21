@@ -16,6 +16,7 @@
 package com.projecttango.examples.java.pointtopoint;
 
 import com.google.atap.tangoservice.TangoPoseData;
+import com.google.tango.support.TangoSupport;
 
 import android.content.Context;
 import android.graphics.Color;
@@ -37,8 +38,6 @@ import org.rajawali3d.renderer.Renderer;
 import java.util.Stack;
 
 import javax.microedition.khronos.opengles.GL10;
-
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * Very simple example point-to-point renderer which displays a line fixed in place.

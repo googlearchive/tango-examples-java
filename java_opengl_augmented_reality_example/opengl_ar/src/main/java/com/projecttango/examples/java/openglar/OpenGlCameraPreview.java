@@ -16,11 +16,10 @@
 
 package com.projecttango.examples.java.openglar;
 
+import com.google.tango.support.TangoSupport;
+
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
-import android.view.Surface;
-
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * A preview of the RGB camera rendered as background using OpenGL.

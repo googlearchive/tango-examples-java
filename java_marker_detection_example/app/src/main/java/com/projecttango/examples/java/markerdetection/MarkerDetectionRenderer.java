@@ -16,11 +16,13 @@
 package com.projecttango.examples.java.markerdetection;
 
 import com.google.atap.tangoservice.TangoPoseData;
+import com.google.tango.markers.TangoMarkers;
+import com.google.tango.support.TangoSupport;
 
 import android.content.Context;
-
 import android.util.Log;
 import android.view.MotionEvent;
+
 import org.rajawali3d.materials.Material;
 import org.rajawali3d.materials.textures.ATexture;
 import org.rajawali3d.materials.textures.StreamingTexture;
@@ -36,8 +38,6 @@ import java.util.Map;
 
 import javax.microedition.khronos.opengles.GL10;
 
-import com.projecttango.tangosupport.TangoSupport;
-
 /**
  * Renderer that implements a basic augmented reality scene using Rajawali.
  * It creates a scene with a background using color camera image, and renders the bounding box and
@@ -45,6 +45,7 @@ import com.projecttango.tangosupport.TangoSupport;
  */
 public class MarkerDetectionRenderer extends Renderer {
     private static final String TAG = MarkerDetectionRenderer.class.getSimpleName();
+    private static final int MAX_MARKER_ID = 255;
 
     private float[] textureCoords0 = new float[] {0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F, 0.0F};
 
@@ -89,31 +90,35 @@ public class MarkerDetectionRenderer extends Renderer {
       } catch (ATexture.TextureException e) {
           Log.e(TAG, "Exception creating texture for RGB camera contents", e);
       }
-      getCurrentScene().addChildAt(mBackgroundQuad, 0);
+
+      Scene scene = getCurrentScene();
+      scene.addChildAt(mBackgroundQuad, 0);
+
+      // Create marker objects and add them to the scene.
+      for (int i = 0; i <= MAX_MARKER_ID; i++) {
+        MarkerObject newObject = new MarkerObject();
+        mMarkerObjects.put(Integer.toString(i), newObject);
+        newObject.addToScene(scene);
+      }
   }
 
   /**
    * Update marker objects and scene.
    */
-  public void updateMarkers(List<TangoSupport.Marker> markerList) {
-      if (markerList.size() > 0) {
-          Scene scene = getCurrentScene();
-
-          // Create objects based on new markers
+  public void updateMarkers(List<TangoMarkers.Marker> markerList) {
+      if (markerList != null && markerList.size() > 0) {
+          // Update objects with new marker poses.
           for (int i = 0; i < markerList.size(); i++) {
-              TangoSupport.Marker marker = markerList.get(i);
+              TangoMarkers.Marker marker = markerList.get(i);
               Log.w(TAG, "Marker detected[" + i + "] = " + marker.content);
 
-              // Remove the marker object from scene if it exists.
+              // Update the marker coordinates if it has been created.
               MarkerObject existingObject = mMarkerObjects.get(marker.content);
               if (existingObject != null) {
-                  existingObject.removeFromScene(scene);
+                  existingObject.updateGeometry(marker);
+              } else {
+                Log.e(TAG, "Marker id is out of range!");
               }
-
-              // Create a new marker object and add it to scene.
-              MarkerObject newObject = new MarkerObject(marker);
-              mMarkerObjects.put(marker.content, newObject);
-              newObject.addToScene(scene);
           }
       }
   }

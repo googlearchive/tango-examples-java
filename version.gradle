@@ -1,5 +1,5 @@
 allprojects {
     ext {
-        release_version = '1.54'
+        release_version = '1.55'
     }
 }

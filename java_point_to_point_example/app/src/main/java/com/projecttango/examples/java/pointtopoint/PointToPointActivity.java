@@ -30,13 +30,16 @@ import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 import com.google.atap.tangoservice.experimental.TangoImageBuffer;
+import com.google.tango.depthinterpolation.TangoDepthInterpolation;
+import com.google.tango.support.TangoPointCloudManager;
+import com.google.tango.support.TangoSupport;
+import com.google.tango.transformhelpers.TangoTransformHelper;
 
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
-import android.hardware.Camera;
 import android.hardware.display.DisplayManager;
 import android.opengl.Matrix;
 import android.os.Bundle;
@@ -59,9 +62,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.projecttango.tangosupport.TangoPointCloudManager;
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * An example showing how to build a very simple point-to-point measurement app
@@ -260,8 +260,6 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
         config.putInt(TangoConfig.KEY_INT_DEPTH_MODE, TangoConfig.TANGO_DEPTH_MODE_POINT_CLOUD);
         // Drift correction allows motion tracking to recover after it loses tracking.
-        // The drift-corrected pose is available through the frame pair with
-        // base frame AREA_DESCRIPTION and target frame DEVICE.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DRIFT_CORRECTION, true);
 
         return config;
@@ -325,7 +323,8 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                         clone.flip();
                         return new TangoImageBuffer(imageBuffer.width, imageBuffer.height,
                                 imageBuffer.stride, imageBuffer.frameNumber,
-                                imageBuffer.timestamp, imageBuffer.format, clone);
+                                imageBuffer.timestamp, imageBuffer.format, clone,
+                                imageBuffer.exposureDurationNs);
                     }
                 });
     }
@@ -401,10 +400,10 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                             // frame.
                             TangoPoseData lastFramePose = TangoSupport.getPoseAtTime(
                                     mRgbTimestampGlThread,
-                                    TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+                                    TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                    TangoSupport.ENGINE_OPENGL,
+                                    TangoSupport.ENGINE_OPENGL,
                                     mDisplayRotation);
                             if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
                                 // Update the camera pose from the renderer.
@@ -425,34 +424,34 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                             if (mMeasuredPoints[0] != null && mMeasuredPoints[1] != null) {
                                 // To make sure drift correct pose is also applied to virtual
                                 // object (measured points).
-                                // We need to re-query the Area Description to Depth camera
+                                // We need to re-query the Start of Service to Depth camera
                                 // pose every frame. Note that you will need to use the timestamp
                                 // at the time when the points were measured to query the pose.
-                                TangoSupport.TangoMatrixTransformData openglTDepthArr0 =
+                                TangoSupport.MatrixTransformData openglTDepthArr0 =
                                         TangoSupport.getMatrixTransformAtTime(
                                                 mMeasuredPoints[0].mTimestamp,
-                                                TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+                                                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                                 TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
-                                                TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                                TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+                                                TangoSupport.ENGINE_OPENGL,
+                                                TangoSupport.ENGINE_TANGO,
                                                 TangoSupport.ROTATION_IGNORED);
 
-                                TangoSupport.TangoMatrixTransformData openglTDepthArr1 =
+                                TangoSupport.MatrixTransformData openglTDepthArr1 =
                                         TangoSupport.getMatrixTransformAtTime(
                                                 mMeasuredPoints[1].mTimestamp,
-                                                TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+                                                TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                                 TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
-                                                TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                                TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+                                                TangoSupport.ENGINE_OPENGL,
+                                                TangoSupport.ENGINE_TANGO,
                                                 TangoSupport.ROTATION_IGNORED);
 
                                 if (openglTDepthArr0.statusCode == TangoPoseData.POSE_VALID &&
                                     openglTDepthArr1.statusCode == TangoPoseData.POSE_VALID) {
                                         mMeasurePoitnsInOpenGLSpace.clear();
-                                        float[] p0 = TangoSupport.transformPoint(
+                                        float[] p0 = TangoTransformHelper.transformPoint(
                                                 openglTDepthArr0.matrix,
                                                 mMeasuredPoints[0].mDepthTPoint);
-                                        float[] p1 = TangoSupport.transformPoint(
+                                        float[] p1 = TangoTransformHelper.transformPoint(
                                                 openglTDepthArr1.matrix,
                                                 mMeasuredPoints[1].mDepthTPoint);
 
@@ -590,8 +589,8 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                 rgbTimestamp,
                 TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
                 TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
-                TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+                TangoSupport.ENGINE_TANGO,
+                TangoSupport.ENGINE_TANGO,
                 TangoSupport.ROTATION_IGNORED);
         if (depthlTcolorPose.statusCode != TangoPoseData.POSE_VALID) {
             Log.w(TAG, "Could not get color camera transform at time "
@@ -601,7 +600,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
 
         float[] depthPoint;
         if (mBilateralBox.isChecked()) {
-            depthPoint = TangoSupport.getDepthAtPointBilateral(
+            depthPoint = TangoDepthInterpolation.getDepthAtPointBilateral(
                     pointCloud,
                     new double[] {0.0, 0.0, 0.0},
                     new double[] {0.0, 0.0, 0.0, 1.0},
@@ -611,7 +610,7 @@ public class PointToPointActivity extends Activity implements View.OnTouchListen
                     depthlTcolorPose.translation,
                     depthlTcolorPose.rotation);
         } else {
-            depthPoint = TangoSupport.getDepthAtPointNearestNeighbor(
+            depthPoint = TangoDepthInterpolation.getDepthAtPointNearestNeighbor(
                     pointCloud,
                     new double[] {0.0, 0.0, 0.0},
                     new double[] {0.0, 0.0, 0.0, 1.0},

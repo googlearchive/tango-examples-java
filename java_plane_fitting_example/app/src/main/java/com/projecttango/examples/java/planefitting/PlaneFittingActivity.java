@@ -29,13 +29,15 @@ import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPointCloudData;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
+import com.google.tango.support.TangoPointCloudManager;
+import com.google.tango.support.TangoSupport;
+import com.google.tango.support.TangoSupport.IntersectionPointPlaneModelPair;
 
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
-import android.hardware.Camera;
 import android.hardware.display.DisplayManager;
 import android.opengl.Matrix;
 import android.os.Bundle;
@@ -53,10 +55,6 @@ import org.rajawali3d.view.SurfaceView;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.projecttango.tangosupport.TangoPointCloudManager;
-import com.projecttango.tangosupport.TangoSupport;
-import com.projecttango.tangosupport.TangoSupport.IntersectionPointPlaneModelPair;
 
 /**
  * An example showing how to use the Tango APIs to create an augmented reality application
@@ -224,8 +222,6 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
         config.putInt(TangoConfig.KEY_INT_DEPTH_MODE, TangoConfig.TANGO_DEPTH_MODE_POINT_CLOUD);
         // Drift correction allows motion tracking to recover after it loses tracking.
-        // The drift-corrected pose is available through the frame pair with
-        // base frame AREA_DESCRIPTION and target frame DEVICE.
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DRIFT_CORRECTION, true);
 
         return config;
@@ -327,20 +323,12 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
                         if (mRgbTimestampGlThread > mCameraPoseTimestamp) {
                             // Calculate the camera color pose at the camera frame update time in
                             // OpenGL engine.
-                            //
-                            // When drift correction mode is enabled in config file, we need
-                            // to query the device with respect to Area Description pose in
-                            // order to use the drift-corrected pose.
-                            //
-                            // Note that if you don't want to use the drift-corrected pose, the
-                            // normal device with respect to start of service pose is still
-                            // available.
                             TangoPoseData lastFramePose = TangoSupport.getPoseAtTime(
                                     mRgbTimestampGlThread,
-                                    TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+                                    TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                     TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                    TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
+                                    TangoSupport.ENGINE_OPENGL,
+                                    TangoSupport.ENGINE_OPENGL,
                                     mDisplayRotation);
                             if (lastFramePose.statusCode == TangoPoseData.POSE_VALID) {
                                 // Update the camera pose from the renderer.
@@ -364,13 +352,13 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
                                 // object we need to re-query the Area Description to Depth camera
                                 // at the time when the corresponding plane fitting
                                 // measurement was acquired.
-                                TangoSupport.TangoMatrixTransformData openglTDepthArr =
+                                TangoSupport.MatrixTransformData openglTDepthArr =
                                         TangoSupport.getMatrixTransformAtTime(
                                             mPlanePlacedTimestamp,
-                                            TangoPoseData.COORDINATE_FRAME_AREA_DESCRIPTION,
+                                            TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
                                             TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
-                                            TangoSupport.TANGO_SUPPORT_ENGINE_OPENGL,
-                                            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+                                            TangoSupport.ENGINE_OPENGL,
+                                            TangoSupport.ENGINE_TANGO,
                                             TangoSupport.ROTATION_IGNORED);
 
                                 if (openglTDepthArr.statusCode == TangoPoseData.POSE_VALID) {
@@ -484,8 +472,8 @@ public class PlaneFittingActivity extends Activity implements View.OnTouchListen
             rgbTimestamp,
             TangoPoseData.COORDINATE_FRAME_CAMERA_DEPTH,
             TangoPoseData.COORDINATE_FRAME_CAMERA_COLOR,
-            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
-            TangoSupport.TANGO_SUPPORT_ENGINE_TANGO,
+            TangoSupport.ENGINE_TANGO,
+            TangoSupport.ENGINE_TANGO,
             TangoSupport.ROTATION_IGNORED);
         if (depthToColorPose.statusCode != TangoPoseData.POSE_VALID) {
             Log.d(TAG, "Could not get a valid pose from depth camera"

@@ -26,6 +26,6 @@ android {
 dependencies {
     apply from: '../../version.gradle'
     compile "com.google.tango:sdk-base:${release_version}"
-    compile "com.google.tango:support-base:${release_version}"
+    compile "com.google.tango:sdk-support:${release_version}"
     compile "com.android.support:appcompat-v7:23.2.0"
 }

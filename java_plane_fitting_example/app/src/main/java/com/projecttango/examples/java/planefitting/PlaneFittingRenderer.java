@@ -16,6 +16,7 @@
 package com.projecttango.examples.java.planefitting;
 
 import com.google.atap.tangoservice.TangoPoseData;
+import com.google.tango.support.TangoSupport;
 
 import android.content.Context;
 import android.graphics.Color;
@@ -39,8 +40,6 @@ import org.rajawali3d.renderer.Renderer;
 
 import java.util.Stack;
 import javax.microedition.khronos.opengles.GL10;
-
-import com.projecttango.tangosupport.TangoSupport;
 
 /**
  * Very simple example augmented reality renderer which displays a cube fixed in place.
