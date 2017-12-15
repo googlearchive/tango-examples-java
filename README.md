@@ -2,6 +2,10 @@ Project Tango Java API Example Projects
 ===========================================
 Copyright 2014 Google Inc.
 
+Project Status
+--------------
+**Project Tango will be deprecated on March 1st, 2018, and will be moved to the [googlearchive](//github.com/googlearchive) Github organization. Access to the Tango API is unaffected (since it's an on-device APIs), but we will no longer support and update Tango.**
+
 Useful Websites
 ---------------
 SDK Download - https://developers.google.com/project-tango/downloads
